@@ -32,7 +32,18 @@ Therefore, if we take some random solution and propagate it for a sufficient amo
 components will eventually die out (in comparison with the lowest-energy state) and leave us with desired 
 steady state:
 \[ \psi(t + dt) \simeq \psi(t) + \frac{dt}{\hbar} \hat{H} \psi(t)\]
+
 Of course, renormalisation will be required after each step, since the precision of numerical calculations is limited.
+Known total number of atoms in steady state serves best in this case (because we will have to renormalise the
+final steady state anyway):
+\[ \int\limits_V \vert \psi(t, \mathbf{r}) \vert^2 dV = N \]
+
+Propagation should be terminated when the total energy of the state stops changing (that is, only one component
+with the lowest energy is left out). So, we need to calculate the total energy after each step:
+\[ E(\psi) = \int\limits_V \psi^\dagger \left( \\
+-\frac{\hbar^2}{2m} \frac{\partial^2}{\partial \mathbf{r}^2} + V(\mathbf{r}) + \\
+\frac{g_{11}}{2} \vert \psi(\mathbf{r}) \vert^2 \right) \psi dV \]
+and compare it to the previous value.
 
 Now how do we propagate the state of the system? There are a lot of possibilities, one of which is split-step
 Fourier method. It is rather simple and can be effectively parallelised, which means a good scaling and 
