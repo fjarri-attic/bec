@@ -49,8 +49,8 @@ Now how do we propagate the state of the system? There are a lot of possibilitie
 Fourier method. It is rather simple and can be effectively parallelised, which means a good scaling and 
 low computation times. 
 
-The propagation can be described as:
-\[ -\hbar \psi(t + dt, \mathbf{r}) \simeq \exp(dt \hat{H}) \psi(t, \mathbf{r}) \]
+The propagation in imaginary time can be described as:
+\[ \psi(t + dt, \mathbf{r}) \simeq \exp \left( -\frac{dt}{\hbar} \hat{H} \right) \psi(t, \mathbf{r}) \]
 The idea of split-step Fourier method is to separate the execution of different parts of Hamiltonian:
 \begin{equation}
 \label{split_step_steady_state:splitted_propagation}
@@ -63,12 +63,12 @@ domain correspondingly. For our Hamiltonian
 V(\mathbf{r}) + g_{11} \vert \psi(\mathbf{r}) \vert^2 
 \]
 it means
-\[ \hat{D} = -\frac{\hbar^2}{2m} \frac{\partial^2}{\partial \mathbf{r}^2} \]
-\[ \hat{N} = V(\mathbf{r}) + g_{11} \vert \psi(\mathbf{r}) \vert^2 \]
+\[ \hat{D} = \frac{\hbar}{2m} \frac{\partial^2}{\partial \mathbf{r}^2} \]
+\[ \hat{N} = -\frac{1}{\hbar} \left( V(\mathbf{r}) + g_{11} \vert \psi(\mathbf{r}) \vert^2 \right) \] 
 The spatial derivative is a simple multiplication in Fourier domain, so the propagation can be performed 
 straightforwardly:
 \[ 
--\hbar \psi(t + dt, \mathbf{r}) \simeq \left\{ \hat{F}^{-1} \exp \left[ dt \hat{D}(i\omega) \right] \hat{F} \right\} \\
+\psi(t + dt, \mathbf{r}) \simeq \left\{ \hat{F}^{-1} \exp \left[ dt \hat{D}(i\omega) \right] \hat{F} \right\} \\
 \exp(dt \hat{N}) \psi(t, \mathbf{r}) 
 \]
 Here $\hat{D}(i\omega)$ is obtained by replacing differential operator by $i \omega$, where $\omega$ is a
@@ -77,7 +77,7 @@ frequency in Fourier domain.
 In order to improve the accuracy of the method, equation \ref{split_step_steady_state:splitted_propagation}
 can be rewritten as
 \[
--\hbar \psi(t + dt, \mathbf{r}) \simeq \exp \left( \frac{dt}{2} \hat{D} \right) \\
+\psi(t + dt, \mathbf{r}) \simeq \exp \left( \frac{dt}{2} \hat{D} \right) \\
 \exp \left( \int\limits^{t + dt}_t \hat{N} (t^\prime) dt^\prime \right) \\
 \exp \left( \frac{dt}{2} \hat{D} \right) \psi(t, \mathbf{r})
 \]
