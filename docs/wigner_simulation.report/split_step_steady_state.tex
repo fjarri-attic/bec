@@ -10,12 +10,12 @@
 The steady state obtained using Thomas-Fermi approximation is good for estimation purposes, but not for
 real-life calculations - for example, it does not have continuous first derivative everywhere (namely,
 near the edges of the condensate). That is why we have to employ numerical calculations in order
-to find precise (to a certain extent) solution of the Shrodinger equation. One of the possible methods, 
+to find precise (to a certain extent) solution of the Gross-Pitevskii equation. One of the possible methods, 
 namely combination of split-step Fourier method and imaginary time, will be described in this section.
 
 Let us say we have the system with Hamiltonian $\hat{H}$, whose eigenvalues are $E_1 < E_2 < ...$.
 The steady state we want to find is the one with lowest energy ($E_1$). The steady solution of time-dependent
-Shrodinger equation
+Gross-Pitaevskii equation
 \[ -i \hbar \frac{\partial \psi}{\partial t} = \hat{H} \psi \]
 then looks like
 \[ \psi(\mathbf{r}, t) = \sum_i e^{\frac{i}{h} E_i t} f_i(\mathbf{r}) \]
