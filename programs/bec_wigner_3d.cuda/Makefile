@@ -1,5 +1,5 @@
 BINDIR = ./
-EXECUTABLE := wigner
+EXECUTABLE := wigner.bin
 
 DIRS := cudahelpers
 CCFILES := wigner.cpp misc.cpp
