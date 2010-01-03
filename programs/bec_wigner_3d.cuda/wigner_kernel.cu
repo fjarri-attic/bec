@@ -455,7 +455,7 @@ __global__ void propagateMidpoint(value_pair *a, value_pair *b, value_type dt)
 	int index = threadIdx.x + blockDim.x * (blockIdx.x + blockIdx.y * gridDim.x);
 
 	int total_pow = d_params.nvx_pow + d_params.nvy_pow + d_params.nvz_pow;
-	value_type E_middle = d_params.mu - potential(index - ((index >> total_pow) << total_pow)) / 2;
+	value_type E_middle = - potential(index - ((index >> total_pow) << total_pow)) / 2;
 	value_type pa = E_middle + d_params.E / 2;
 	value_type pb = E_middle - d_params.E / 2;
 
