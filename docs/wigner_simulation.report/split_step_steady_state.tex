@@ -57,12 +57,12 @@ The idea of split-step Fourier method is to separate the execution of different 
 \psi(t + dt, \mathbf{r}) \simeq \exp(dt \hat{D}) \exp(dt \hat{N}) \psi(t, \mathbf{r})
 \end{equation}
 where $\hat{D}$ and $\hat{N}$ are chosen so that they could be executed most conveniently in Fourier and spatial
-domain correspondingly. For our Hamiltonian
+domains correspondingly. For our Hamiltonian
 \[ 
 \hat{H} = -\frac{\hbar^2}{2m} \frac{\partial^2}{\partial \mathbf{r}^2} + \\
 V(\mathbf{r}) + g_{11} \vert \psi(\mathbf{r}) \vert^2 
 \]
-it means
+it means that
 \[ \hat{D} = \frac{\hbar}{2m} \frac{\partial^2}{\partial \mathbf{r}^2} \]
 \[ \hat{N} = -\frac{1}{\hbar} \left( V(\mathbf{r}) + g_{11} \vert \psi(\mathbf{r}) \vert^2 \right) \] 
 The spatial derivative is a simple multiplication in Fourier domain, so the propagation can be performed 
