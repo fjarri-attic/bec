@@ -13,12 +13,12 @@ near the edges of the condensate). That is why we have to employ numerical calcu
 to find precise (to a certain extent) solution of the Gross-Pitevskii equation. One of the possible methods, 
 namely combination of split-step Fourier method and imaginary time, will be described in this section.
 
-Let us say we have the system with Hamiltonian $\hat{H}$, whose eigenvalues are $E_1 < E_2 < ...$.
-The steady state we want to find is the one with lowest energy ($E_1$). The steady solution of time-dependent
-Gross-Pitaevskii equation
+Let us say we have the system with Hamiltonian $\hat{H}$, whose eigenvalues are $\mu_1 < \mu_2 < ...$.
+The steady state we want to find is the one with lowest chemical potential ($\mu_1$). The steady
+solution of time-dependent Gross-Pitaevskii equation
 \[ -i \hbar \frac{\partial \psi}{\partial t} = \hat{H} \psi \]
 then looks like
-\[ \psi(\mathbf{r}, t) = \sum_i e^{\frac{i}{h} E_i t} f_i(\mathbf{r}) \]
+\[ \psi(\mathbf{r}, t) = \sum_k e^{\frac{i}{h} \mu_k t} f_k(\mathbf{r}) \]
 We can use Hamiltonian to propagate the solution in time:
 \[ 
 \psi(t + dt) \simeq \psi(t) + \frac{\partial \psi}{\partial t} dt = \\
@@ -27,11 +27,11 @@ We can use Hamiltonian to propagate the solution in time:
 
 Now consider the substitution $t \rightarrow it$; after it the steady solution will become fading, with
 higher-energy components fading faster:
-\[ \psi(\mathbf{r}, t) = \sum_i e^{- \frac{1}{h} E_i t} f_i(\mathbf{r}) \]
+\[ \psi(\mathbf{r}, t) = \sum_k e^{- \frac{1}{h} \mu_k t} f_k(\mathbf{r}) \]
 Therefore, if we take some random solution and propagate it for a sufficient amount of time, higher-energy
 components will eventually die out (in comparison with the lowest-energy state) and leave us with desired 
 steady state:
-\[ \psi(t + dt) \simeq \psi(t) + \frac{dt}{\hbar} \hat{H} \psi(t)\]
+\[ \psi(t + dt) \simeq \psi(t) - \frac{dt}{\hbar} \hat{H} \psi(t)\]
 
 Of course, renormalisation will be required after each step, since the precision of numerical calculations is limited.
 Known total number of atoms in steady state serves best in this case (because we will have to renormalise the
