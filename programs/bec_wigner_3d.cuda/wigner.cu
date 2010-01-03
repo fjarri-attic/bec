@@ -237,7 +237,7 @@ void initEvolution(value_pair *h_steady_state, CalculationParameters &params, Ev
 	cutilCheckMsg("normalizeInverseFFT");
 	normalizeInverseFFT<<<state.grid, state.block>>>(state.b, 1.0 / params.cells);
 	cutilCheckMsg("normalizeInverseFFT");
-	return;
+
 	// Equilibration phase
 	for(value_type t = 0; t <= params.tmaxWig; t += params.dtWig)
 		propagate(params, state, params.dtWig);
@@ -249,7 +249,7 @@ void initEvolution(value_pair *h_steady_state, CalculationParameters &params, Ev
 // propagate system and fill current state graph data
 void calculateEvolution(CalculationParameters &params, EvolutionState &state, value_type dt)
 {
-//	propagate(params, state, dt);
+	propagate(params, state, dt);
 	state.t += dt;
 
 	//FFT into x-space
@@ -263,11 +263,11 @@ void calculateEvolution(CalculationParameters &params, EvolutionState &state, va
 	value_type nb = reduce<value_type>(state.dens_b, state.temp, params.cells * params.ne, 1) / params.ne;
 	printf("%f %f\n", state.t, na+nb);
  */
-	calculateModules<<<state.grid, state.block>>>(state.dens_a, state.a);
-	calculateModules<<<state.grid, state.block>>>(state.dens_b, state.b);
-	normalizeParticles<<<state.grid, state.block>>>(state.dens_a, state.dens_b);
-	//halfPiRotate<<<state.grid, state.block>>>(state.dens_a, state.dens_b, state.a, state.b, 0);
-	//cutilCheckMsg("halfPiRotate");
+	//calculateModules<<<state.grid, state.block>>>(state.dens_a, state.a);
+	//calculateModules<<<state.grid, state.block>>>(state.dens_b, state.b);
+	//normalizeParticles<<<state.grid, state.block>>>(state.dens_a, state.dens_b);
+	halfPiRotate<<<state.grid, state.block>>>(state.dens_a, state.dens_b, state.a, state.b, 0);
+	cutilCheckMsg("halfPiRotate");
 /*
 	value_type max = 0;
 	for(value_type alpha = 0; alpha < 2 * M_PI; alpha += 0.5)
