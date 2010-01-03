@@ -45,8 +45,10 @@ void calculateSteadyState(value_pair *h_steady_state, CalculationParameters &par
 	cufftSafeCall(cufftPlan3d(&plan, params.nvz, params.nvy, params.nvx, CUFFT_C2C));
 
 	//initial GP solution in k-space
-	fillInitialState<<<grid, block>>>(a);
-	cutilCheckMsg("fillInitialState");
+	//fillInitialState<<<grid, block>>>(a);
+	//cutilCheckMsg("fillInitialState");
+	fillWithTFSolution<<<grid, block>>>(a);
+	cutilCheckMsg("fillWithTFSolution");
 
 	cufftSafeCall(cufftExecC2C(plan, (cufftComplex*)a, (cufftComplex*)a, CUFFT_INVERSE));
 	normalizeInverseFFT<<<grid, block>>>(a, 1.0 / params.cells);
