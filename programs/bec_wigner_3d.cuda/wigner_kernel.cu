@@ -312,7 +312,7 @@ __global__ void propagateToEndpoint(value_pair *data)
 	for(int iter = 0; iter < d_params.itmax; iter++)
 	{
 		//calculate midpoint log derivative and exponentiate
-		da = exp(d_params.dtGP / 2 * (d_params.mu - potential(index) / 2 -
+		da = exp(d_params.dtGP / 2 * (- potential(index) / 2 -
 			d_params.g11 * (a.x * a.x + a.y * a.y)));
 
 		//propagate to midpoint using log derivative
