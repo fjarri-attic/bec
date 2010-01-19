@@ -2,6 +2,7 @@
 \usepackage{indentfirst}
 \usepackage[pdftex]{graphicx}
 \usepackage{subfig}
+\usepackage{amsmath}
 
 \title{Two-component BEC dynamics calculations using split-step Fourier method}
 \author{Bogdan Opanchuk}
@@ -180,6 +181,43 @@ with $d\tau\hat{N}$ or by using more accurate method, like trapezoidal rule
 \]
 Since the value of $\hat{N}(\tau + d\tau)$ is unknown at the time of the calculation (it is performed in the
 middle of the step), an iterative procedure is necessary.
+
+\section*{Split-step propagation}
+
+Now when we have got the steady state for one-component system, it is the time to start the simulation of
+two-component system. The initial state for the component $\vert1\rangle$ is the one-component steady state,
+and for $\vert2\rangle$ the initial state equals to zero.
+
+In the experiment, system evolution starts with the $\frac{\pi}{2}$ pulse, which transforms relative density
+to relative phase:
+\[
+\begin{pmatrix}
+	\psi^\prime_1 \\
+	\psi^\prime_2
+\end{pmatrix} = \\
+\begin{pmatrix}
+	1 & -i \\
+	-i & 1
+\end{pmatrix} \\
+\begin{pmatrix}
+	\psi_1 \\
+	\psi_2
+\end{pmatrix}
+\]
+Of course, the pulse is not instantaneous, but as a first approximation it can be treated like one.
+The evolution of the system is described by coupled Gross-Pitaevskii equations:
+\[
+i \hbar \frac{\partial}{\partial t} \begin{pmatrix}
+	\psi_1 \\ \psi_2
+\end{pmatrix} = \left(
+	-\frac{\hbar^2\nabla^2}{2m} + V + G \begin{pmatrix}
+		\vert \psi_1 \vert^2 \\ \vert \psi_2 \vert^2
+	\end{pmatrix} + \Gamma + P
+\right)
+\begin{pmatrix}
+	\psi_1 \\ \psi_2
+\end{pmatrix}
+\]
 
 \bibliographystyle{plain}
 \bibliography{refs}
