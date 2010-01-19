@@ -23,8 +23,7 @@ The steady state should satisfy the Gross-Pitaevskii equation:
 To get the first approximation of the state function, we consider the kinetic term to be small as compared to other terms and omit it. The conditions for this operation to be valid will be determined later in this section. Thus we get the simple equation:
 \[ \left( V(\mathbf{r}) + g_{11} \vert \psi(\mathbf{r}) \vert^2 \right) \psi(\mathbf{r}) = \mu \psi(\mathbf{r}) \]
 which leads us to the state function:
-\[ \vert \psi(\mathbf{r}) \vert^2 = \frac{1}{g_{11}} \left( \mu - V(\mathbf{r}) \right), V(\mathbf{r}) \leq \mu \]
-\[ \psi(\mathbf{r}) \equiv 0, V(\mathbf{r}) > \mu \]
+\[ \vert \psi(\mathbf{r}) \vert^2 = \frac{1}{g_{11}} \max \left( \mu - V(\mathbf{r}), 0 \right) \]
 The condition for $V(\mathbf{r})$ defines the shape of the condensate - it is the ellipsoid with the following radii:
 \[ r_i = \sqrt{\frac{2 \mu}{m \omega_i^2}}, i = x, y, z \]
 
