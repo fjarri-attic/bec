@@ -10,68 +10,76 @@
 \begin{document}
 \maketitle
 
+\section*{Natural units}
+
+Before we start doing any calculations, a transformation to dimensionless units should be defined. It will significantly increase readability of equations and facilitate various estimations.
+
+There are several ways to do it; since we are working with the harmonic potential, the obvious variant is to use the parameters of harmonic oscillator as new units, taking into account the usual symmetry $\omega_x = \omega_y = \omega_\rho$ which exists in experiments:
+\[ l_\rho =  \sqrt{\frac{\hbar}{m\omega_\rho}},\, t_\rho = \frac{1}{\omega_\rho},\, E_\rho = \hbar \omega_\rho. \]
+
+Dimensionless variables will be mainly used throughout the article, so, for the sake of readability, they will be explicitly marked with primes only when they can be confused with variables in real units. In other places all variables should be considered dimensionless unless explicitly specified as real. For example, the transformation of coordinates will look like:
+\[ x = x^\prime l_\rho,\, y = y^\prime l_\rho,\, z = z^\prime l_\rho. \]
+
+Wave function can be transformed in different ways depending on the normalisation. We will use the transformation that keeps the integral of wave function over space equal to number of particles in the system:
+\[ \Psi = \Psi^\prime l_\rho^\frac{3}{2}. \]
+
 \section*{Thomas-Fermi approximation}
 
-We are looking for steady state of the system with pseudopotential model hamiltonian:
+We are looking for steady state of the system with pseudopotential model hamiltonian (in real units):
 \[ 
 \hat{H} = -\frac{\hbar^2}{2m} \frac{\partial^2}{\partial \mathbf{r}^2} + \\
-V(\mathbf{r}) + \\
-g_{11} \vert \psi(\mathbf{r}) \vert^2 
+V(\mathbf{r}) + g_{11} \vert \Psi(\mathbf{r}) \vert^2,
 \]
-\[g_{11} = \frac{4 \pi \hbar^2 a_{11}}{m}\]
-\[ V(\mathbf{r}) = \frac{m}{2} \left( \omega_x^2 x^2 + \omega_y^2 y^2 + \omega_z^2 z^2 \right) \]
-where $V(\mathbf{r})$ is the potential energy for parabolic trap, $g_{11}$ is the interaction coefficient
-and $a_{11}$ is the scattering length for atoms in non-excited state.
+\[ g_{11} = \frac{4 \pi \hbar^2 a_{11}}{m}, \]
+\[ V(\mathbf{r}) = \frac{m}{2} \left( \omega_x^2 x^2 + \omega_y^2 y^2 + \omega_z^2 z^2 \right). \]
+where $V(\mathbf{r})$ is the potential energy for parabolic trap, $g_{11}$ is the interaction coefficient and $a_{11}$ is the scattering length for atoms in non-excited state. In natural units:
+\[
+\hat{H} = -\frac{1}{2} \frac{\partial^2}{\partial \mathbf{r}^2} + 
+\frac{1}{2} \left( x^2 + y^2 + \lambda^{-2} z^2 \right) + g_{11} \vert \Psi(\mathbf{r}) \vert^2,
+\]
+where
+\[ \lambda = \frac{\omega_\rho}{\omega_z},\, g_{11} = \frac{4 \pi a_{11}}{l_\rho}. \]
 
 The steady state should satisfy the Gross-Pitaevskii equation:
-\[ \hat{H} \psi = \mu \psi \]
+\[ \hat{H} \Psi = \mu \Psi. \]
 To get the first approximation of the state function, we consider the kinetic term to be small as compared to other terms and omit it. The conditions for this operation to be valid will be determined later in this section. Thus we get the simple equation:
-\[ \left( V(\mathbf{r}) + g_{11} \vert \psi(\mathbf{r}) \vert^2 \right) \psi(\mathbf{r}) = \mu \psi(\mathbf{r}) \]
+\[ \left( V(\mathbf{r}) + g_{11} \vert \Psi(\mathbf{r}) \vert^2 \right) \Psi(\mathbf{r}) = \mu \Psi(\mathbf{r}), \]
 which leads us to the state function:
-\[ \vert \psi(\mathbf{r}) \vert^2 = \frac{1}{g_{11}} \max \left( \mu - V(\mathbf{r}), 0 \right) \]
+\[ \vert \Psi(\mathbf{r}) \vert^2 = \frac{1}{g_{11}} \max \left( \mu - V(\mathbf{r}), 0 \right). \]
 The condition for $V(\mathbf{r})$ defines the shape of the condensate - it is the ellipsoid with the following radii:
-\[ r_i = \sqrt{\frac{2 \mu}{m \omega_i^2}}, i = x, y, z \]
+\[ r_x = r_y = \sqrt{2\mu},\, r_z = \lambda \sqrt{2\mu}. \]
 
 Using the normalisation condition for the steady state function gives us the connection between the number of atoms in the condensate and the chemical potential:
-\[ \int\limits_{V} \vert \psi(\mathbf{r}) \vert^2 dV = N \]
+\[ \int\limits_{V} \vert \Psi(\mathbf{r}) \vert^2 dV = N, \]
+\[ \mu = \left( \frac{15 N g_{11}}{16 \lambda \sqrt{2}} \right)^{\frac{2}{5}}, \]
+or, in real units:
 \[ 
-\mu = \left( \frac{15 N}{8 \pi} \right)^\frac{2}{5} \\
-\left( \frac{m \bar{\omega}^2}{2} \right)^\frac{3}{5} \\
-{g_{11}}^\frac{2}{5}
+\mu = \left( \frac{15 N}{8 \pi} \right)^\frac{2}{5} 
+\left( \frac{m \bar{\omega}^2}{2} \right)^\frac{3}{5}
+{g_{11}}^\frac{2}{5},
 \]
 where $\bar{\omega} = \sqrt[3]{\omega_x \omega_y \omega_z}$.
 
-Now we can estimate the conditions necessary to drop the kinetic term from equation. We will do it for one-dimensional case for the sake of simplicity; three-dimensional results will differ only in coefficients of the order of unity:
-\[ 
-\frac{\hbar^2}{2 m} \vert \frac{d^2 \psi}{d x^2} \vert \ll \\
-\left( V + g_{11} \vert \psi \vert^2 \right) \vert \psi \vert
-\]
-Substituting the expression for $\psi$ and simplifying the inequation:
+Now we can roughly estimate the conditions necessary to drop the kinetic term from equation. Substitution of the approximate solution and calculation of the second derivative gives us the following inequation:
 \[
-\frac{\hbar^2}{2 m} \left( \mu + \frac{V}{2} \right) \ll \\
-x^2 \left( \mu - V \right)^2 + \frac{2}{m \omega^2} \left( \mu - V \right)^3
+\left( 
+	\frac{2 + \lambda^{-2}}{2 \sqrt{\mu - V(\mathbf{r})}} +
+	\frac{\left( x + y + \lambda^{-2}z \right)^2}{4 \left( \mu - V(\mathbf{r}) \right)^{\frac{3}{2}}} 
+\right) \ll
+\mu \sqrt{\mu - V(\mathbf{r})}.
 \]
+In the experiments $\lambda$ is usually of the order of ten, so we can drop terms with $\lambda^{-2}$. Therefore, near the centre of the condensate we this inequation simplifies to $\mu \gg 1$, which, in turn gives us the condition:
+\[ \frac{N a_{11}}{\lambda l_\rho} \gg 1. \]
 
-Simple (but lengthy) calculation of the first order derivative shows that we need to investigate only cases of $x=0$ and
-$x=r_x$. For $x=0$ the condition straightforwardly turns into $\mu \gg \frac{\hbar \omega}{2}$, or just
-$\mu \gg \hbar \omega$, since the coefficient of the order of unity is insignificant.
-On the other hand, for $x=r_x$ the inequation turns into $\mu \ll 0$ which is apparently always false. This means that
-near the edges of the condensate Thomas-Fermi approximation will fail. Fortunately, the density of the particles
-there is low, so we can estimate the width $h$ of the "belt" where our first approximation of the state function is
-sufficiently incorrect. After replacing $x$ by $r_x - h$ and "$\ll$" by "$\approx$" in inequation, we will get (providing that 
-$h \ll r_x$) $h \approx \sqrt{\frac{3 \hbar^2}{m \mu}}$. So, in order the belt to be narrow --- or, in other words
-$h \ll r_x$ --- the chemical potential should satisfy the similarly looking condition as for the case of $x=0$: 
-$\mu \gg \sqrt{\frac{3}{2}} \hbar \omega$ or just $\mu \gg \hbar \omega$. For three-dimensional case we can safely substitute $\bar{\omega}$ for $\omega$ in the condition.
+On the other hand, near the edges the left-hand side of the inequation converges to infinity, while the right-hand side equals zero. This means that near the edges of the condensate Thomas-Fermi approximation fails regardless of the conditions. Fortunately, the density of the particles there is low, so we can estimate the width $h$ of the "belt" where our first approximation of the state function is significantly incorrect. If it happens to be small as compared to the size of the condensate, the approximation can be considered valid.
 
-Let us use some real-life experimental parameters and check how well Thomas-Fermi approximation works.
-For three-dimensional trap with frequencies $f_x = f_y = 97.6 \textrm{ Hz}$ and $f_x = 11.96 \textrm{ Hz}$ and
-$10^5$ rubidium atoms (which have scattering length $a_{11} = 100.4 a_0$, where $a_0$ is Bohr radius):
-\[ \frac{\mu}{\hbar \bar{\omega}} \approx 15.3 \]
-This is a pretty good result, which means that Thomas-Fermi approximation produces state close to the real one.
-But for lower amount of atoms, say $10^4$, we get:
-\[ \frac{\mu}{\hbar \bar{\omega}} \approx 6 \]
-which is lower than the order of ten. Therefore, for low amounts of atoms, Thomas-Fermi approximation should be
-used with care. 
+The first term at the left-hand side of the inequation converges to infinity slower than the second one and can be dropped. Then, for the sake of simplicity, we consider two of three coordinates to be zero and the third one to equal $r - h$, where $r$ is the corresponding radius of the condensate. After replacing "$\ll$" by "$\approx$" and assuming $h$ to be small as compared to $r$, we obtain:
+\[ h_x \approx \frac{2}{\sqrt{2 \mu}},\, h_z \approx \frac{2}{\lambda \sqrt{2 \mu}}. \]
+They have to be much smaller than corresponding radii, which gives us:
+\[ x:\: \mu \gg 1,\, z:\: \mu \gg \lambda^{-2}. \]
+The former condition is the same as for the centre of the condensate, but the latter one is much less strict. Therefore, we have only one condition justifying the application of Thomas-Fermi approximation: $\mu \gg 1$.
+ 
+Let us use some real-life experimental parameters and check how well Thomas-Fermi approximation works. For three-dimensional trap with frequencies $f_x = f_y = 97.6 \textrm{ Hz}$ and $f_x = 11.96 \textrm{ Hz}$ and $10^5$ rubidium atoms (which have scattering length $a_{11} = 100.4 a_0$, where $a_0$ is Bohr radius) we have $\mu \approx 7.56$. This means that Thomas-Fermi approximation produces solution which is close to the real one. But for lower amount of atoms, say $10^4$, we get $\mu \approx 3.02$, which is a sign that the we have reached the limit of the approximation's applicability. Therefore, for low amounts of atoms, Thomas-Fermi approximation must be used with care.
 
 \section*{Steady state calculation}
 
@@ -205,19 +213,21 @@ to relative phase:
 \end{pmatrix}
 \]
 Of course, the pulse is not instantaneous, but as a first approximation it can be treated like one.
-The evolution of the system is described by coupled Gross-Pitaevskii equations:
-\[
-i \hbar \frac{\partial}{\partial t} \begin{pmatrix}
-	\psi_1 \\ \psi_2
-\end{pmatrix} = \left(
-	-\frac{\hbar^2\nabla^2}{2m} + V + G \begin{pmatrix}
-		\vert \psi_1 \vert^2 \\ \vert \psi_2 \vert^2
-	\end{pmatrix} + \Gamma + P
-\right)
-\begin{pmatrix}
-	\psi_1 \\ \psi_2
-\end{pmatrix}
-\]
+The evolution of the system is described by coupled Gross-Pitaevskii equations. They can contain different
+terms depending on which features of the system we need to take into account. Basic form can be found in
+many sources, i.e. \cite{pitaevskii_bec}; with the addition of loss terms it looks like:
+\[ i \hbar \frac{\partial \psi_1}{\partial t} = \left(
+	-\frac{\hbar^2\nabla^2}{2m} + V_1(\mathbf{r}) + 
+	g_{11} \vert \psi_1 \vert^2 + g_{12} \vert \psi_2 \vert^2 - i \hbar \Gamma_1
+\right) \psi_1 + \frac{\hbar \Omega}{2}e^{i \omega t} \psi_2, \]
+\[ i \hbar \frac{\partial \psi_2}{\partial t} = \left(
+	-\frac{\hbar^2\nabla^2}{2m} + V_2(\mathbf{r}) + 
+	g_{12} \vert \psi_1 \vert^2 + g_{22} \vert \psi_2 \vert^2 - i \hbar \Gamma_2
+\right) \psi_2 + \frac{\hbar \Omega}{2}e^{i \omega t} \psi_1 - \hbar \Delta \psi_2. \]
+Here $V_1$ and $V_2$ stand for the external potential (which, in general, is different for each component),
+$g_{11}$, $g_{12}$ and $g_{22}$ are interaction coefficients, $\Gamma_1$ and $\Gamma_2$ are responsible for
+two- and three-body loss processes correspondingly, $\Omega$ is a constant for state transitions due to
+external oscillating magnetic field, and $\Delta$ is a detuning frequency.
 
 \bibliographystyle{plain}
 \bibliography{refs}
