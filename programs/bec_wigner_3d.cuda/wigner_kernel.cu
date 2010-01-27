@@ -89,7 +89,7 @@ __device__ __inline__ value_type module(value_pair a)
 	return a.x * a.x + a.y * a.y;
 }
 
-// Returns potential energy for given lattice node
+// Returns external potential energy for given lattice node
 __device__ __inline__ value_type potential(int index)
 {
 	int nvx_pow = d_params.nvx_pow;
@@ -103,7 +103,7 @@ __device__ __inline__ value_type potential(int index)
 	value_type y = -d_params.ymax + d_params.dy * j;
 	value_type z = -d_params.zmax + d_params.dz * k;
 
-	return d_params.px * x * x + d_params.py * y * y + d_params.pz * z * z;
+	return (d_params.px * x * x + d_params.py * y * y + d_params.pz * z * z) / 2;
 }
 
 // fill given buffer with ground state, obtained from Thomas-Fermi approximation
@@ -111,7 +111,7 @@ __global__ void fillWithTFGroundState(value_pair *data)
 {
 	int index = threadIdx.x + blockDim.x * (blockIdx.x + blockIdx.y * gridDim.x);
 
-	value_type e = d_params.mu - potential(index) / 2;
+	value_type e = d_params.mu - potential(index);
 	if(e > 0)
 		data[index] = MAKE_VALUE_PAIR(sqrt(e / d_params.g11), 0);
 	else
@@ -155,13 +155,13 @@ __global__ void propagateXSpaceOneComponent(value_pair *data)
 	value_pair a0 = a;
 
 	value_type da;
-	value_type V = -potential(index) / 2;
+	value_type V = potential(index);
 
 	//iterate to midpoint solution
 	for(int iter = 0; iter < d_params.itmax; iter++)
 	{
 		//calculate midpoint log derivative and exponentiate
-		da = exp(d_params.dtGP / 2 * (V - d_params.g11 * module(a)));
+		da = exp(d_params.dtGP / 2 * (-V - d_params.g11 * module(a)));
 
 		//propagate to midpoint using log derivative
 		a = cmul(a0, da);
@@ -180,7 +180,7 @@ __global__ void propagateXSpaceTwoComponent(value_pair *aa, value_pair *bb, valu
 	int index = threadIdx.x + blockDim.x * (blockIdx.x + blockIdx.y * gridDim.x);
 
 	int total_pow = d_params.nvx_pow + d_params.nvy_pow + d_params.nvz_pow;
-	value_type V = -potential(index - ((index >> total_pow) << total_pow)) / 2;
+	value_type V = potential(index - ((index >> total_pow) << total_pow));
 
 	value_pair a = aa[index];
 	value_pair b = bb[index];
@@ -197,8 +197,8 @@ __global__ void propagateXSpaceTwoComponent(value_pair *aa, value_pair *bb, valu
 		value_type n_a = module(a);
 		value_type n_b = module(b);
 
-		value_type pa = V - d_params.g11 * n_a - d_params.g12 * n_b;
-		value_type pb = V - d_params.g22 * n_b - d_params.g12 * n_a;
+		value_type pa = -V - d_params.g11 * n_a - d_params.g12 * n_b;
+		value_type pb = -V - d_params.g22 * n_b - d_params.g12 * n_a;
 
 		//calculate midpoint log derivative and exponentiate
 		value_type a_angle = dt * pa / 2;
@@ -227,8 +227,7 @@ __global__ void calculateGPEnergy(value_type *res, value_pair *a)
 	//res[index] = module * (d_params.mu - potential(index) / 2 +
 	//		d_params.g11 * module / 2);
 
-	res[index] = module * (potential(index) / 2 +
-			d_params.g11 * module / 2);
+	res[index] = module * (potential(index) + d_params.g11 * module / 2);
 }
 
 __global__ void calculateChemPotential(value_type *res, value_pair *a)
@@ -238,11 +237,7 @@ __global__ void calculateChemPotential(value_type *res, value_pair *a)
 	value_pair a0 = a[index];
 	value_type module = (a0.x * a0.x + a0.y * a0.y);
 
-	//res[index] = module * (d_params.mu - potential(index) / 2 +
-	//		d_params.g11 * module / 2);
-
-	res[index] = module * (potential(index) / 2 +
-			d_params.g11 * module);
+	res[index] = module * (potential(index) + d_params.g11 * module);
 }
 
 __global__ void calculateGPEnergy2(value_pair *a)
