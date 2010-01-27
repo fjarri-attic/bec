@@ -66,6 +66,9 @@ __device__ __inline__ value_type getWaveVectorLength(int index)
 	return tex1Dfetch(k_tex, index);
 }
 
+
+// auxiliary functions for operations with complex values
+
 __device__ __inline__ value_pair cmul(value_pair a, value_pair b)
 {
 	return MAKE_VALUE_PAIR(a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x);
@@ -81,7 +84,7 @@ __device__ __inline__ value_pair cmul(value_pair a, value_type b)
 	return MAKE_VALUE_PAIR(a.x * b, a.y * b);
 }
 
-// Returns potential energy
+// Returns potential energy for given lattice node
 __device__ __inline__ value_type potential(int index)
 {
 	int nvx_pow = d_params.nvx_pow;
@@ -98,37 +101,8 @@ __device__ __inline__ value_type potential(int index)
 	return d_params.px * x * x + d_params.py * y * y + d_params.pz * z * z;
 }
 
-__global__ void initialState(value_pair *data)
-{
-	int index = threadIdx.x + blockDim.x * (blockIdx.x + blockIdx.y * gridDim.x);
-
-	int nvx_pow = d_params.nvx_pow;
-	int nvy_pow = d_params.nvy_pow;
-	int k = index >> (nvx_pow + nvy_pow);
-	index -= (k << (nvx_pow + nvy_pow));
-	int j = index >> nvx_pow;
-	int i = index - (j << nvx_pow);
-
-	value_type h_bar = 1.054571628e-34;
-	value_type mass = 1.443160648e-25;
-
-	value_type lenx = sqrt(h_bar / (mass * 2.0 * M_PI * d_params.fx));
-	value_type leny = sqrt(h_bar / (mass * 2.0 * M_PI * d_params.fy));
-	value_type lenz = sqrt(h_bar / (mass * 2.0 * M_PI * d_params.fz));
-
-	value_type x = -d_params.xmax + d_params.dx * i;
-	value_type y = -d_params.ymax + d_params.dy * j;
-	value_type z = -d_params.zmax + d_params.dz * k;
-
-	x /= lenx;
-	y /= leny;
-	z /= lenz;
-
-	data[index] = MAKE_VALUE_PAIR(exp(-(x * x + y * y + z * z) / 2) / (pow(M_PI, 0.25)), 0);
-	//data[index] = MAKE_VALUE_PAIR(1, 0);
-}
-
-__global__ void fillWithTFSolution(value_pair *data)
+// fill given buffer with ground state, obtained from Thomas-Fermi approximation
+__global__ void fillWithTFGroundState(value_pair *data)
 {
 	int index = threadIdx.x + blockDim.x * (blockIdx.x + blockIdx.y * gridDim.x);
 

@@ -48,8 +48,8 @@ void calculateSteadyState(value_pair *h_steady_state, CalculationParameters &par
 	//initial GP solution in k-space
 	//initialState<<<grid, block>>>(a);
 	//cutilCheckMsg("initialState");
-	fillWithTFSolution<<<grid, block>>>(a);
-	cutilCheckMsg("fillWithTFSolution");
+	fillWithTFGroundState<<<grid, block>>>(a);
+	cutilCheckMsg("fillWithTFGroundState");
 
 	calculateModules<<<grid, block>>>(a_module, a);
 	cutilCheckMsg("calculateModules");
@@ -127,8 +127,8 @@ void calculateSteadyState(value_pair *h_steady_state, CalculationParameters &par
 	cufftSafeCall(cufftExecC2C(plan, (cufftComplex*)a, (cufftComplex*)a, CUFFT_FORWARD));
 
 	// DEBUG
-	//fillWithTFSolution<<<grid, block>>>(a);
-	//cutilCheckMsg("fillWithTFSolution");
+	//fillWithTFGroundState<<<grid, block>>>(a);
+	//cutilCheckMsg("fillWithTFGroundState");
 
 	// save steady state
 	a.copyTo(h_steady_state);
