@@ -75,7 +75,7 @@ void calculateSteadyState(value_pair *h_steady_state, CalculationParameters &par
 		// FFT into x-space
 		cufftSafeCall(cufftExecC2C(plan, (cufftComplex*)a, (cufftComplex*)a, CUFFT_FORWARD));
 
-		propagateToEndpoint<<<grid, block>>>(a);
+		propagateXSpaceOneComponent<<<grid, block>>>(a);
 		cutilCheckMsg("propagateToEndpoint");
 
 		// FFT into k-space
@@ -228,7 +228,7 @@ void propagate(CalculationParameters &params, EvolutionState &state, value_type 
 */
 //	calculateAverage(params, state);
 
-	propagateMidpoint<<<state.grid, state.block>>>(state.a, state.b, dt);
+	propagateXSpaceTwoComponent<<<state.grid, state.block>>>(state.a, state.b, dt);
 	cutilCheckMsg("propagateMidpoint");
 
 	//FFT into k-space

@@ -42,9 +42,6 @@ void releaseWaveVectors();
 // Initialize calculation
 void fillCalculationParameters(CalculationParameters &params)
 {
-	// in h-bar units
-	params.E = 0.00;
-
 	params.N = 150000;
 
 	params.m = 87; // atom mass of one particle

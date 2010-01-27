@@ -27,7 +27,6 @@ struct CalculationParameters
 	value_type g11; // nonlinear coupling in 1
 	value_type g12; // nonlinear cross-coupling
 	value_type g22; // nonlinear coupling in 2
-	value_type E; // energy splitting
 
 	value_type m; // atom mass of a particle
 	value_type fx, fy, fz; // trap frequences, Hz

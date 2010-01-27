@@ -84,6 +84,11 @@ __device__ __inline__ value_pair cmul(value_pair a, value_type b)
 	return MAKE_VALUE_PAIR(a.x * b, a.y * b);
 }
 
+__device__ __inline__ value_type module(value_pair a)
+{
+	return a.x * a.x + a.y * a.y;
+}
+
 // Returns potential energy for given lattice node
 __device__ __inline__ value_type potential(int index)
 {
@@ -139,28 +144,27 @@ __global__ void propagateKSpaceRealTime(value_pair *a, value_pair *b, value_type
 	b[index] = cmul(b0, prop_coeff);
 }
 
-// Propagates state vector in x-space for steady state calculation
-__global__ void propagateToEndpoint(value_pair *data)
+// Propagates state in x-space for steady state calculation
+__global__ void propagateXSpaceOneComponent(value_pair *data)
 {
 	int index = threadIdx.x + blockDim.x * (blockIdx.x + blockIdx.y * gridDim.x);
 
 	value_pair a = data[index];
 
 	//store initial x-space field
-	value_pair a1 = a;
+	value_pair a0 = a;
 
 	value_type da;
+	value_type V = -potential(index) / 2;
 
 	//iterate to midpoint solution
 	for(int iter = 0; iter < d_params.itmax; iter++)
 	{
 		//calculate midpoint log derivative and exponentiate
-		da = exp(d_params.dtGP / 2 * (- potential(index) / 2 -
-			d_params.g11 * (a.x * a.x + a.y * a.y)));
+		da = exp(d_params.dtGP / 2 * (V - d_params.g11 * module(a)));
 
 		//propagate to midpoint using log derivative
-		a.x = a1.x * da;
-		a.y = a1.y * da;
+		a = cmul(a0, da);
 	}
 
 	//propagate to endpoint using log derivative
@@ -168,6 +172,49 @@ __global__ void propagateToEndpoint(value_pair *data)
 	a.y *= da;
 
 	data[index] = a;
+}
+
+// Propagates state vector in x-space for evolution calculation
+__global__ void propagateXSpaceTwoComponent(value_pair *aa, value_pair *bb, value_type dt)
+{
+	int index = threadIdx.x + blockDim.x * (blockIdx.x + blockIdx.y * gridDim.x);
+
+	int total_pow = d_params.nvx_pow + d_params.nvy_pow + d_params.nvz_pow;
+	value_type V = -potential(index - ((index >> total_pow) << total_pow)) / 2;
+
+	value_pair a = aa[index];
+	value_pair b = bb[index];
+
+	//store initial x-space field
+	value_pair a0 = a;
+	value_pair b0 = b;
+
+	value_pair da = MAKE_VALUE_PAIR(0, 0), db = MAKE_VALUE_PAIR(0, 0);
+
+	//iterate to midpoint solution
+	for(int iter = 0; iter < d_params.itmax; iter++)
+	{
+		value_type n_a = module(a);
+		value_type n_b = module(b);
+
+		value_type pa = V - d_params.g11 * n_a - d_params.g12 * n_b;
+		value_type pb = V - d_params.g22 * n_b - d_params.g12 * n_a;
+
+		//calculate midpoint log derivative and exponentiate
+		value_type a_angle = dt * pa / 2;
+		da = MAKE_VALUE_PAIR(cos(a_angle), -sin(a_angle));
+
+		value_type b_angle = dt * pb / 2;
+		db = MAKE_VALUE_PAIR(cos(b_angle), -sin(b_angle));
+
+		//propagate to midpoint using log derivative
+		a = cmul(a0, da);
+		b = cmul(b0, db);
+	}
+
+	//propagate to endpoint using log derivative
+	aa[index] = cmul(a, da);
+	bb[index] = cmul(b, db);
 }
 
 __global__ void calculateGPEnergy(value_type *res, value_pair *a)
@@ -278,48 +325,6 @@ __global__ void applyBraggPulse(value_pair *a, value_pair *b)
 	a[index] = cmul(cadd(a0, cmul(b0, MAKE_VALUE_PAIR(0, -1))), 1.0 / sqrt(2.0));
 	b[index] = cmul(cadd(cmul(a0, MAKE_VALUE_PAIR(0, -1)), b0), 1.0 / sqrt(2.0));
 
-}
-
-
-// Midpoint propagation for evolution calculation
-__global__ void propagateMidpoint(value_pair *a, value_pair *b, value_type dt)
-{
-	int index = threadIdx.x + blockDim.x * (blockIdx.x + blockIdx.y * gridDim.x);
-
-	int total_pow = d_params.nvx_pow + d_params.nvy_pow + d_params.nvz_pow;
-	value_type E_middle = - potential(index - ((index >> total_pow) << total_pow)) / 2;
-	value_type pa = E_middle + d_params.E / 2;
-	value_type pb = E_middle - d_params.E / 2;
-
-	value_pair a0 = a[index];
-	value_pair b0 = b[index];
-
-	value_type a0_squared = a0.x * a0.x + a0.y * a0.y;
-	value_type b0_squared = b0.x * b0.x + b0.y * b0.y;
-
-	//calculate midpoint log derivative
-
-	value_type da = -d_params.g11 * a0_squared - d_params.g12 * b0_squared + pa;
-	value_type db = -d_params.g22 * b0_squared - d_params.g12 * a0_squared + pb;
-
-	value_type a_angle = dt * da;
-	value_type cos_a = cos(a_angle);
-	value_type sin_a = sin(a_angle);
-
-	value_type b_angle = dt * db;
-	value_type cos_b = cos(b_angle);
-	value_type sin_b = sin(b_angle);
-
-	//Use log propagator to calculate next time point
-	a[index] = MAKE_VALUE_PAIR(
-		a0.x * cos_a + a0.y * sin_a,
-		a0.y * cos_a - a0.x * sin_a
-	);
-
-	b[index] = MAKE_VALUE_PAIR(
-		b0.x * cos_b + b0.y * sin_b,
-		b0.y * cos_b - b0.x * sin_b
-	);
 }
 
 // normalize particle density
