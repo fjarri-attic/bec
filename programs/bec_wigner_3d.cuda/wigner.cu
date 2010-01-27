@@ -86,8 +86,8 @@ void calculateSteadyState(value_pair *h_steady_state, CalculationParameters &par
 	dim3 block, grid;
 	value_type E = 0;
 
-	CudaBuffer<value_pair> a(params.cells), a_modified(params.cells);
-	CudaBuffer<value_type> a_module(params.cells), temp(params.cells);
+	CudaBuffer<value_pair> a(params.cells), complex_temp(params.cells);
+	CudaBuffer<value_type> real_temp(params.cells), real_temp2(params.cells);
 
 	createKernelParams(block, grid, params.cells, MAX_THREADS_NUM);
 	cufftSafeCall(batchfftPlan3d(&plan, params.nvz, params.nvy, params.nvx, CUFFT_C2C, 1));
@@ -97,7 +97,7 @@ void calculateSteadyState(value_pair *h_steady_state, CalculationParameters &par
 	cutilCheckMsg("fillWithTFGroundState");
 
 	// normalize initial conditions
-	value_type N = calculateParticles(a, a_module, temp, params);
+	value_type N = calculateParticles(a, real_temp, real_temp2, params);
 	printf("N = %f\n", N);
 	multiply<<<grid, block>>>(a, sqrt(params.N / N));
 
@@ -137,12 +137,12 @@ void calculateSteadyState(value_pair *h_steady_state, CalculationParameters &par
 		cufftSafeCall(batchfftExecute(plan, (cufftComplex*)a, (cufftComplex*)a, CUFFT_FORWARD));
 
 		// Normalize
-		N = calculateParticles(a, a_module, temp, params);
+		N = calculateParticles(a, real_temp, real_temp2, params);
 		//printf("N = %f\n", N);
 		multiply<<<grid, block>>>(a, sqrt(params.N / N));
 
 		// Calculate energy
-		value_type new_E = calculateStateIntegral(a, a_modified, a_module, temp, plan, true);
+		value_type new_E = calculateStateIntegral(a, complex_temp, real_temp, real_temp2, plan, true);
 
 		// FFT into k-space
 		cufftSafeCall(batchfftExecute(plan, (cufftComplex*)a, (cufftComplex*)a, CUFFT_INVERSE));
@@ -162,10 +162,10 @@ void calculateSteadyState(value_pair *h_steady_state, CalculationParameters &par
 	// save steady state
 	a.copyTo(h_steady_state);
 
-	E = calculateStateIntegral(a, a_modified, a_module, temp, plan, true);
+	E = calculateStateIntegral(a, complex_temp, real_temp, real_temp2, plan, true);
 	printf("E = %f\n", E / (2 * M_PI * params.fz * params.N) * params.dx * params.dy * params.dz);
 
-	value_type mu = calculateStateIntegral(a, a_modified, a_module, temp, plan, false);
+	value_type mu = calculateStateIntegral(a, complex_temp, real_temp, real_temp2, plan, false);
 	printf("mu = %f\n", mu / (2 * M_PI * params.fz * params.N) * params.dx * params.dy * params.dz);
 
 	batchfftDestroy(plan);
