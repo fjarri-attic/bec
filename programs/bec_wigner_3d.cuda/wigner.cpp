@@ -69,14 +69,12 @@ void fillCalculationParameters(CalculationParameters &params)
 	params.nvy = 32;
 	params.nvz = 32;
 
-	params.tmaxGP = 0.1;
 	params.itmax = 3;
 	params.dtGP = 0.00001;
 
 	params.tmaxWig = 0.02;
 	params.dtWig = 0.0001;
 	params.ne = 1;
-	params.n0 = 1.0;
 }
 
 // auxiliary function - binary algorithm

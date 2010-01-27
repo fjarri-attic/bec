@@ -50,11 +50,10 @@ struct CalculationParameters
 	int nvy;
 	int nvz;
 
+	int itmax; // number of iterations for mid-step integral calculations
+
 	// steady state calculation parameters
-	value_type tmaxGP; // maximum time for GP
-	int itmax; // maximum iterations for GP
 	value_type dtGP; // time step for GP
-	int n0; // initial number per cell
 
 	// evolution parameters
 	value_type tmaxWig; // equilibration time

@@ -328,13 +328,6 @@ __global__ void calculateGPEnergy3(value_type *res, value_pair *a, value_pair *a
 	res[index] += a0.x * am.x + a0.y * am.y;
 }
 
-// Fill initial particle numbers for steady state calculation
-__global__ void fillInitialState(value_pair *data)
-{
-	int index = threadIdx.x + blockDim.x * (blockIdx.x + blockIdx.y * gridDim.x);
-	data[index] = MAKE_VALUE_PAIR(d_params.n0, 0);
-}
-
 // Supplementary function for inverse FFT (both cufft and batchfft)
 // They are normalized so that ifft(fft(x)) = size(x) * x, and we need
 // ifft(fft(x)) = x
