@@ -113,15 +113,30 @@ __global__ void fillWithTFGroundState(value_pair *data)
 		data[index] = MAKE_VALUE_PAIR(0, 0);
 }
 
-// Propagates state vector in k-space for steady state calculation
-__global__ void propagateKSpace(value_pair *data)
+// Propagates state vector in k-space for steady state calculation (i.e., in imaginary time)
+__global__ void propagateKSpaceImaginaryTime(value_pair *data)
 {
 	int index = threadIdx.x + blockDim.x * (blockIdx.x + blockIdx.y * gridDim.x);
-	value_type propG = exp(-d_params.dtGP / 2 * getWaveVectorLength(index));
+	value_type prop_coeff = exp(-d_params.dtGP / 2 * getWaveVectorLength(index));
 	value_pair temp = data[index];
-	temp.x *= propG;
-	temp.y *= propG;
-	data[index] = temp;
+	data[index] = cmul(temp, prop_coeff);
+}
+
+// Propagates state vector in k-space for evolution calculation (i.e., in real time)
+__global__ void propagateKSpaceRealTime(value_pair *a, value_pair *b, value_type dt)
+{
+	int index = threadIdx.x + blockDim.x * (blockIdx.x + blockIdx.y * gridDim.x);
+	int total_pow = d_params.nvx_pow + d_params.nvy_pow + d_params.nvz_pow;
+	int index_in_ensemble = index - ((index >> total_pow) << total_pow);
+
+	value_type prop_angle = getWaveVectorLength(index_in_ensemble) * dt / 2;
+	value_pair prop_coeff = MAKE_VALUE_PAIR(cos(prop_angle), sin(prop_angle));
+
+	value_pair a0 = a[index];
+	value_pair b0 = b[index];
+
+	a[index] = cmul(a0, prop_coeff);
+	b[index] = cmul(b0, prop_coeff);
 }
 
 // Propagates state vector in x-space for steady state calculation
@@ -265,24 +280,6 @@ __global__ void applyBraggPulse(value_pair *a, value_pair *b)
 
 }
 
-// Linear propagate in k-space for evolution calculation
-__global__ void linearPropagate(value_pair *a, value_pair *b, value_type dt)
-{
-	int index = threadIdx.x + blockDim.x * (blockIdx.x + blockIdx.y * gridDim.x);
-	int total_pow = d_params.nvx_pow + d_params.nvy_pow;
-	value_type propWangle = getWaveVectorLength(index - ((index >> total_pow) << total_pow)) * dt / 2;
-
-	value_type propWcos = cos(propWangle);
-	value_type propWsin = sin(propWangle);
-
-	value_pair a0 = a[index];
-	value_pair b0 = b[index];
-
-	a[index] = MAKE_VALUE_PAIR(a0.x * propWcos - a0.y * propWsin,
-		a0.y * propWcos + a0.x * propWsin);
-	b[index] = MAKE_VALUE_PAIR(b0.x * propWcos - b0.y * propWsin,
-		b0.y * propWcos + b0.x * propWsin);
-}
 
 // Midpoint propagation for evolution calculation
 __global__ void propagateMidpoint(value_pair *a, value_pair *b, value_type dt)

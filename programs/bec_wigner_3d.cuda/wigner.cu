@@ -69,8 +69,8 @@ void calculateSteadyState(value_pair *h_steady_state, CalculationParameters &par
 	while(1)
 	{
 		// Linear propagate in k-space
-		propagateKSpace<<<grid, block>>>(a);
-		cutilCheckMsg("propagateKSpace");
+		propagateKSpaceImaginaryTime<<<grid, block>>>(a);
+		cutilCheckMsg("propagateKSpaceImaginaryTime");
 
 		// FFT into x-space
 		cufftSafeCall(cufftExecC2C(plan, (cufftComplex*)a, (cufftComplex*)a, CUFFT_FORWARD));
@@ -84,8 +84,8 @@ void calculateSteadyState(value_pair *h_steady_state, CalculationParameters &par
 		cutilCheckMsg("normalizeInverseFFT");
 
 		// Linear propagate in k-space
-		propagateKSpace<<<grid, block>>>(a);
-		cutilCheckMsg("propagateKSpace");
+		propagateKSpaceImaginaryTime<<<grid, block>>>(a);
+		cutilCheckMsg("propagateKSpaceImaginaryTime");
 
 
 		// FFT into x-space
@@ -209,8 +209,8 @@ void calculateAverage(CalculationParameters &params, EvolutionState &state)
 // Propagate k-state for evolution calculation
 void propagate(CalculationParameters &params, EvolutionState &state, value_type dt)
 {
-	linearPropagate<<<state.grid, state.block>>>(state.a, state.b, dt);
-	cutilCheckMsg("linearPropagate");
+	propagateKSpaceRealTime<<<state.grid, state.block>>>(state.a, state.b, dt);
+	cutilCheckMsg("propagateKSpaceRealTime");
 
 	//FFT into x-space
 	cufftSafeCall(batchfftExecute(state.plan, (cufftComplex*)state.a, (cufftComplex*)state.a, CUFFT_FORWARD));
@@ -240,8 +240,8 @@ void propagate(CalculationParameters &params, EvolutionState &state, value_type 
 	cutilCheckMsg("normalizeInverseFFT");
 
 	//Linear propagate a,b-field
-	linearPropagate<<<state.grid, state.block>>>(state.a, state.b, dt);
-	cutilCheckMsg("linearPropagate");
+	propagateKSpaceRealTime<<<state.grid, state.block>>>(state.a, state.b, dt);
+	cutilCheckMsg("propagateKSpaceRealTime");
 }
 
 // initialize evolution state
