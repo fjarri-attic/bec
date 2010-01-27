@@ -46,10 +46,17 @@ void calculateSteadyState(value_pair *h_steady_state, CalculationParameters &par
 	cufftSafeCall(cufftPlan3d(&plan, params.nvz, params.nvy, params.nvx, CUFFT_C2C));
 
 	//initial GP solution in k-space
-	//fillInitialState<<<grid, block>>>(a);
-	//cutilCheckMsg("fillInitialState");
+	//initialState<<<grid, block>>>(a);
+	//cutilCheckMsg("initialState");
 	fillWithTFSolution<<<grid, block>>>(a);
 	cutilCheckMsg("fillWithTFSolution");
+
+	calculateModules<<<grid, block>>>(a_module, a);
+	cutilCheckMsg("calculateModules");
+	value_type current_N = reduce<value_type>(a_module, temp, params.cells, 1) *
+		params.dx * params.dy * params.dz;
+	printf("N = %f\n", current_N);
+	normalizeInverseFFT<<<grid, block>>>(a, sqrt(params.N / current_N));
 
 	cufftSafeCall(cufftExecC2C(plan, (cufftComplex*)a, (cufftComplex*)a, CUFFT_INVERSE));
 	normalizeInverseFFT<<<grid, block>>>(a, 1.0 / params.cells);
@@ -71,11 +78,25 @@ void calculateSteadyState(value_pair *h_steady_state, CalculationParameters &par
 		propagateToEndpoint<<<grid, block>>>(a);
 		cutilCheckMsg("propagateToEndpoint");
 
+		// FFT into k-space
+		cufftSafeCall(cufftExecC2C(plan, (cufftComplex*)a, (cufftComplex*)a, CUFFT_INVERSE));
+		normalizeInverseFFT<<<grid, block>>>(a, 1.0 / params.cells);
+		cutilCheckMsg("normalizeInverseFFT");
+
+		// Linear propagate in k-space
+		propagateKSpace<<<grid, block>>>(a);
+		cutilCheckMsg("propagateKSpace");
+
+
+		// FFT into x-space
+		cufftSafeCall(cufftExecC2C(plan, (cufftComplex*)a, (cufftComplex*)a, CUFFT_FORWARD));
+
 		// Normalize
 		calculateModules<<<grid, block>>>(a_module, a);
 		cutilCheckMsg("calculateModules");
-		value_type current_N = reduce<value_type>(a_module, temp, params.cells, 1) *
+		current_N = reduce<value_type>(a_module, temp, params.cells, 1) *
 			params.dx * params.dy * params.dz;
+		printf("N = %f\n", current_N);
 		normalizeInverseFFT<<<grid, block>>>(a, sqrt(params.N / current_N));
 
 		// Calculate energy
@@ -95,10 +116,6 @@ void calculateSteadyState(value_pair *h_steady_state, CalculationParameters &par
 		normalizeInverseFFT<<<grid, block>>>(a, 1.0 / params.cells);
 		cutilCheckMsg("normalizeInverseFFT");
 
-		// Linear propagate in k-space
-		propagateKSpace<<<grid, block>>>(a);
-		cutilCheckMsg("propagateKSpace");
-
 		if(abs((new_E - E) / new_E) < 0.000001)
 			break;
 
@@ -113,14 +130,20 @@ void calculateSteadyState(value_pair *h_steady_state, CalculationParameters &par
 	//fillWithTFSolution<<<grid, block>>>(a);
 	//cutilCheckMsg("fillWithTFSolution");
 
+	// save steady state
+	a.copyTo(h_steady_state);
+
+	// Calculate number of atoms in steady state (for debug purposes)
+	calculateModules<<<grid, block>>>(a_module, a);
+	printf("%f\n", reduce<value_type>(a_module, temp, params.cells, 1) * params.dx * params.dy * params.dz);
+
 	calculateModules<<<grid, block>>>(a_module, a);
 	cutilCheckMsg("calculateModules");
-	value_type current_N = reduce<value_type>(a_module, temp, params.cells, 1) *
+	current_N = reduce<value_type>(a_module, temp, params.cells, 1) *
 		params.dx * params.dy * params.dz;
 	normalizeInverseFFT<<<grid, block>>>(a, sqrt(params.N / current_N));
 
 	calculateGPEnergy<<<grid, block>>>(a_module, a);
-
 	cufftSafeCall(cufftExecC2C(plan, (cufftComplex*)a, (cufftComplex*)a_modified, CUFFT_INVERSE));
 	normalizeInverseFFT<<<grid, block>>>(a_modified, 1.0 / params.cells);
 	cutilCheckMsg("normalizeInverseFFT");
@@ -129,14 +152,18 @@ void calculateSteadyState(value_pair *h_steady_state, CalculationParameters &par
 	calculateGPEnergy3<<<grid, block>>>(a_module, a, a_modified);
 
 	value_type new_E = reduce<value_type>(a_module, temp, params.cells, 1);
-	printf("%f\n", new_E / (2 * M_PI * params.fz * params.N) * params.dx * params.dy * params.dz);
+	printf("E = %f\n", new_E / (2 * M_PI * params.fz * params.N) * params.dx * params.dy * params.dz);
 
-	// save steady state
-	a.copyTo(h_steady_state);
+	calculateChemPotential<<<grid, block>>>(a_module, a);
+	cufftSafeCall(cufftExecC2C(plan, (cufftComplex*)a, (cufftComplex*)a_modified, CUFFT_INVERSE));
+	normalizeInverseFFT<<<grid, block>>>(a_modified, 1.0 / params.cells);
+	cutilCheckMsg("normalizeInverseFFT");
+	calculateGPEnergy2<<<grid, block>>>(a_modified);
+	cufftSafeCall(cufftExecC2C(plan, (cufftComplex*)a_modified, (cufftComplex*)a_modified, CUFFT_FORWARD));
+	calculateGPEnergy3<<<grid, block>>>(a_module, a, a_modified);
 
-	// Calculate number of atoms in steady state (for debug purposes)
-	calculateModules<<<grid, block>>>(a_module, a);
-	printf("%f\n", reduce<value_type>(a_module, temp, params.cells, 1) * params.dx * params.dy * params.dz);
+	value_type new_mu = reduce<value_type>(a_module, temp, params.cells, 1);
+	printf("mu = %f\n", new_mu / (2 * M_PI * params.fz * params.N) * params.dx * params.dy * params.dz);
 
 	cufftDestroy(plan);
 }
@@ -240,8 +267,8 @@ void initEvolution(value_pair *h_steady_state, CalculationParameters &params, Ev
 	cutilCheckMsg("normalizeInverseFFT");
 
 	// Equilibration phase
-	for(value_type t = 0; t <= params.tmaxWig; t += params.dtWig)
-		propagate(params, state, params.dtWig);
+//	for(value_type t = 0; t <= params.tmaxWig; t += params.dtWig)
+//		propagate(params, state, params.dtWig);
 
 	applyBraggPulse<<<state.grid, state.block>>>(state.a, state.b);
 	cutilCheckMsg("applyBraggPulse");

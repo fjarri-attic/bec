@@ -43,9 +43,6 @@ void releaseWaveVectors();
 void fillCalculationParameters(CalculationParameters &params)
 {
 	// in h-bar units
-//	params.g11 = 6.18;
-//	params.g12 = 6.03;
-//	params.g22 = 5.88;
 	params.E = 0.00;
 
 	params.N = 150000;
@@ -67,11 +64,11 @@ void fillCalculationParameters(CalculationParameters &params)
 	params.Vb = 0;
 
 	params.nvx = 128;
-	params.nvy = 32;
-	params.nvz = 32;
+	params.nvy = 16;
+	params.nvz = 16;
 
 	params.itmax = 3;
-	params.dtGP = 0.00001;
+	params.dtGP = 0.0001;
 
 	params.tmaxWig = 0.02;
 	params.dtWig = 0.0001;
@@ -135,15 +132,16 @@ void fillDerivedParameters(CalculationParameters &params)
 	params.mu = 0.5 * 2.0 * M_PI * f_123 *
 		pow(15.0 * params.N * a_11 / sqrt(h_bar / mass / (2 * M_PI * f_123)), 2.0 / 5);
 
-	//printf("mu=%f\n", params.mu / (2 * M_PI * params.fz));
+	printf("mu=%f %f\n", params.mu, params.mu * params.dtGP);
 	//printf("g11=%f\n", params.g11 * mass / (h_bar * sqrt(h_bar / (mass * 2 * M_PI * params.fx))));
 	//printf("mu/g11 = %f = %f\n", params.mu / params.g11, params.mu / (2 * M_PI * params.fz) /
 	//       (params.g11 * mass / (h_bar * sqrt(h_bar / (mass * 2 * M_PI * params.fx)))));
+	printf("mu_natural = %f\n", params.mu / (2 * M_PI * params.fz));
 
-	params.xmax = 1.0 * (1.0 / (2.0 * M_PI * params.fx) * sqrt(2.0 * params.mu * h_bar / mass));
-	params.ymax = 1.0 * (1.0 / (2.0 * M_PI * params.fy) * sqrt(2.0 * params.mu * h_bar / mass));
-	params.zmax = 1.0 * (1.0 / (2.0 * M_PI * params.fz) * sqrt(2.0 * params.mu * h_bar / mass));
-	printf("%f %f %f\n", params.xmax, params.ymax, params.zmax);
+	params.xmax = 1.2 * (1.0 / (2.0 * M_PI * params.fx) * sqrt(2.0 * params.mu * h_bar / mass));
+	params.ymax = 1.2 * (1.0 / (2.0 * M_PI * params.fy) * sqrt(2.0 * params.mu * h_bar / mass));
+	params.zmax = 1.2 * (1.0 / (2.0 * M_PI * params.fz) * sqrt(2.0 * params.mu * h_bar / mass));
+	//printf("%f %f %f\n", params.xmax, params.ymax, params.zmax);
 
 	// space step
 	params.dx = 2 * params.xmax / (params.nvx - 1);
@@ -319,7 +317,7 @@ int main(int argc, char** argv)
 	gettimeofday(&init_stop, NULL);
 	printf("Steady state calculation: %.3f s\n", time_diff(init_start, init_stop));
 
-	FILE *f = fopen("plot_tf.txt", "w");
+	FILE *f = fopen("plot_gs_mu.txt", "w");
 	int shift = (params.nvz / 2) * params.nvx * params.nvy + (params.nvy / 2) * params.nvx;
 	for(int i = 0; i < params.nvx; i++)
 	{
