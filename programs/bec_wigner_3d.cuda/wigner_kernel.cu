@@ -6,32 +6,22 @@
 #include "defines.h"
 
 texture<value_type, 1> k_tex;
-cudaArray *k_arr;
 value_type *k_buf;
 
 // calculation parameters in constant memory, for easy access from kernels
 __constant__ CalculationParameters d_params;
 
-value_type h_kkk(int i, value_type dk, int N)
+// auxiliary function, returning value of wave vector for given lattice index, step and lattice size
+value_type getK(int i, value_type dk, int N)
 {
-//	value_type alpha = (N - 3.0) / (N - 2.0);
-//	value_type beta = (N - 1.0) / 2;
-
-//	if(2 * i >= N)
-//		return dk / (beta - alpha * (N - 1 - i));
-//	else
-//		return dk / (beta - alpha * i);
 	if(2 * i > N)
 		return dk * (i - N);
 	else
 		return dk * i;
 }
 
-value_type h_kkk2(int i, value_type dk, int N)
-{
-	return (2 * i > N) ? (dk * (i - N)) : (dk * i);
-}
-
+// initialize texture with wave vector lengths for corresponding spatial lattice nodes
+// (i.e., k's which will be used for corresponding lattice nodes after Fourier transform)
 void initWaveVectors(CalculationParameters &params)
 {
 	value_type *h_k = new value_type[params.cells];
@@ -43,9 +33,9 @@ void initWaveVectors(CalculationParameters &params)
 		int j = (index - k_shift) >> params.nvx_pow;
 		int i = (index - k_shift) - (j << params.nvx_pow);
 
-		value_type kx = h_kkk(i, params.dkx, params.nvx);
-		value_type ky = h_kkk(j, params.dky, params.nvy);
-		value_type kz = h_kkk(k, params.dkz, params.nvz);
+		value_type kx = getK(i, params.dkx, params.nvx);
+		value_type ky = getK(j, params.dky, params.nvy);
+		value_type kz = getK(k, params.dkz, params.nvz);
 
 		h_k[index] = (kx * kx + ky * ky + kz * kz) * params.kcoeff;
 	}
@@ -67,41 +57,14 @@ void initWaveVectors(CalculationParameters &params)
 void releaseWaveVectors()
 {
 	cudaUnbindTexture(k_tex);
-	cudaFreeArray(k_arr);
+	cudaFree(k_buf);
 }
 
-
-__device__ value_type kkk(int i, value_type dk, int N)
+// returns wave vector length from table
+__device__ __inline__ value_type getWaveVectorLength(int index)
 {
-	value_type alpha = (N - 3.0) / (N - 2.0);
-	value_type beta = (N - 1.0) / 2;
-
-	if(2 * i >= N)
-		return dk / (beta - alpha * (N - 1 - i));
-	else
-		return dk / (beta - alpha * i);
+	return tex1Dfetch(k_tex, index);
 }
-
-// Returns squared module of k vector
-__device__ value_type kradius(int index)
-{
-	int nvx_pow = d_params.nvx_pow;
-	int nvy_pow = d_params.nvy_pow;
-	int k = index >> (nvx_pow + nvy_pow);
-	index -= (k << (nvx_pow + nvy_pow));
-	int j = index >> nvx_pow;
-	int i = index - (j << nvx_pow);
-
-//	value_type kx = (2 * i > d_params.nvx) ? (d_params.dkx * (i - d_params.nvx)) : (d_params.dkx * i);
-//	value_type ky = (2 * j > d_params.nvy) ? (d_params.dky * (j - d_params.nvy)) : (d_params.dky * j);
-//	value_type kz = (2 * k > d_params.nvz) ? (d_params.dkz * (k - d_params.nvz)) : (d_params.dkz * k);
-	value_type kx = kkk(i, d_params.dkx, d_params.nvx);
-	value_type ky = kkk(j, d_params.dky, d_params.nvy);
-	value_type kz = kkk(k, d_params.dkz, d_params.nvz);
-
-	return kx * kx + ky * ky + kz * kz;
-}
-
 
 __device__ __inline__ value_pair cmul(value_pair a, value_pair b)
 {
@@ -180,7 +143,7 @@ __global__ void fillWithTFSolution(value_pair *data)
 __global__ void propagateKSpace(value_pair *data)
 {
 	int index = threadIdx.x + blockDim.x * (blockIdx.x + blockIdx.y * gridDim.x);
-	value_type propG = exp(-d_params.dtGP / 2 * tex1Dfetch(k_tex, index));
+	value_type propG = exp(-d_params.dtGP / 2 * getWaveVectorLength(index));
 	value_pair temp = data[index];
 	temp.x *= propG;
 	temp.y *= propG;
@@ -251,7 +214,7 @@ __global__ void calculateGPEnergy2(value_pair *a)
 	int index = threadIdx.x + blockDim.x * (blockIdx.x + blockIdx.y * gridDim.x);
 
 	value_pair a0 = a[index];
-	value_type coeff = tex1Dfetch(k_tex, index);
+	value_type coeff = getWaveVectorLength(index);
 	a0.x *= coeff;
 	a0.y *= coeff;
 	a[index] = a0;
@@ -333,7 +296,7 @@ __global__ void linearPropagate(value_pair *a, value_pair *b, value_type dt)
 {
 	int index = threadIdx.x + blockDim.x * (blockIdx.x + blockIdx.y * gridDim.x);
 	int total_pow = d_params.nvx_pow + d_params.nvy_pow;
-	value_type propWangle = tex1Dfetch(k_tex, index - ((index >> total_pow) << total_pow)) * dt / 2;
+	value_type propWangle = getWaveVectorLength(index - ((index >> total_pow) << total_pow)) * dt / 2;
 
 	value_type propWcos = cos(propWangle);
 	value_type propWsin = sin(propWangle);
