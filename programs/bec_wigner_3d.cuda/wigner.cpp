@@ -10,6 +10,7 @@
 #include "batchfft.h"
 #include "bitmap.h"
 #include "cudatexture.h"
+#include "spectre.h"
 
 #include <GL/glew.h>
 #include <cutil_gl_inline.h>
@@ -35,8 +36,8 @@ void initEvolution(value_pair *buf, CalculationParameters &params, EvolutionStat
 void calculateEvolution(CalculationParameters &params, EvolutionState &state, value_type dt);
 void drawState(CalculationParameters &params, EvolutionState &state, CudaTexture &a_xy_tex,
 	CudaTexture &b_xy_tex, CudaTexture &a_zy_tex, CudaTexture &b_zy_tex);
-void setupTextures(CalculationParameters &params);
-void deleteTextures();
+void initWaveVectors(CalculationParameters &params);
+void releaseWaveVectors();
 
 // Initialize calculation
 void fillCalculationParameters(CalculationParameters &params)
@@ -213,7 +214,8 @@ void cleanup(void) {
 
 	// Free all CUDA resources
 	state.release();
-	deleteTextures();
+	releaseWaveVectors();
+	releaseSpectre();
 }
 
 // Main on-paint handler
@@ -309,7 +311,8 @@ int main(int argc, char** argv)
 	// calculate steady state
 	value_pair *steady_state = new value_pair[params.cells];
 
-	setupTextures(params);
+	initSpectre();
+	initWaveVectors(params);
 
 	gettimeofday(&init_start, NULL);
 	calculateSteadyState(steady_state, params);

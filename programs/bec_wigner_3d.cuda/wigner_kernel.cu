@@ -5,107 +5,12 @@
 
 #include "defines.h"
 
-// texture with mapping level -> color
-// ([0.0, 1.0] -> [black-violet-blue-green-yellow-red])
-texture<float4, 1> rainbow_tex;
-cudaArray *rainbow_arr;
-
 texture<value_type, 1> k_tex;
 cudaArray *k_arr;
 value_type *k_buf;
 
 // calculation parameters in constant memory, for easy access from kernels
 __constant__ CalculationParameters d_params;
-
-// returns black for index < 0, red for index > 255 * 6 and
-// violet-blue-teal-green-yellow-red for intermediate indices
-dim3 violetToRedSpectre(int index)
-{
-	if(index < 0)
-		return dim3(0, 0, 0);
-	else if(index <= 255) // black -> violet
-		return dim3(index, 0, index);
-	else if(index <= 255 * 2) // violet -> blue
-		return dim3(255 * 2 - index, 0, 255);
-	else if(index <= 255 * 3) // blue -> teal
-		return dim3(0, index - 255 * 2, 255);
-	else if(index <= 255 * 4) // teal -> green
-		return dim3(0, 255, 255 * 4 - index);
-	else if(index <= 255 * 5) // green -> yellow
-		return dim3(index - 255 * 4, 255, 0);
-	else if(index <= 255 * 6) // yellow -> red
-		return dim3(255, 255 * 6 - index, 0);
-	else
-		return dim3(255, 0, 0);
-}
-
-// returns blue for index < 0, red for index > 255 * 3 and
-// blue-white-yellow-red for intermediate indices
-dim3 blueToRedSpectre(int index)
-{
-	if(index < 0)
-		return dim3(0, 0, 0);
-	else if(index <= 255) // blue -> white
-		return dim3(index, index, 255);
-	else if(index <= 255 * 2) // white -> yellow
-		return dim3(255, 255, 255 * 2 - index);
-	else if(index <= 255 * 3) // yellow -> red
-		return dim3(255, 255 * 3 - index, 0);
-	else
-		return dim3(255, 0, 0);
-}
-
-// fills array with spectre colors using given index->color function
-void fillSpectreArray(float4 *array, dim3 (*func)(int), int colors_num)
-{
-	for(int i = 0; i < colors_num; i++)
-	{
-		dim3 color = func(i);
-		array[i].x = (float)color.x / 256;
-		array[i].y = (float)color.y / 256;
-		array[i].z = (float)color.z / 256;
-		array[i].w = 1.0;
-	}
-}
-
-// Prepare 'rainbow' texture which is used to display 2D heightmaps
-void setupRainbow()
-{
-	// int colors_num = 255 * 6;
-	int colors_num = 255 * 3;
-
-	float4 *h_colors = new float4[colors_num];
-
-	// fillSpectreArray(h_colors, violetToRedSpectre, colors_num);
-	fillSpectreArray(h_colors, blueToRedSpectre, colors_num);
-
-	// texture parameters - linear filtering, value range [0.0, 1.0],
-	// f(x) = f(0) for x < 0 and f(x) = f(1) for x > 1
-	rainbow_tex.filterMode = cudaFilterModeLinear;
-	rainbow_tex.normalized = true;
-	rainbow_tex.addressMode[0] = cudaAddressModeClamp;
-
-	cudaChannelFormatDesc desc = cudaCreateChannelDesc<float4>();
-
-	cutilSafeCall(cudaMallocArray(&rainbow_arr, &desc, colors_num, 1));
-	cutilSafeCall(cudaMemcpyToArray(rainbow_arr, 0, 0, h_colors, colors_num * sizeof(float4), cudaMemcpyHostToDevice));
-	cutilSafeCall(cudaBindTextureToArray(rainbow_tex, rainbow_arr, desc));
-
-	delete[] h_colors;
-}
-
-// Clean up coloring texture
-void deleteRainbow()
-{
-	cudaUnbindTexture(rainbow_tex);
-	cudaFreeArray(rainbow_arr);
-}
-
-// returns color for level in range [0.0, 1.0]
-__device__ __inline__ float4 getRainbowColor(float normalized)
-{
-	return tex1D(rainbow_tex, normalized);
-}
 
 value_type h_kkk(int i, value_type dk, int N)
 {
@@ -127,7 +32,7 @@ value_type h_kkk2(int i, value_type dk, int N)
 	return (2 * i > N) ? (dk * (i - N)) : (dk * i);
 }
 
-void setupK(CalculationParameters &params)
+void initWaveVectors(CalculationParameters &params)
 {
 	value_type *h_k = new value_type[params.cells];
 
@@ -159,23 +64,12 @@ void setupK(CalculationParameters &params)
 	delete[] h_k;
 }
 
-void deleteK()
+void releaseWaveVectors()
 {
 	cudaUnbindTexture(k_tex);
 	cudaFreeArray(k_arr);
 }
 
-void setupTextures(CalculationParameters &params)
-{
-	setupRainbow();
-	setupK(params);
-}
-
-void deleteTextures()
-{
-	deleteRainbow();
-	deleteK();
-}
 
 __device__ value_type kkk(int i, value_type dk, int N)
 {
@@ -239,6 +133,36 @@ __device__ __inline__ value_type potential(int index)
 	value_type z = -d_params.zmax + d_params.dz * k;
 
 	return d_params.px * x * x + d_params.py * y * y + d_params.pz * z * z;
+}
+
+__global__ void initialState(value_pair *data)
+{
+	int index = threadIdx.x + blockDim.x * (blockIdx.x + blockIdx.y * gridDim.x);
+
+	int nvx_pow = d_params.nvx_pow;
+	int nvy_pow = d_params.nvy_pow;
+	int k = index >> (nvx_pow + nvy_pow);
+	index -= (k << (nvx_pow + nvy_pow));
+	int j = index >> nvx_pow;
+	int i = index - (j << nvx_pow);
+
+	value_type h_bar = 1.054571628e-34;
+	value_type mass = 1.443160648e-25;
+
+	value_type lenx = sqrt(h_bar / (mass * 2.0 * M_PI * d_params.fx));
+	value_type leny = sqrt(h_bar / (mass * 2.0 * M_PI * d_params.fy));
+	value_type lenz = sqrt(h_bar / (mass * 2.0 * M_PI * d_params.fz));
+
+	value_type x = -d_params.xmax + d_params.dx * i;
+	value_type y = -d_params.ymax + d_params.dy * j;
+	value_type z = -d_params.zmax + d_params.dz * k;
+
+	x /= lenx;
+	y /= leny;
+	z /= lenz;
+
+	data[index] = MAKE_VALUE_PAIR(exp(-(x * x + y * y + z * z) / 2) / (pow(M_PI, 0.25)), 0);
+	//data[index] = MAKE_VALUE_PAIR(1, 0);
 }
 
 __global__ void fillWithTFSolution(value_pair *data)
@@ -306,6 +230,20 @@ __global__ void calculateGPEnergy(value_type *res, value_pair *a)
 
 	res[index] = module * (potential(index) / 2 +
 			d_params.g11 * module / 2);
+}
+
+__global__ void calculateChemPotential(value_type *res, value_pair *a)
+{
+	int index = threadIdx.x + blockDim.x * (blockIdx.x + blockIdx.y * gridDim.x);
+
+	value_pair a0 = a[index];
+	value_type module = (a0.x * a0.x + a0.y * a0.y);
+
+	//res[index] = module * (d_params.mu - potential(index) / 2 +
+	//		d_params.g11 * module / 2);
+
+	res[index] = module * (potential(index) / 2 +
+			d_params.g11 * module);
 }
 
 __global__ void calculateGPEnergy2(value_pair *a)

@@ -6,6 +6,7 @@
 #include "defines.h"
 #include "batchfft.h"
 #include "reduce.cuh"
+#include "spectre.h"
 #include "transpose.cuh"
 #include "wigner_kernel.cu"
 #include "cudatexture.h"
@@ -361,13 +362,6 @@ void calculateEvolution(CalculationParameters &params, EvolutionState &state, va
 	cutilSafeCall(transpose<value_type>(state.dens_b_zy, state.temp, params.nvy, params.nvz, 1));
 }
 
-// Kernel for transforming levels to colors
-__global__ void drawKernel(float4 *canvas, value_type *data, float max)
-{
-	int index = threadIdx.x + blockDim.x * (blockIdx.x + blockIdx.y * gridDim.x);
-	canvas[index] = getRainbowColor(data[index] / max);
-}
-
 // Draw graphs from current state to provided buffers
 void drawState(CalculationParameters &params, EvolutionState &state, CudaTexture &a_xy_tex,
 	CudaTexture &b_xy_tex, CudaTexture &a_zy_tex, CudaTexture &b_zy_tex)
@@ -376,19 +370,12 @@ void drawState(CalculationParameters &params, EvolutionState &state, CudaTexture
 	value_type xy_scale = scale * params.nvz;
 	value_type zy_scale = scale * params.nvx;
 
-	float4 *a_xy_buf = a_xy_tex.map();
+	drawData(a_xy_tex, state.dens_a_xy, xy_scale);
+	drawData(b_xy_tex, state.dens_b_xy, xy_scale);
+	drawData(a_zy_tex, state.dens_a_zy, zy_scale);
+	drawData(b_zy_tex, state.dens_b_zy, zy_scale);
+
 	float4 *b_xy_buf = b_xy_tex.map();
-	float4 *a_zy_buf = a_zy_tex.map();
-	float4 *b_zy_buf = b_zy_tex.map();
-
-	drawKernel<<<state.xy_grid, state.xy_block>>>(a_xy_buf, state.dens_a_xy, xy_scale);
-	drawKernel<<<state.xy_grid, state.xy_block>>>(b_xy_buf, state.dens_b_xy, xy_scale);
-	drawKernel<<<state.zy_grid, state.zy_block>>>(a_zy_buf, state.dens_a_zy, zy_scale);
-	drawKernel<<<state.zy_grid, state.zy_block>>>(b_zy_buf, state.dens_b_zy, zy_scale);
 	cudaMemcpy(state.to_bmp, b_xy_buf, params.nvx * params.nvy * sizeof(float4), cudaMemcpyDeviceToHost);
-
-	a_xy_tex.unmap();
 	b_xy_tex.unmap();
-	a_zy_tex.unmap();
-	b_zy_tex.unmap();
 }

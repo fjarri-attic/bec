@@ -3,7 +3,7 @@ EXECUTABLE := wigner.bin
 
 DIRS := cudahelpers
 CCFILES := wigner.cpp misc.cpp
-CUFILES := wigner.cu batchfft.cu
+CUFILES := wigner.cu batchfft.cu spectre.cu
 
 USECUFFT := 1
 USEGLUT := 1
