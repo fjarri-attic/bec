@@ -161,31 +161,48 @@ Since the value of $\hat{N}(\tau + d\tau)$ is unknown at the time of the calcula
 
 Now when we have got the steady state for one-component system, it is the time to start the simulation of two-component system. The initial state for the component $\vert1\rangle$ is the one-component steady state, and for $\vert2\rangle$ the initial state equals to zero.
 
-In the experiment, system evolution starts with the $\frac{\pi}{2}$ pulse, which transforms relative density to relative phase:
+The evolution of the system is described by coupled Gross-Pitaevskii equations. They can contain different terms depending on which features of the system we need to take into account. Basic form can be found in many sources, i.e. \cite{pitaevskii_bec}; with the addition of loss terms it looks like (in real units):
+\[ i \hbar \frac{\partial \Psi_1}{\partial t} = \left(
+	-\frac{\hbar^2\nabla^2}{2m} + V_1(\mathbf{r}) +
+	g_{11} \vert \Psi_1 \vert^2 + g_{12} \vert \Psi_2 \vert^2 - i \hbar \Gamma_1
+\right) \Psi_1 + \frac{\hbar \Omega}{2}e^{i \omega t} \Psi_2, \]
+\[ i \hbar \frac{\partial \Psi_2}{\partial t} = \left(
+	-\frac{\hbar^2\nabla^2}{2m} + V_2(\mathbf{r}) +
+	g_{12} \vert \Psi_1 \vert^2 + g_{22} \vert \Psi_2 \vert^2 - i \hbar \Gamma_2
+\right) \Psi_2 + \frac{\hbar \Omega}{2}e^{i \omega t} \Psi_1 - \hbar \Delta \Psi_2. \]
+
+Let us now explain each term in this system. $V_1$ and $V_2$ stand for the external potential (which, in general, is different for each component). For our purposes we can consider $V_1 = V_2 = V_{ext}$ (symmetric trapping), where $V_{ext}$ is a trap potential. Interaction coefficients $g_{11}$, $g_{12}$ and $g_{22}$ depend on corresponding scattering lengths:
+\[ g_{ij} = \frac{4 \pi \hbar^2 a_{ij}}{m}. \]
+For rubidium, according to the latest experimental data (\cite{PhysRevLett.99.190402}), $a_{11} = 100.40\ a_0$, $a_{22} = 95.00\ a_0$ and $a_{12} = 97.66\ a_0$ where $a_0$ is the Bohr radius. $\Gamma_1 = (\gamma_{111} n_1^2 + \gamma_{12} n_2) / 2$ and $\Gamma_2 = (\gamma_{22} n_2 + \gamma_{12} n_1) / 2$, where $n_1$ and $n_2$ stand for the densities of components, are responsible for two- and three-body loss processes. Loss rates $\gamma$ can be found in \cite{PhysRevLett.99.190402} and \cite{PhysRevLett.79.337}:
+\[ \gamma_{111} = 5.4(11) \times 10^{-30}\ \textrm{cm}^3/\textrm{s}, \]
+\[ \gamma_{12} = 0.780(19) \times 10^{-13}\ \textrm{cm}^3/\textrm{s}, \]
+\[ \gamma_{22} = 1.194(19) \times 10^{-13}\ \textrm{cm}^3/\textrm{s}. \]
+$\Delta$ is a detuning frequency and depends on experimental conditions.
+
+$\Omega$ is a constant for state transitions due to external oscillating magnetic field, for example, during $\frac{\pi}{2}$-pulses. Since these pulses act for a short amount of time (as compared to the time scale of the system), we can apply corresponding matrix instantaneously instead of explicitly use $\Omega$ terms. For example, matrix for $\frac{\pi}{2}$-pulse will look like:
 \[
 \begin{pmatrix}
-	\psi^\prime_1 \\
-	\psi^\prime_2
-\end{pmatrix} = \\
+	\Psi^\prime_1 \\	\Psi^\prime_2
+\end{pmatrix} =
 \begin{pmatrix}
-	1 & -i \\
-	-i & 1
-\end{pmatrix} \\
+	1 & -i \\ -i & 1
+\end{pmatrix}
 \begin{pmatrix}
-	\psi_1 \\
-	\psi_2
+	\Psi_1 \\ \Psi_2
 \end{pmatrix}.
 \]
-Of course, the pulse is not instantaneous, but as a first approximation it can be treated like one. The evolution of the system is described by coupled Gross-Pitaevskii equations. They can contain different terms depending on which features of the system we need to take into account. Basic form can be found in many sources, i.e. \cite{pitaevskii_bec}; with the addition of loss terms it looks like:
-\[ i \hbar \frac{\partial \psi_1}{\partial t} = \left(
-	-\frac{\hbar^2\nabla^2}{2m} + V_1(\mathbf{r}) + 
-	g_{11} \vert \psi_1 \vert^2 + g_{12} \vert \psi_2 \vert^2 - i \hbar \Gamma_1
-\right) \psi_1 + \frac{\hbar \Omega}{2}e^{i \omega t} \psi_2, \]
-\[ i \hbar \frac{\partial \psi_2}{\partial t} = \left(
-	-\frac{\hbar^2\nabla^2}{2m} + V_2(\mathbf{r}) + 
-	g_{12} \vert \psi_1 \vert^2 + g_{22} \vert \psi_2 \vert^2 - i \hbar \Gamma_2
-\right) \psi_2 + \frac{\hbar \Omega}{2}e^{i \omega t} \psi_1 - \hbar \Delta \psi_2. \]
-Here $V_1$ and $V_2$ stand for the external potential (which, in general, is different for each component), $g_{11}$, $g_{12}$ and $g_{22}$ are interaction coefficients, $\Gamma_1$ and $\Gamma_2$ are responsible for two- and three-body loss processes correspondingly, $\Omega$ is a constant for state transitions due to external oscillating magnetic field, and $\Delta$ is a detuning frequency.
+More generally, rotation around the equatorial vector in Bloch sphere is described by the following matrix:
+\[
+\begin{pmatrix}
+	\Psi^\prime_1 \\	\Psi^\prime_2
+\end{pmatrix} =
+\begin{pmatrix}
+	1 & -i e^{-i \phi} \\ -i e^{i \phi} & 1
+\end{pmatrix}
+\begin{pmatrix}
+	\Psi_1 \\ \Psi_2
+\end{pmatrix}.
+\]
 
 \bibliographystyle{plain}
 \bibliography{refs}
