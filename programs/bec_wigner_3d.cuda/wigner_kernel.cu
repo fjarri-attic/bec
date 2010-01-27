@@ -217,47 +217,33 @@ __global__ void propagateXSpaceTwoComponent(value_pair *aa, value_pair *bb, valu
 	bb[index] = cmul(b, db);
 }
 
-__global__ void calculateGPEnergy(value_type *res, value_pair *a)
+// auxiliary function for calculating nonlinear component of state energy integral
+__global__ void calculateNonlinearEnergyPart(value_type *res, value_pair *a)
 {
 	int index = threadIdx.x + blockDim.x * (blockIdx.x + blockIdx.y * gridDim.x);
 
-	value_pair a0 = a[index];
-	value_type module = (a0.x * a0.x + a0.y * a0.y);
-
-	//res[index] = module * (d_params.mu - potential(index) / 2 +
-	//		d_params.g11 * module / 2);
-
-	res[index] = module * (potential(index) + d_params.g11 * module / 2);
+	value_type n_a = module(a[index]);
+	res[index] = n_a * (potential(index) + d_params.g11 * n_a / 2);
 }
 
-__global__ void calculateChemPotential(value_type *res, value_pair *a)
+// auxiliary function for calculating nonlinear component of chemical potential integral
+__global__ void calculateNonlinearMuPart(value_type *res, value_pair *a)
 {
 	int index = threadIdx.x + blockDim.x * (blockIdx.x + blockIdx.y * gridDim.x);
 
-	value_pair a0 = a[index];
-	value_type module = (a0.x * a0.x + a0.y * a0.y);
-
-	res[index] = module * (potential(index) + d_params.g11 * module);
+	value_type n_a = module(a[index]);
+	res[index] = n_a * (potential(index) + d_params.g11 * n_a);
 }
 
-__global__ void calculateGPEnergy2(value_pair *a)
+// auxiliary function for calculating energy/chem.potential integral
+__global__ void combineNonlinearAndDifferential(value_type *res, value_pair *state, value_pair *fourier_state)
 {
 	int index = threadIdx.x + blockDim.x * (blockIdx.x + blockIdx.y * gridDim.x);
+	value_pair differential = cmul(fourier_state[index], getWaveVectorLength(index));
+	value_pair temp = cmul(state[index], differential);
 
-	value_pair a0 = a[index];
-	value_type coeff = getWaveVectorLength(index);
-	a0.x *= coeff;
-	a0.y *= coeff;
-	a[index] = a0;
-}
-
-__global__ void calculateGPEnergy3(value_type *res, value_pair *a, value_pair *a_modified)
-{
-	int index = threadIdx.x + blockDim.x * (blockIdx.x + blockIdx.y * gridDim.x);
-
-	value_pair a0 = a[index];
-	value_pair am = a_modified[index];
-	res[index] += a0.x * am.x + a0.y * am.y;
+	// temp.y will be equal to 0, because \psi * D \psi is a real number
+	res[index] += temp.x;
 }
 
 // Supplementary function for inverse FFT (both cufft and batchfft)

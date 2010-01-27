@@ -33,9 +33,56 @@ void fillWithNormalDistribution(CudaBuffer<value_pair> &data, value_type dev)
 	delete[] h_data;
 }
 
+// returns value of energy/chem.potential integral over given state
+// *_temp values are spoiled after call
+value_type calculateStateIntegral(CudaBuffer<value_pair> &state,
+	CudaBuffer<value_pair> &complex_temp,
+	CudaBuffer<value_type> &real_temp,
+	CudaBuffer<value_type> &real_temp2,
+	batchfftHandle plan, bool energy)
+{
+	dim3 grid, block;
+	createKernelParams(block, grid, state.len(), MAX_THREADS_NUM);
+
+	cufftSafeCall(batchfftExecute(plan, (cufftComplex*)state, (cufftComplex*)complex_temp, CUFFT_INVERSE));
+	normalizeInverseFFT<<<grid, block>>>(complex_temp, 1.0 / state.len());
+	cutilCheckMsg("normalizeInverseFFT");
+
+	if(energy)
+	{
+		calculateNonlinearEnergyPart<<<grid, block>>>(real_temp, state);
+		cutilCheckMsg("calculateNonlinearEnergyPart");
+	}
+	else
+	{
+		calculateNonlinearMuPart<<<grid, block>>>(real_temp, state);
+		cutilCheckMsg("calculateNonlinearMuPart");
+	}
+
+	combineNonlinearAndDifferential<<<grid, block>>>(real_temp, state, complex_temp);
+	cutilCheckMsg("combineNonlinearAndDifferential");
+
+	return reduce<value_type>(real_temp, real_temp2, state.len(), 1);
+}
+
+// returns number if particles for given state
+// *_temp values are spoiled after call
+value_type calculateParticles(CudaBuffer<value_pair> &state, CudaBuffer<value_type> &real_temp,
+	CudaBuffer<value_type> &real_temp2, CalculationParameters &params)
+{
+	dim3 grid, block;
+	createKernelParams(block, grid, state.len(), MAX_THREADS_NUM);
+
+	calculateModules<<<grid, block>>>(real_temp, state);
+	cutilCheckMsg("calculateModules");
+
+	return reduce<value_type>(real_temp, real_temp2, state.len(), 1) *
+		params.dx * params.dy * params.dz;
+}
+
 void calculateSteadyState(value_pair *h_steady_state, CalculationParameters &params)
 {
-	cufftHandle plan;
+	batchfftHandle plan;
 	dim3 block, grid;
 	value_type E = 0;
 
@@ -43,22 +90,19 @@ void calculateSteadyState(value_pair *h_steady_state, CalculationParameters &par
 	CudaBuffer<value_type> a_module(params.cells), temp(params.cells);
 
 	createKernelParams(block, grid, params.cells, MAX_THREADS_NUM);
-	cufftSafeCall(cufftPlan3d(&plan, params.nvz, params.nvy, params.nvx, CUFFT_C2C));
+	cufftSafeCall(batchfftPlan3d(&plan, params.nvz, params.nvy, params.nvx, CUFFT_C2C, 1));
 
 	//initial GP solution in k-space
-	//initialState<<<grid, block>>>(a);
-	//cutilCheckMsg("initialState");
 	fillWithTFGroundState<<<grid, block>>>(a);
 	cutilCheckMsg("fillWithTFGroundState");
 
-	calculateModules<<<grid, block>>>(a_module, a);
-	cutilCheckMsg("calculateModules");
-	value_type current_N = reduce<value_type>(a_module, temp, params.cells, 1) *
-		params.dx * params.dy * params.dz;
-	printf("N = %f\n", current_N);
-	normalizeInverseFFT<<<grid, block>>>(a, sqrt(params.N / current_N));
+	// normalize initial conditions
+	value_type N = calculateParticles(a, a_module, temp, params);
+	printf("N = %f\n", N);
+	normalizeInverseFFT<<<grid, block>>>(a, sqrt(params.N / N));
 
-	cufftSafeCall(cufftExecC2C(plan, (cufftComplex*)a, (cufftComplex*)a, CUFFT_INVERSE));
+	// FFT into k-space
+	cufftSafeCall(batchfftExecute(plan, (cufftComplex*)a, (cufftComplex*)a, CUFFT_INVERSE));
 	normalizeInverseFFT<<<grid, block>>>(a, 1.0 / params.cells);
 	cutilCheckMsg("normalizeInverseFFT");
 
@@ -73,13 +117,13 @@ void calculateSteadyState(value_pair *h_steady_state, CalculationParameters &par
 		cutilCheckMsg("propagateKSpaceImaginaryTime");
 
 		// FFT into x-space
-		cufftSafeCall(cufftExecC2C(plan, (cufftComplex*)a, (cufftComplex*)a, CUFFT_FORWARD));
+		cufftSafeCall(batchfftExecute(plan, (cufftComplex*)a, (cufftComplex*)a, CUFFT_FORWARD));
 
 		propagateXSpaceOneComponent<<<grid, block>>>(a);
 		cutilCheckMsg("propagateToEndpoint");
 
 		// FFT into k-space
-		cufftSafeCall(cufftExecC2C(plan, (cufftComplex*)a, (cufftComplex*)a, CUFFT_INVERSE));
+		cufftSafeCall(batchfftExecute(plan, (cufftComplex*)a, (cufftComplex*)a, CUFFT_INVERSE));
 		normalizeInverseFFT<<<grid, block>>>(a, 1.0 / params.cells);
 		cutilCheckMsg("normalizeInverseFFT");
 
@@ -87,32 +131,21 @@ void calculateSteadyState(value_pair *h_steady_state, CalculationParameters &par
 		propagateKSpaceImaginaryTime<<<grid, block>>>(a);
 		cutilCheckMsg("propagateKSpaceImaginaryTime");
 
+		// Renormalization
 
 		// FFT into x-space
-		cufftSafeCall(cufftExecC2C(plan, (cufftComplex*)a, (cufftComplex*)a, CUFFT_FORWARD));
+		cufftSafeCall(batchfftExecute(plan, (cufftComplex*)a, (cufftComplex*)a, CUFFT_FORWARD));
 
 		// Normalize
-		calculateModules<<<grid, block>>>(a_module, a);
-		cutilCheckMsg("calculateModules");
-		current_N = reduce<value_type>(a_module, temp, params.cells, 1) *
-			params.dx * params.dy * params.dz;
-		printf("N = %f\n", current_N);
-		normalizeInverseFFT<<<grid, block>>>(a, sqrt(params.N / current_N));
+		N = calculateParticles(a, a_module, temp, params);
+		//printf("N = %f\n", N);
+		normalizeInverseFFT<<<grid, block>>>(a, sqrt(params.N / N));
 
 		// Calculate energy
-		calculateGPEnergy<<<grid, block>>>(a_module, a);
-
-		cufftSafeCall(cufftExecC2C(plan, (cufftComplex*)a, (cufftComplex*)a_modified, CUFFT_INVERSE));
-		normalizeInverseFFT<<<grid, block>>>(a_modified, 1.0 / params.cells);
-		cutilCheckMsg("normalizeInverseFFT");
-		calculateGPEnergy2<<<grid, block>>>(a_modified);
-		cufftSafeCall(cufftExecC2C(plan, (cufftComplex*)a_modified, (cufftComplex*)a_modified, CUFFT_FORWARD));
-		calculateGPEnergy3<<<grid, block>>>(a_module, a, a_modified);
-
-		value_type new_E = reduce<value_type>(a_module, temp, params.cells, 1);
+		value_type new_E = calculateStateIntegral(a, a_modified, a_module, temp, plan, true);
 
 		// FFT into k-space
-		cufftSafeCall(cufftExecC2C(plan, (cufftComplex*)a, (cufftComplex*)a, CUFFT_INVERSE));
+		cufftSafeCall(batchfftExecute(plan, (cufftComplex*)a, (cufftComplex*)a, CUFFT_INVERSE));
 		normalizeInverseFFT<<<grid, block>>>(a, 1.0 / params.cells);
 		cutilCheckMsg("normalizeInverseFFT");
 
@@ -124,48 +157,18 @@ void calculateSteadyState(value_pair *h_steady_state, CalculationParameters &par
 	} //end time loop
 
 	//FFT into x-space
-	cufftSafeCall(cufftExecC2C(plan, (cufftComplex*)a, (cufftComplex*)a, CUFFT_FORWARD));
-
-	// DEBUG
-	//fillWithTFGroundState<<<grid, block>>>(a);
-	//cutilCheckMsg("fillWithTFGroundState");
+	cufftSafeCall(batchfftExecute(plan, (cufftComplex*)a, (cufftComplex*)a, CUFFT_FORWARD));
 
 	// save steady state
 	a.copyTo(h_steady_state);
 
-	// Calculate number of atoms in steady state (for debug purposes)
-	calculateModules<<<grid, block>>>(a_module, a);
-	printf("%f\n", reduce<value_type>(a_module, temp, params.cells, 1) * params.dx * params.dy * params.dz);
+	E = calculateStateIntegral(a, a_modified, a_module, temp, plan, true);
+	printf("E = %f\n", E / (2 * M_PI * params.fz * params.N) * params.dx * params.dy * params.dz);
 
-	calculateModules<<<grid, block>>>(a_module, a);
-	cutilCheckMsg("calculateModules");
-	current_N = reduce<value_type>(a_module, temp, params.cells, 1) *
-		params.dx * params.dy * params.dz;
-	normalizeInverseFFT<<<grid, block>>>(a, sqrt(params.N / current_N));
+	value_type mu = calculateStateIntegral(a, a_modified, a_module, temp, plan, false);
+	printf("mu = %f\n", mu / (2 * M_PI * params.fz * params.N) * params.dx * params.dy * params.dz);
 
-	calculateGPEnergy<<<grid, block>>>(a_module, a);
-	cufftSafeCall(cufftExecC2C(plan, (cufftComplex*)a, (cufftComplex*)a_modified, CUFFT_INVERSE));
-	normalizeInverseFFT<<<grid, block>>>(a_modified, 1.0 / params.cells);
-	cutilCheckMsg("normalizeInverseFFT");
-	calculateGPEnergy2<<<grid, block>>>(a_modified);
-	cufftSafeCall(cufftExecC2C(plan, (cufftComplex*)a_modified, (cufftComplex*)a_modified, CUFFT_FORWARD));
-	calculateGPEnergy3<<<grid, block>>>(a_module, a, a_modified);
-
-	value_type new_E = reduce<value_type>(a_module, temp, params.cells, 1);
-	printf("E = %f\n", new_E / (2 * M_PI * params.fz * params.N) * params.dx * params.dy * params.dz);
-
-	calculateChemPotential<<<grid, block>>>(a_module, a);
-	cufftSafeCall(cufftExecC2C(plan, (cufftComplex*)a, (cufftComplex*)a_modified, CUFFT_INVERSE));
-	normalizeInverseFFT<<<grid, block>>>(a_modified, 1.0 / params.cells);
-	cutilCheckMsg("normalizeInverseFFT");
-	calculateGPEnergy2<<<grid, block>>>(a_modified);
-	cufftSafeCall(cufftExecC2C(plan, (cufftComplex*)a_modified, (cufftComplex*)a_modified, CUFFT_FORWARD));
-	calculateGPEnergy3<<<grid, block>>>(a_module, a, a_modified);
-
-	value_type new_mu = reduce<value_type>(a_module, temp, params.cells, 1);
-	printf("mu = %f\n", new_mu / (2 * M_PI * params.fz * params.N) * params.dx * params.dy * params.dz);
-
-	cufftDestroy(plan);
+	batchfftDestroy(plan);
 }
 
 
