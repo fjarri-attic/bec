@@ -246,24 +246,18 @@ __global__ void combineNonlinearAndDifferential(value_type *res, value_pair *sta
 	res[index] += temp.x;
 }
 
-// Supplementary function for inverse FFT (both cufft and batchfft)
-// They are normalized so that ifft(fft(x)) = size(x) * x, and we need
-// ifft(fft(x)) = x
-__global__ void normalizeInverseFFT(value_pair *data, value_type coeff)
+// componentwise multiplication
+__global__ void multiply(value_pair *data, value_type coeff)
 {
 	int index = threadIdx.x + blockDim.x * (blockIdx.x + blockIdx.y * gridDim.x);
-	value_pair temp = data[index];
-	temp.x *= coeff;
-	temp.y *= coeff;
-	data[index] = temp;
+	data[index] = cmul(data[index], coeff);
 }
 
 // Calculate squared modules for two-dimensional vectors
 __global__ void calculateModules(value_type *output, value_pair *input)
 {
 	int index = threadIdx.x + blockDim.x * (blockIdx.x + blockIdx.y * gridDim.x);
-	value_pair temp = input[index];
-	output[index] = temp.x * temp.x + temp.y * temp.y;
+	output[index] = module(input[index]);
 }
 
 // Initialize ensembles with steady state + noise for evolution calculation
@@ -279,12 +273,8 @@ __global__ void initializeEnsembles(value_pair *a, value_pair *b, value_pair *st
 	value_pair steady_val = steady_state[index % single_size];
 
 	//Initialises a-ensemble amplitudes with vacuum noise
-	temp.x =
-		steady_val.x +
-		d_params.Va * noise_a.x;
-	temp.y =
-		steady_val.y +
-		d_params.Va * noise_a.y;
+	temp.x = steady_val.x +	d_params.Va * noise_a.x;
+	temp.y = steady_val.y +	d_params.Va * noise_a.y;
 	a[index] = temp;
 
 	//Initialises b-ensemble amplitudes with vacuum noise
@@ -301,11 +291,8 @@ __global__ void applyBraggPulse(value_pair *a, value_pair *b)
 	value_pair a0 = a[index];
 	value_pair b0 = b[index];
 
-//	a[index] = MAKE_VALUE_PAIR((a0.x + b0.y) / sqrt(2.0), (a0.y - b0.x) / sqrt(2.0));
-//	b[index] = MAKE_VALUE_PAIR((b0.x + a0.y) / sqrt(2.0), (b0.y - a0.x) / sqrt(2.0));
 	a[index] = cmul(cadd(a0, cmul(b0, MAKE_VALUE_PAIR(0, -1))), 1.0 / sqrt(2.0));
 	b[index] = cmul(cadd(cmul(a0, MAKE_VALUE_PAIR(0, -1)), b0), 1.0 / sqrt(2.0));
-
 }
 
 // normalize particle density

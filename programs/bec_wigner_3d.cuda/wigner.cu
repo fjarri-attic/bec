@@ -45,8 +45,8 @@ value_type calculateStateIntegral(CudaBuffer<value_pair> &state,
 	createKernelParams(block, grid, state.len(), MAX_THREADS_NUM);
 
 	cufftSafeCall(batchfftExecute(plan, (cufftComplex*)state, (cufftComplex*)complex_temp, CUFFT_INVERSE));
-	normalizeInverseFFT<<<grid, block>>>(complex_temp, 1.0 / state.len());
-	cutilCheckMsg("normalizeInverseFFT");
+	multiply<<<grid, block>>>(complex_temp, 1.0 / state.len());
+	cutilCheckMsg("multiply");
 
 	if(energy)
 	{
@@ -99,12 +99,12 @@ void calculateSteadyState(value_pair *h_steady_state, CalculationParameters &par
 	// normalize initial conditions
 	value_type N = calculateParticles(a, a_module, temp, params);
 	printf("N = %f\n", N);
-	normalizeInverseFFT<<<grid, block>>>(a, sqrt(params.N / N));
+	multiply<<<grid, block>>>(a, sqrt(params.N / N));
 
 	// FFT into k-space
 	cufftSafeCall(batchfftExecute(plan, (cufftComplex*)a, (cufftComplex*)a, CUFFT_INVERSE));
-	normalizeInverseFFT<<<grid, block>>>(a, 1.0 / params.cells);
-	cutilCheckMsg("normalizeInverseFFT");
+	multiply<<<grid, block>>>(a, 1.0 / params.cells);
+	cutilCheckMsg("multiply");
 
 	//////////////////////////////////////////////////////////////////////////
 	// 	Starts GP loop in time: calculate mean-field steady-state
@@ -124,8 +124,8 @@ void calculateSteadyState(value_pair *h_steady_state, CalculationParameters &par
 
 		// FFT into k-space
 		cufftSafeCall(batchfftExecute(plan, (cufftComplex*)a, (cufftComplex*)a, CUFFT_INVERSE));
-		normalizeInverseFFT<<<grid, block>>>(a, 1.0 / params.cells);
-		cutilCheckMsg("normalizeInverseFFT");
+		multiply<<<grid, block>>>(a, 1.0 / params.cells);
+		cutilCheckMsg("multiply");
 
 		// Linear propagate in k-space
 		propagateKSpaceImaginaryTime<<<grid, block>>>(a);
@@ -139,15 +139,15 @@ void calculateSteadyState(value_pair *h_steady_state, CalculationParameters &par
 		// Normalize
 		N = calculateParticles(a, a_module, temp, params);
 		//printf("N = %f\n", N);
-		normalizeInverseFFT<<<grid, block>>>(a, sqrt(params.N / N));
+		multiply<<<grid, block>>>(a, sqrt(params.N / N));
 
 		// Calculate energy
 		value_type new_E = calculateStateIntegral(a, a_modified, a_module, temp, plan, true);
 
 		// FFT into k-space
 		cufftSafeCall(batchfftExecute(plan, (cufftComplex*)a, (cufftComplex*)a, CUFFT_INVERSE));
-		normalizeInverseFFT<<<grid, block>>>(a, 1.0 / params.cells);
-		cutilCheckMsg("normalizeInverseFFT");
+		multiply<<<grid, block>>>(a, 1.0 / params.cells);
+		cutilCheckMsg("multiply");
 
 		if(abs((new_E - E) / new_E) < 0.000001)
 			break;
@@ -237,10 +237,10 @@ void propagate(CalculationParameters &params, EvolutionState &state, value_type 
 	//FFT into k-space
 	cufftSafeCall(batchfftExecute(state.plan, (cufftComplex*)state.a, (cufftComplex*)state.a, CUFFT_INVERSE));
 	cufftSafeCall(batchfftExecute(state.plan, (cufftComplex*)state.b, (cufftComplex*)state.b, CUFFT_INVERSE));
-	normalizeInverseFFT<<<state.grid, state.block>>>(state.a, 1.0 / params.cells);
-	cutilCheckMsg("normalizeInverseFFT");
-	normalizeInverseFFT<<<state.grid, state.block>>>(state.b, 1.0 / params.cells);
-	cutilCheckMsg("normalizeInverseFFT");
+	multiply<<<state.grid, state.block>>>(state.a, 1.0 / params.cells);
+	cutilCheckMsg("multiply");
+	multiply<<<state.grid, state.block>>>(state.b, 1.0 / params.cells);
+	cutilCheckMsg("multiply");
 
 	//Linear propagate a,b-field
 	propagateKSpaceRealTime<<<state.grid, state.block>>>(state.a, state.b, dt);
@@ -264,10 +264,10 @@ void initEvolution(value_pair *h_steady_state, CalculationParameters &params, Ev
 	// FFT into k-space
 	cufftSafeCall(batchfftExecute(state.plan, (cufftComplex*)state.a, (cufftComplex*)state.a, CUFFT_INVERSE));
 	cufftSafeCall(batchfftExecute(state.plan, (cufftComplex*)state.b, (cufftComplex*)state.b, CUFFT_INVERSE));
-	normalizeInverseFFT<<<state.grid, state.block>>>(state.a, 1.0 / params.cells);
-	cutilCheckMsg("normalizeInverseFFT");
-	normalizeInverseFFT<<<state.grid, state.block>>>(state.b, 1.0 / params.cells);
-	cutilCheckMsg("normalizeInverseFFT");
+	multiply<<<state.grid, state.block>>>(state.a, 1.0 / params.cells);
+	cutilCheckMsg("multiply");
+	multiply<<<state.grid, state.block>>>(state.b, 1.0 / params.cells);
+	cutilCheckMsg("multiply");
 
 	// Equilibration phase
 //	for(value_type t = 0; t <= params.tmaxWig; t += params.dtWig)
@@ -319,10 +319,10 @@ void calculateEvolution(CalculationParameters &params, EvolutionState &state, va
 
 	cutilSafeCall(cudaThreadSynchronize());
 
-	normalizeInverseFFT<<<state.grid, state.block>>>(state.a, 1.0 / params.cells);
-	cutilCheckMsg("normalizeInverseFFT");
-	normalizeInverseFFT<<<state.grid, state.block>>>(state.b, 1.0 / params.cells);
-	cutilCheckMsg("normalizeInverseFFT");
+	multiply<<<state.grid, state.block>>>(state.a, 1.0 / params.cells);
+	cutilCheckMsg("multiply");
+	multiply<<<state.grid, state.block>>>(state.b, 1.0 / params.cells);
+	cutilCheckMsg("multiply");
 
 	// reduce<value_type>() reduces neighbouring values first, and we need to reduce
 	// values for each particle separately
