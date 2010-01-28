@@ -171,44 +171,6 @@ void calculateSteadyState(value_pair *h_steady_state, CalculationParameters &par
 	batchfftDestroy(plan);
 }
 
-
-void calculateAverage(CalculationParameters &params, EvolutionState &state)
-{
-	calculateModules<<<state.grid, state.block>>>(state.dens_b, state.b);
-	cutilCheckMsg("calculateModules");
-	calculateModules<<<state.grid, state.block>>>(state.dens_a, state.a);
-	cutilCheckMsg("calculateModules");
-	normalizeParticles<<<state.grid, state.block>>>(state.dens_a, state.dens_b);
-	cutilCheckMsg("normalizeParticles");
-
-	value_type sum1 = 0, sum2 = 0;
-
-	for(int i = 0; i < params.ne; i++)
-	{
-		value_type n1 = reduce<value_type>(state.dens_a + i * params.cells, state.temp, params.cells, 1);
-		value_type n2 = reduce<value_type>(state.dens_b + i * params.cells, state.temp, params.cells, 1);
-		sum1 += -n1 * n1;
-		sum2 += -n2 * n2;
-	}
-
-	calculateModules<<<state.grid, state.block>>>(state.dens_b, state.b);
-	cutilCheckMsg("calculateModules");
-	calculateModules<<<state.grid, state.block>>>(state.dens_a, state.a);
-	cutilCheckMsg("calculateModules");
-	normalizeParticles2<<<state.grid, state.block>>>(state.dens_a, state.dens_b);
-	cutilCheckMsg("normalizeParticles2");
-
-	for(int i = 0; i < params.ne; i++)
-	{
-		value_type n1 = reduce<value_type>(state.dens_a + i * params.cells, state.temp, params.cells, 1);
-		value_type n2 = reduce<value_type>(state.dens_b + i * params.cells, state.temp, params.cells, 1);
-		sum1 += n1;
-		sum2 += n2;
-	}
-
-	printf("%f %f\n", sum1 / params.ne, sum2 / params.ne);
-}
-
 // Propagate k-state for evolution calculation
 void propagate(CalculationParameters &params, EvolutionState &state, value_type dt)
 {
@@ -218,18 +180,6 @@ void propagate(CalculationParameters &params, EvolutionState &state, value_type 
 	//FFT into x-space
 	cufftSafeCall(batchfftExecute(state.plan, (cufftComplex*)state.a, (cufftComplex*)state.a, CUFFT_FORWARD));
 	cufftSafeCall(batchfftExecute(state.plan, (cufftComplex*)state.b, (cufftComplex*)state.b, CUFFT_FORWARD));
-/*
-	calculateModules<<<state.grid, state.block>>>(state.dens_b, state.b);
-	cutilCheckMsg("calculateModules");
-	calculateModules<<<state.grid, state.block>>>(state.dens_a, state.a);
-	cutilCheckMsg("calculateModules");
-	normalizeParticles<<<state.grid, state.block>>>(state.dens_a, state.dens_b);
-	cutilCheckMsg("normalizeParticles");
-	printf("%f %f\n",
-	       reduce<value_type>(state.dens_a, state.temp, params.cells, 1),
-	       reduce<value_type>(state.dens_b, state.temp, params.cells, 1));
-*/
-//	calculateAverage(params, state);
 
 	propagateXSpaceTwoComponent<<<state.grid, state.block>>>(state.a, state.b, dt);
 	cutilCheckMsg("propagateMidpoint");
@@ -314,16 +264,7 @@ void calculateEvolution(CalculationParameters &params, EvolutionState &state, va
 	cufftSafeCall(batchfftExecute(state.plan, (cufftComplex*)state.a, (cufftComplex*)state.a, CUFFT_FORWARD));
 	cufftSafeCall(batchfftExecute(state.plan, (cufftComplex*)state.b, (cufftComplex*)state.b, CUFFT_FORWARD));
 	cutilSafeCall(cudaThreadSynchronize());
-/*
-	halfPiRotate<<<state.grid, state.block>>>(state.dens_a, state.dens_b, state.a, state.b, 0);
-	cutilCheckMsg("halfPiRotate");
-	value_type na = reduce<value_type>(state.dens_a, state.temp, params.cells * params.ne, 1) / params.ne;
-	value_type nb = reduce<value_type>(state.dens_b, state.temp, params.cells * params.ne, 1) / params.ne;
-	printf("%f %f\n", state.t, na+nb);
- */
-	//calculateModules<<<state.grid, state.block>>>(state.dens_a, state.a);
-	//calculateModules<<<state.grid, state.block>>>(state.dens_b, state.b);
-	//normalizeParticles<<<state.grid, state.block>>>(state.dens_a, state.dens_b);
+
 	halfPiRotate<<<state.grid, state.block>>>(state.dens_a, state.dens_b, state.a, state.b, 0);
 	cutilCheckMsg("halfPiRotate");
 /*
@@ -357,18 +298,10 @@ void calculateEvolution(CalculationParameters &params, EvolutionState &state, va
 	// and then perform reduce<value_type>()
 	sparseReduce(state.temp, state.dens_a, params.cells * params.ne, params.cells);
 
-	// for XY slice just copy memory from the middle
-	//state.dens_a_xy.copyFrom(state.temp, params.nvx * params.nvy, params.nvx * params.nvy * (params.nvz / 2));
-
 	// projection on XY plane
 	cutilSafeCall(transpose<value_type>(state.temp2, state.temp, params.nvx * params.nvy, params.nvz, 1));
 	reduce<value_type>(state.temp2, state.dens_a, params.cells, params.nvx * params.nvy);
 	state.dens_a_xy.copyFrom(state.temp2, params.nvx * params.nvy);
-
-	// for YZ slice copy memory after transpose
-	//cutilSafeCall(transpose<value_type>(state.dens_a, state.temp, params.nvx, params.nvy * params.nvz, 1));
-	//state.temp.copyFrom(state.dens_a, params.nvy * params.nvz, params.nvy * params.nvz * (params.nvx / 2));
-	//cutilSafeCall(transpose<value_type>(state.dens_a_zy, state.temp, params.nvy, params.nvz, 1));
 
 	// projection on YZ plane
 	reduce<value_type>(state.temp, state.temp2, params.cells, params.nvy * params.nvz);
@@ -377,18 +310,10 @@ void calculateEvolution(CalculationParameters &params, EvolutionState &state, va
 
 	sparseReduce(state.temp, state.dens_b, params.cells * params.ne, params.cells);
 
-	// for XY slice just copy memory from the middle
-	//state.dens_b_xy.copyFrom(state.temp, params.nvx * params.nvy, params.nvx * params.nvy * (params.nvz / 2));
-
 	// projection on XY plane
 	cutilSafeCall(transpose<value_type>(state.temp2, state.temp, params.nvx * params.nvy, params.nvz, 1));
 	reduce<value_type>(state.temp2, state.dens_b, params.cells, params.nvx * params.nvy);
 	state.dens_b_xy.copyFrom(state.temp2, params.nvx * params.nvy);
-
-	// for YZ slice copy memory after transpose
-	//cutilSafeCall(transpose<value_type>(state.dens_b, state.temp, params.nvx, params.nvy * params.nvz, 1));
-	//state.temp.copyFrom(state.dens_b, params.nvy * params.nvz, params.nvy * params.nvz * (params.nvx / 2));
-	//cutilSafeCall(transpose<value_type>(state.dens_b_zy, state.temp, params.nvy, params.nvz, 1));
 
 	// projection on YZ plane
 	reduce<value_type>(state.temp, state.temp2, params.cells, params.nvy * params.nvz);
