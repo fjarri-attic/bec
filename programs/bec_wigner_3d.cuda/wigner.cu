@@ -39,6 +39,7 @@ value_type calculateStateIntegral(CudaBuffer<value_pair> &state,
 	CudaBuffer<value_pair> &complex_temp,
 	CudaBuffer<value_type> &real_temp,
 	CudaBuffer<value_type> &real_temp2,
+	CalculationParameters &params,
 	batchfftHandle plan, bool energy)
 {
 	dim3 grid, block;
@@ -62,7 +63,7 @@ value_type calculateStateIntegral(CudaBuffer<value_pair> &state,
 	combineNonlinearAndDifferential<<<grid, block>>>(real_temp, state, complex_temp);
 	cutilCheckMsg("combineNonlinearAndDifferential");
 
-	return reduce<value_type>(real_temp, real_temp2, state.len(), 1);
+	return reduce<value_type>(real_temp, real_temp2, state.len(), 1) * params.dx * params.dy * params.dz;
 }
 
 // returns number if particles for given state
@@ -142,7 +143,7 @@ void calculateSteadyState(value_pair *h_steady_state, CalculationParameters &par
 		multiply<<<grid, block>>>(a, sqrt(params.N / N));
 
 		// Calculate energy
-		value_type new_E = calculateStateIntegral(a, complex_temp, real_temp, real_temp2, plan, true);
+		value_type new_E = calculateStateIntegral(a, complex_temp, real_temp, real_temp2, params, plan, true);
 
 		// FFT into k-space
 		cufftSafeCall(batchfftExecute(plan, (cufftComplex*)a, (cufftComplex*)a, CUFFT_INVERSE));
@@ -162,11 +163,11 @@ void calculateSteadyState(value_pair *h_steady_state, CalculationParameters &par
 	// save steady state
 	a.copyTo(h_steady_state);
 
-	E = calculateStateIntegral(a, complex_temp, real_temp, real_temp2, plan, true);
-	printf("E = %f\n", E / (2 * M_PI * params.fz * params.N) * params.dx * params.dy * params.dz);
+	E = calculateStateIntegral(a, complex_temp, real_temp, real_temp2, params, plan, true);
+	printf("E = %f\n", E / params.N);
 
-	value_type mu = calculateStateIntegral(a, complex_temp, real_temp, real_temp2, plan, false);
-	printf("mu = %f\n", mu / (2 * M_PI * params.fz * params.N) * params.dx * params.dy * params.dz);
+	value_type mu = calculateStateIntegral(a, complex_temp, real_temp, real_temp2, params, plan, false);
+	printf("mu = %f\n", mu / params.N);
 
 	batchfftDestroy(plan);
 }
@@ -319,7 +320,7 @@ void calculateEvolution(CalculationParameters &params, EvolutionState &state, va
 void drawState(CalculationParameters &params, EvolutionState &state, CudaTexture &a_xy_tex,
 	CudaTexture &b_xy_tex, CudaTexture &a_zy_tex, CudaTexture &b_zy_tex)
 {
-	value_type scale = 5.0 * params.N * params.ne / params.cells;
+	value_type scale = 10.0 * params.N * params.ne / params.cells;
 	value_type xy_scale = scale * params.nvz;
 	value_type zy_scale = scale * params.nvx;
 

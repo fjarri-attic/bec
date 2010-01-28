@@ -37,7 +37,7 @@ void initWaveVectors(CalculationParameters &params)
 		value_type ky = getK(j, params.dky, params.nvy);
 		value_type kz = getK(k, params.dkz, params.nvz);
 
-		h_k[index] = (kx * kx + ky * ky + kz * kz) * params.kcoeff;
+		h_k[index] = (kx * kx + ky * ky + kz * kz) / 2;
 	}
 
 	k_tex.filterMode = cudaFilterModeLinear;
@@ -103,7 +103,7 @@ __device__ __inline__ value_type potential(int index)
 	value_type y = -d_params.ymax + d_params.dy * j;
 	value_type z = -d_params.zmax + d_params.dz * k;
 
-	return (d_params.px * x * x + d_params.py * y * y + d_params.pz * z * z) / 2;
+	return (1 / (d_params.lambda * d_params.lambda) * x * x + y * y + z * z) / 2;
 }
 
 // fill given buffer with ground state, obtained from Thomas-Fermi approximation
@@ -306,7 +306,7 @@ __global__ void applyHalfPiPulse(value_pair *a, value_pair *b)
 
 __device__ __inline__ value_type density(value_pair a)
 {
-	 return module(a) * d_params.dx * d_params.dy * d_params.dz - d_params.V / 2.0f;
+	 return module(a) - d_params.V / 2.0f;
 }
 
 // Pi/2 rotate around vector in equatorial plane, with angle alpha between it and x axis

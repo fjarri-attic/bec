@@ -23,17 +23,18 @@ typedef float2 value_pair;
 
 struct CalculationParameters
 {
+	// scattering lengths, in Bohr radii
+	value_type a11, a12, a22;
+
 	// in h-bar units
 	value_type g11; // nonlinear coupling in 1
 	value_type g12; // nonlinear cross-coupling
 	value_type g22; // nonlinear coupling in 2
 
-	value_type m; // atom mass of a particle
+	value_type m; // mass of a particle
 	value_type fx, fy, fz; // trap frequences, Hz
 
 	int N;
-
-	value_type tscale; // time scale factor (ms)=1/omega_||
 
 	// set to 1 with vacuum noise, 0 otherwise
 	value_type Va;
@@ -52,28 +53,29 @@ struct CalculationParameters
 	int itmax; // number of iterations for mid-step integral calculations
 
 	// steady state calculation parameters
-	value_type dtGP; // time step for GP
+	value_type dtGP; // time step for GP, in natural units
 
 	// evolution parameters
-	value_type tmaxWig; // equilibration time
-	value_type dtWig; // equilibration time step
+	value_type tmaxWig; // equilibration time, natural units
+	value_type dtWig; // evolution time step, natural units
 	int ne; // number of samples in ensemble (must be power of 2)
 
-// derived parameters
+// derived parameters, natural units
 
-	value_type mu; // chemical potential
+	value_type mu; // chemical potential from TF approximation
 
 	int cells; // number of space cells in one ensemble
 
 	value_type V; // average vacuum noise
 
+	value_type lambda; // radial trap freq. / axial trap freq.
+	value_type l_rho; // natural length
+	value_type t_rho; // natural time
+
 	// space step
 	value_type dx;
 	value_type dy;
 	value_type dz;
-
-	// potential energy coefficients, h-bar units
-	value_type px, py, pz;
 
 	// number of points in space in form of powers of 2
 	// (to use in bitwise shifts instead of multiplication)
@@ -85,9 +87,6 @@ struct CalculationParameters
 	value_type dkx;
 	value_type dky;
 	value_type dkz;
-
-	value_type kcoeff;
-
 };
 
 

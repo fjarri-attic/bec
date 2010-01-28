@@ -44,7 +44,25 @@ void fillCalculationParameters(CalculationParameters &params)
 {
 	params.N = 150000;
 
-	params.m = 87; // atom mass of one particle
+	params.m = 1.443160648e-25; // mass of one particle, kg (Rb, atom mass 87)
+
+	// scattering lengths, in Bohr radii
+
+	// from AS presentation
+	//value_type a_11 = 100.44 * a0;
+	//value_type a_22 = 95.47 * a0;
+	//value_type a_12 = 98.09 * a0;
+
+	// From "Spatially inhomogeneous phase evolution of a two-component Bose-Einstein condensate"
+	//value_type a_11 = 100.40 * a0;
+	//value_type a_22 = 95.00 * a0;
+	//value_type a_12 = 97.66 * a0;
+
+	params.a11 = 100.4;
+	params.a22 = 95.0;
+	params.a12 = 97.66;
+
+	// Trap frequencies, Hz
 
 	// From "Spatially inhomogeneous phase evolution of a two-component Bose-Einstein condensate"
 	params.fx = 11.96;
@@ -55,20 +73,21 @@ void fillCalculationParameters(CalculationParameters &params)
 	//params.fy = 95;
 	//params.fz = 95;
 
-	params.tscale = 1000.0;
-
+	// Vacuum noise, 0.0 - 1.0
 	params.Va = 0;
 	params.Vb = 0;
 
+	// spatial lattice size
 	params.nvx = 128;
 	params.nvy = 16;
 	params.nvz = 16;
 
 	params.itmax = 3;
-	params.dtGP = 0.0001;
 
-	params.tmaxWig = 0.02;
-	params.dtWig = 0.0001;
+	params.dtGP = 0.01;
+	params.tmaxWig = 2;
+	params.dtWig = 0.01;
+
 	params.ne = 1;
 }
 
@@ -93,52 +112,29 @@ int log2(int input)
 // Derive dependent calculation parameters
 void fillDerivedParameters(CalculationParameters &params)
 {
+	value_type h_bar = 1.054571628e-34;
+	value_type a0 = 5.2917720859e-11; // Bohr radius, meters
+
+	// natural length
+	params.l_rho = sqrt(h_bar / (params.m * 2 * M_PI * params.fz));
+	params.t_rho = 1 / (2 * M_PI * params.fz);
+
 	params.cells = params.nvx * params.nvy * params.nvz;
 
 	params.V = (params.Va + params.Vb) / 2.0;
 
-	value_type h_bar = 1.054571628e-34;
-	value_type mass = 1.443160648e-25;
+	params.lambda = params.fz / params.fx;
 
-	value_type osc_coeff = 4 * M_PI * M_PI * mass / h_bar;
-	params.px = osc_coeff * params.fx * params.fx;
-	params.py = osc_coeff * params.fy * params.fy;
-	params.pz = osc_coeff * params.fz * params.fz;
+	params.g11 = 4 * M_PI * params.a11 * a0 / params.l_rho;
+	params.g12 = 4 * M_PI * params.a12 * a0 / params.l_rho;
+	params.g22 = 4 * M_PI * params.a22 * a0 / params.l_rho;
 
-	value_type a0 = 5.2917720859e-11; // Bohr radius, meters
+	params.mu = pow(15.0 * params.N * params.g11 / (16.0 * M_PI * params.lambda * sqrt(2.0)), 0.4);
+	printf("mu(TF) = %f\n", params.mu);
 
-	// scattering lengths (from AS presentation)
-	//value_type a_11 = 100.44 * a0;
-	//value_type a_22 = 95.47 * a0;
-	//value_type a_12 = 98.09 * a0;
-
-	// From "Spatially inhomogeneous phase evolution of a two-component Bose-Einstein condensate"
-	//value_type a_11 = 100.40 * a0;
-	//value_type a_22 = 95.00 * a0;
-	//value_type a_12 = 97.66 * a0;
-
-	value_type a_11 = 100.4 * a0;
-	value_type a_22 = 95.0 * a0;
-	value_type a_12 = 97.66 * a0;
-
-	params.g11 = 4 * M_PI * h_bar * a_11 / mass;
-	params.g12 = 4 * M_PI * h_bar * a_12 / mass;
-	params.g22 = 4 * M_PI * h_bar * a_22 / mass;
-
-	value_type f_123 = pow(params.fx * params.fy * params.fz, 1.0 / 3);
-	params.mu = 0.5 * 2.0 * M_PI * f_123 *
-		pow(15.0 * params.N * a_11 / sqrt(h_bar / mass / (2 * M_PI * f_123)), 2.0 / 5);
-
-	printf("mu=%f %f\n", params.mu, params.mu * params.dtGP);
-	//printf("g11=%f\n", params.g11 * mass / (h_bar * sqrt(h_bar / (mass * 2 * M_PI * params.fx))));
-	//printf("mu/g11 = %f = %f\n", params.mu / params.g11, params.mu / (2 * M_PI * params.fz) /
-	//       (params.g11 * mass / (h_bar * sqrt(h_bar / (mass * 2 * M_PI * params.fx)))));
-	printf("mu_natural = %f\n", params.mu / (2 * M_PI * params.fz));
-
-	params.xmax = 1.2 * (1.0 / (2.0 * M_PI * params.fx) * sqrt(2.0 * params.mu * h_bar / mass));
-	params.ymax = 1.2 * (1.0 / (2.0 * M_PI * params.fy) * sqrt(2.0 * params.mu * h_bar / mass));
-	params.zmax = 1.2 * (1.0 / (2.0 * M_PI * params.fz) * sqrt(2.0 * params.mu * h_bar / mass));
-	//printf("%f %f %f\n", params.xmax, params.ymax, params.zmax);
+	params.xmax = 1.2 * params.lambda * sqrt(2 * params.mu);
+	params.ymax = 1.2 * sqrt(2 * params.mu);
+	params.zmax = 1.2 * sqrt(2 * params.mu);
 
 	// space step
 	params.dx = 2 * params.xmax / (params.nvx - 1);
@@ -153,8 +149,6 @@ void fillDerivedParameters(CalculationParameters &params)
 	params.dkx = M_PI / params.xmax;
 	params.dky = M_PI / params.ymax;
 	params.dkz = M_PI / params.zmax;
-
-	params.kcoeff = h_bar / (2 * mass);
 }
 
 // Returns difference in seconds between to timevals
@@ -223,10 +217,12 @@ void display(void) {
 	// fill vertex buffers with state graphs
 	drawState(params, state, a_xy, b_xy, a_zy, b_zy);
 
-	if((int)(state.t * 1000) % 5 == 0)
+	int t = (int)(state.t * params.t_rho * 1000.0); // time in ms
+
+	if(t % 5 == 0)
 	{
 		char fname[255];
-		sprintf(fname, "screenshot%03d.bmp", (int)(state.t * 1000));
+		sprintf(fname, "screenshot%03d.bmp", t);
 		createBitmap(fname, state.to_bmp, params.nvx, params.nvy);
 	}
 
@@ -250,7 +246,7 @@ void display(void) {
 	glutPostRedisplay();
 
 	char title[256];
-	sprintf(title, "Two-component BEC evolution: %3.f ms", state.t * 1000.0);
+	sprintf(title, "Two-component BEC evolution: %d ms", t);
 	glutSetWindowTitle(title);
 }
 
