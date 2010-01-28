@@ -277,6 +277,33 @@ void initEvolution(value_pair *h_steady_state, CalculationParameters &params, Ev
 	cutilCheckMsg("applyBraggPulse");
 }
 
+// reduce sparse elements instead of neighbouring ones
+// data in *in is spoiled after call
+void sparseReduce(CudaBuffer<value_type> &out, CudaBuffer<value_type> &in, int length, int final_length = 1)
+{
+	int coeff = length / final_length;
+
+	if(coeff == 1)
+	{
+		out.copyFrom(in);
+		return;
+	}
+
+	// transpose cannot handle matrices with dimensions less than 16
+	if(coeff >= 16)
+	{
+		cutilSafeCall(transpose<value_type>(out, in, final_length, coeff, 1));
+		reduce<value_type>(out, in, length, final_length);
+	}
+	else
+	{
+		dim3 block, grid;
+		createKernelParams(block, grid, final_length, MAX_THREADS_NUM);
+		smallReduce<<<grid, block>>>(out, in, coeff);
+		cutilCheckMsg("smallReduce");
+	}
+}
+
 // propagate system and fill current state graph data
 void calculateEvolution(CalculationParameters &params, EvolutionState &state, value_type dt)
 {
@@ -328,19 +355,7 @@ void calculateEvolution(CalculationParameters &params, EvolutionState &state, va
 	// values for each particle separately
 	// so we transform [ensemble1, ensemble2, ...] to [particle1, particle2, ...] using transpose<value_type>()
 	// and then perform reduce<value_type>()
-
-	if(params.ne >= 16)
-	{
-		cutilSafeCall(transpose<value_type>(state.temp, state.dens_a, params.cells, params.ne, 1));
-		reduce<value_type>(state.temp, state.dens_a, params.cells * params.ne, params.cells);
-	}
-	else
-	{
-		dim3 block, grid;
-		createKernelParams(block, grid, params.cells, MAX_THREADS_NUM);
-		smallReduce<<<grid, block>>>(state.temp, state.dens_a, params.ne);
-		cutilCheckMsg("smallReduce");
-	}
+	sparseReduce(state.temp, state.dens_a, params.cells * params.ne, params.cells);
 
 	// for XY slice just copy memory from the middle
 	//state.dens_a_xy.copyFrom(state.temp, params.nvx * params.nvy, params.nvx * params.nvy * (params.nvz / 2));
@@ -360,18 +375,7 @@ void calculateEvolution(CalculationParameters &params, EvolutionState &state, va
 	state.dens_a_zy.copyFrom(state.temp2, params.nvy * params.nvz);
 	cutilSafeCall(transpose<value_type>(state.dens_a_zy, state.temp, params.nvy, params.nvz, 1));
 
-	if(params.ne >= 16)
-	{
-		cutilSafeCall(transpose<value_type>(state.temp, state.dens_b, params.cells, params.ne, 1));
-		reduce<value_type>(state.temp, state.dens_b, params.cells * params.ne, params.cells);
-	}
-	else
-	{
-		dim3 block, grid;
-		createKernelParams(block, grid, params.cells, MAX_THREADS_NUM);
-		smallReduce<<<grid, block>>>(state.temp, state.dens_b, params.ne);
-		cutilCheckMsg("smallReduce");
-	}
+	sparseReduce(state.temp, state.dens_b, params.cells * params.ne, params.cells);
 
 	// for XY slice just copy memory from the middle
 	//state.dens_b_xy.copyFrom(state.temp, params.nvx * params.nvy, params.nvx * params.nvy * (params.nvz / 2));
