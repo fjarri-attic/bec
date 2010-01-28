@@ -304,23 +304,28 @@ __global__ void applyHalfPiPulse(value_pair *a, value_pair *b)
 	b[index] = cmul(cadd(cmul(a0, MAKE_VALUE_PAIR(0, -1)), b0), 1.0 / sqrt(2.0));
 }
 
-// normalize particle density
-__global__ void normalizeParticles(value_type *sum_a, value_type *sum_b)
+__device__ __inline__ value_type density(value_pair a)
 {
-	int index = threadIdx.x + blockDim.x * (blockIdx.x + blockIdx.y * gridDim.x);
-
-	sum_a[index] = sum_a[index] * d_params.dx * d_params.dy * d_params.dz - d_params.V / 2.0f;
-	sum_b[index] = sum_b[index] * d_params.dx * d_params.dy * d_params.dz - d_params.V / 2.0f;
+	 return module(a) * d_params.dx * d_params.dy * d_params.dz - d_params.V / 2.0f;
 }
 
-__global__ void normalizeParticles2(value_type *sum_a, value_type *sum_b)
+// Pi/2 rotate around vector in equatorial plane, with angle alpha between it and x axis
+__global__ void halfPiRotate(value_type *a_res, value_type *b_res, value_pair *a, value_pair *b, value_type alpha)
 {
 	int index = threadIdx.x + blockDim.x * (blockIdx.x + blockIdx.y * gridDim.x);
 
-	value_type n1 = sum_a[index] * d_params.dx * d_params.dy * d_params.dz;
-	value_type n2 = sum_b[index] * d_params.dx * d_params.dy * d_params.dz;
-	sum_a[index] = n1 * n1;
-	sum_b[index] = n2 * n2;
+	value_pair a0 = a[index];
+	value_pair b0 = b[index];
+
+	value_type root2 = sqrt(2.0);
+	value_type cosa = cos(alpha);
+	value_type sina = sin(alpha);
+
+	value_pair a_new = cmul(cadd(a0, cmul(b0, MAKE_VALUE_PAIR(sina, -cosa))), 1.0 / root2);
+	value_pair b_new = cmul(cadd(cmul(a0, MAKE_VALUE_PAIR(-sina, -cosa)), b0), 1.0 / root2);
+
+	a_res[index] = density(a_new);
+	b_res[index] = density(b_new);
 }
 
 // Reduces a small set of arrays (if reduce power is too high it is better
@@ -341,97 +346,6 @@ __global__ void smallReduce(value_type *sum, value_type *data, int n)
 
 	sum[index] = temp;
 }
-
-__device__ __inline__ value_type density(value_pair a)
-{
-	 return (a.x * a.x + a.y * a.y) * d_params.dx * d_params.dy * d_params.dz - d_params.V / 2.0f;
-}
-
-__global__ void calculatePulse(value_type *a_dens, value_type *b_dens, value_pair *a, value_pair *b)
-{
-	int index = threadIdx.x + blockDim.x * (blockIdx.x + blockIdx.y * gridDim.x);
-
-	value_pair a_val = a[index];
-	value_pair b_val = b[index];
-
-//	value_pair a_new = MAKE_VALUE_PAIR((a_val.x + b_val.x) / sqrt(2.0f), (a_val.y + b_val.y) / sqrt(2.0f));
-//	value_pair b_new = MAKE_VALUE_PAIR((a_val.x - b_val.x) / sqrt(2.0f), (a_val.y - b_val.y) / sqrt(2.0f));
-	value_pair a_new = MAKE_VALUE_PAIR((a_val.x + b_val.y) / sqrt(2.0f), (a_val.y - b_val.x) / sqrt(2.0f));
-	value_pair b_new = MAKE_VALUE_PAIR((a_val.y + b_val.x) / sqrt(2.0f), (b_val.y - a_val.x) / sqrt(2.0f));
-
-	a_dens[index] = density(a_new);
-	b_dens[index] = density(b_new);
-}
-
-// Pi/2 rotate around vector in equatorial plane, with angle alpha between it and x axis
-__global__ void halfPiRotate(value_type *a_res, value_type *b_res, value_pair *a, value_pair *b, value_type alpha)
-{
-	int index = threadIdx.x + blockDim.x * (blockIdx.x + blockIdx.y * gridDim.x);
-
-	value_pair a0 = a[index];
-	value_pair b0 = b[index];
-
-	value_type root2 = sqrt(2.0);
-	value_type cosa = cos(alpha);
-	value_type sina = sin(alpha);
-
-//	a0 = MAKE_VALUE_PAIR((a0.x + b0.y) / root2, (a0.y - b0.x) / root2);
-//	b0 = MAKE_VALUE_PAIR((b0.x + a0.y) / root2, (b0.y - a0.x) / root2);
-/*
-	value_pair a_new = cmul(
-		cadd(
-			a0,
-			cmul(
-				b0,
-				MAKE_VALUE_PAIR((root2 - 1) * cosa, (1 - root2) * sina)
-			)
-		),
-		1.0 / root2
-	);
-	value_pair b_new = cmul(
-		cadd(
-			cmul(
-				a0,
-				MAKE_VALUE_PAIR(-sina, cosa)
-			),
-			cmul(
-				b0,
-				MAKE_VALUE_PAIR(root2, -1)
-			)
-		),
-		1.0 / root2
-	);
- */
-
-	value_pair a_new = cmul(cadd(a0, cmul(b0, MAKE_VALUE_PAIR(sina, -cosa))), 1.0 / root2);
-	value_pair b_new = cmul(cadd(cmul(a0, MAKE_VALUE_PAIR(-sina, -cosa)), b0), 1.0 / root2);
-
-	a_res[index] = density(a_new);
-	b_res[index] = density(b_new);
-}
-
-__global__ void calculatePhaseDiff(value_type *res, value_pair *a, value_pair *b)
-{
-	int index = threadIdx.x + blockDim.x * (blockIdx.x + blockIdx.y * gridDim.x);
-
-	value_pair a_val = a[index];
-	value_pair b_val = b[index];
-
-	value_type phase_a = atan2f(a_val.y, a_val.x);
-	value_type phase_b = atan2f(b_val.y, b_val.x);
-
-	value_type diff = (phase_a - phase_b);
-	if(diff < -M_PI)
-		diff += 2 * M_PI;
-	else if(diff > M_PI)
-		diff -= 2 * M_PI;
-	diff = abs(diff);
-
-	diff *= density(a_val) * density(b_val);
-
-	res[index] = diff;
-}
-
 
 // Fill constant memory
 void initConstants(CalculationParameters &params)
