@@ -253,6 +253,15 @@ __global__ void multiply(value_pair *data, value_type coeff)
 	data[index] = cmul(data[index], coeff);
 }
 
+// componentwise multiplication, for two data sets
+// (in order to reduce number of calls to GPU)
+__global__ void multiplyPair(value_pair *data1, value_pair *data2, value_type coeff)
+{
+	int index = threadIdx.x + blockDim.x * (blockIdx.x + blockIdx.y * gridDim.x);
+	data1[index] = cmul(data1[index], coeff);
+	data2[index] = cmul(data2[index], coeff);
+}
+
 // Calculate squared modules for two-dimensional vectors
 __global__ void calculateModules(value_type *output, value_pair *input)
 {

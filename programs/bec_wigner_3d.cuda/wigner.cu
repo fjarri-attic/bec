@@ -187,10 +187,8 @@ void propagate(CalculationParameters &params, EvolutionState &state, value_type 
 	//FFT into k-space
 	cufftSafeCall(batchfftExecute(state.plan, (cufftComplex*)state.a, (cufftComplex*)state.a, CUFFT_INVERSE));
 	cufftSafeCall(batchfftExecute(state.plan, (cufftComplex*)state.b, (cufftComplex*)state.b, CUFFT_INVERSE));
-	multiply<<<state.grid, state.block>>>(state.a, 1.0 / params.cells);
-	cutilCheckMsg("multiply");
-	multiply<<<state.grid, state.block>>>(state.b, 1.0 / params.cells);
-	cutilCheckMsg("multiply");
+	multiplyPair<<<state.grid, state.block>>>(state.a, state.b, 1.0 / params.cells);
+	cutilCheckMsg("multiplyPair");
 
 	//Linear propagate a,b-field
 	propagateKSpaceRealTime<<<state.grid, state.block>>>(state.a, state.b, dt);
@@ -214,10 +212,8 @@ void initEvolution(value_pair *h_steady_state, CalculationParameters &params, Ev
 	// FFT into k-space
 	cufftSafeCall(batchfftExecute(state.plan, (cufftComplex*)state.a, (cufftComplex*)state.a, CUFFT_INVERSE));
 	cufftSafeCall(batchfftExecute(state.plan, (cufftComplex*)state.b, (cufftComplex*)state.b, CUFFT_INVERSE));
-	multiply<<<state.grid, state.block>>>(state.a, 1.0 / params.cells);
-	cutilCheckMsg("multiply");
-	multiply<<<state.grid, state.block>>>(state.b, 1.0 / params.cells);
-	cutilCheckMsg("multiply");
+	multiplyPair<<<state.grid, state.block>>>(state.a, state.b, 1.0 / params.cells);
+	cutilCheckMsg("multiplyPair");
 
 	// Equilibration phase
 //	for(value_type t = 0; t <= params.tmaxWig; t += params.dtWig)
@@ -287,10 +283,8 @@ void calculateEvolution(CalculationParameters &params, EvolutionState &state, va
 
 	cutilSafeCall(cudaThreadSynchronize());
 
-	multiply<<<state.grid, state.block>>>(state.a, 1.0 / params.cells);
-	cutilCheckMsg("multiply");
-	multiply<<<state.grid, state.block>>>(state.b, 1.0 / params.cells);
-	cutilCheckMsg("multiply");
+	multiplyPair<<<state.grid, state.block>>>(state.a, state.b, 1.0 / params.cells);
+	cutilCheckMsg("multiplyPair");
 
 	// reduce<value_type>() reduces neighbouring values first, and we need to reduce
 	// values for each particle separately
