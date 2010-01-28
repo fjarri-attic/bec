@@ -292,8 +292,8 @@ __global__ void initializeEnsembles(value_pair *a, value_pair *b, value_pair *st
 	b[index] = temp;
 }
 
-//Apply pi/2 Bragg pulse
-__global__ void applyBraggPulse(value_pair *a, value_pair *b)
+// Apply pi/2 pulse (instantaneus approximation)
+__global__ void applyHalfPiPulse(value_pair *a, value_pair *b)
 {
 	int index = threadIdx.x + blockDim.x * (blockIdx.x + blockIdx.y * gridDim.x);
 

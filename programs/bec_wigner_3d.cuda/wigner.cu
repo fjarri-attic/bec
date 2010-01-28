@@ -219,7 +219,7 @@ void initEvolution(value_pair *h_steady_state, CalculationParameters &params, Ev
 //	for(value_type t = 0; t <= params.tmaxWig; t += params.dtWig)
 //		propagate(params, state, params.dtWig);
 
-	applyBraggPulse<<<state.grid, state.block>>>(state.a, state.b);
+	applyHalfPiPulse<<<state.grid, state.block>>>(state.a, state.b);
 	cutilCheckMsg("applyBraggPulse");
 }
 
