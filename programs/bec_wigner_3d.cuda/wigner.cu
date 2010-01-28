@@ -329,7 +329,7 @@ void drawState(CalculationParameters &params, EvolutionState &state, CudaTexture
 	drawData(a_zy_tex, state.dens_a_zy, zy_scale);
 	drawData(b_zy_tex, state.dens_b_zy, zy_scale);
 
-	float4 *b_xy_buf = b_xy_tex.map();
-	cudaMemcpy(state.to_bmp, b_xy_buf, params.nvx * params.nvy * sizeof(float4), cudaMemcpyDeviceToHost);
-	b_xy_tex.unmap();
+	float4 *b_zy_buf = b_zy_tex.map();
+	cudaMemcpy(state.to_bmp, b_zy_buf, params.nvz * params.nvy * sizeof(float4), cudaMemcpyDeviceToHost);
+	b_zy_tex.unmap();
 }

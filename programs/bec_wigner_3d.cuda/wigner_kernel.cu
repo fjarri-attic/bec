@@ -103,7 +103,7 @@ __device__ __inline__ value_type potential(int index)
 	value_type y = -d_params.ymax + d_params.dy * j;
 	value_type z = -d_params.zmax + d_params.dz * k;
 
-	return (1 / (d_params.lambda * d_params.lambda) * x * x + y * y + z * z) / 2;
+	return (x * x + y * y + z * z / (d_params.lambda * d_params.lambda)) / 2;
 }
 
 // fill given buffer with ground state, obtained from Thomas-Fermi approximation
