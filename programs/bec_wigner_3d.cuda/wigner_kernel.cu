@@ -89,6 +89,12 @@ __device__ __inline__ value_type module(value_pair a)
 	return a.x * a.x + a.y * a.y;
 }
 
+__device__ __inline__ value_pair cexp(value_pair a)
+{
+	value_type module = exp(a.x);
+	return MAKE_VALUE_PAIR(module * cos(a.y), module * sin(a.y));
+}
+
 // Returns external potential energy for given lattice node
 __device__ __inline__ value_type potential(int index)
 {
@@ -197,15 +203,20 @@ __global__ void propagateXSpaceTwoComponent(value_pair *aa, value_pair *bb, valu
 		value_type n_a = module(a);
 		value_type n_b = module(b);
 
-		value_type pa = -V - d_params.g11 * n_a - d_params.g12 * n_b;
-		value_type pb = -V - d_params.g22 * n_b - d_params.g12 * n_a;
+		// TODO: there must be no minus sign before imaginary part,
+		// but without it the whole thing diverges
+		value_pair pa = MAKE_VALUE_PAIR(
+			-(d_params.l111 * n_a * n_a + d_params.l12 * n_b) / 2,
+			//0,
+			-(-V - d_params.g11 * n_a - d_params.g12 * n_b));
+		value_pair pb = MAKE_VALUE_PAIR(
+			-(d_params.l22 * n_b + d_params.l12 * n_a) / 2,
+			//0,
+			-(-V - d_params.g22 * n_b - d_params.g12 * n_a));
 
-		//calculate midpoint log derivative and exponentiate
-		value_type a_angle = dt * pa / 2;
-		da = MAKE_VALUE_PAIR(cos(a_angle), -sin(a_angle));
-
-		value_type b_angle = dt * pb / 2;
-		db = MAKE_VALUE_PAIR(cos(b_angle), -sin(b_angle));
+		// calculate midpoint log derivative and exponentiate
+		da = cexp(cmul(pa, dt / 2));
+		db = cexp(cmul(pb, dt / 2));
 
 		//propagate to midpoint using log derivative
 		a = cmul(a0, da);

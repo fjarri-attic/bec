@@ -36,6 +36,9 @@ struct CalculationParameters
 
 	int N;
 
+	value_type detuning; // detuning frequency, Hz
+	value_type gamma111, gamma12, gamma22; // loss terms, cm^6/s for 111 and cm^3/s for others
+
 	// set to 1 with vacuum noise, 0 otherwise
 	value_type Va;
 	value_type Vb;
@@ -71,6 +74,9 @@ struct CalculationParameters
 	value_type lambda; // radial trap freq. / axial trap freq.
 	value_type l_rho; // natural length
 	value_type t_rho; // natural time
+
+	value_type detuning_natural; // detuning, natural units
+	value_type l111, l12, l22; // loss terms, natural units
 
 	// space step
 	value_type dx;

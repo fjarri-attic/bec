@@ -69,13 +69,18 @@ void fillCalculationParameters(CalculationParameters &params)
 	params.fy = 97.6;
 	params.fz = 11.96;
 
+	params.detuning = 41;
+	params.gamma111 = 5.4e-30;
+	params.gamma12 = 0.78e-13;
+	params.gamma22 = 1.194e-13;
+
 	// Vacuum noise, 0.0 - 1.0
 	params.Va = 0;
 	params.Vb = 0;
 
 	// spatial lattice size
-	params.nvx = 16;
-	params.nvy = 16;
+	params.nvx = 32;
+	params.nvy = 32;
 	params.nvz = 128;
 
 	params.itmax = 3;
@@ -111,15 +116,21 @@ void fillDerivedParameters(CalculationParameters &params)
 	value_type h_bar = 1.054571628e-34;
 	value_type a0 = 5.2917720859e-11; // Bohr radius, meters
 
-	// natural length
-	params.l_rho = sqrt(h_bar / (params.m * 2 * M_PI * params.fx));
-	params.t_rho = 1 / (2 * M_PI * params.fx);
+	// natural units
+	value_type w_rho = 2 * M_PI * params.fx;
+	params.l_rho = sqrt(h_bar / (params.m * w_rho));
+	params.t_rho = 1 / w_rho;
+	params.lambda = params.fx / params.fz;
 
 	params.cells = params.nvx * params.nvy * params.nvz;
 
 	params.V = (params.Va + params.Vb) / 2.0;
 
-	params.lambda = params.fx / params.fz;
+	params.detuning_natural = params.detuning / w_rho;
+
+	params.l111 = (params.gamma111 / 1e-12) * pow(params.l_rho, 6) / w_rho;
+	params.l12 = (params.gamma12 / 1e-6) * pow(params.l_rho, 3) / w_rho;
+	params.l22 = (params.gamma22 / 1e-6) * pow(params.l_rho, 3) / w_rho;
 
 	params.g11 = 4 * M_PI * params.a11 * a0 / params.l_rho;
 	params.g12 = 4 * M_PI * params.a12 * a0 / params.l_rho;
