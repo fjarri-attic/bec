@@ -320,7 +320,8 @@ void calculateEvolution(CalculationParameters &params, EvolutionState &state, va
 void drawState(CalculationParameters &params, EvolutionState &state, CudaTexture &a_xy_tex,
 	CudaTexture &b_xy_tex, CudaTexture &a_zy_tex, CudaTexture &b_zy_tex)
 {
-	value_type scale = 30.0 * params.N * params.ne / params.cells;
+
+	value_type scale = 3.0 * params.N * params.ne / (params.cells * params.dx * params.dy * params.dz);
 	value_type xy_scale = scale * params.nvz;
 	value_type zy_scale = scale * params.nvx;
 
