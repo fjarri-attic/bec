@@ -1,7 +1,6 @@
 *.gz
 *.aux
 *.log
-*.pdf
 *.gz(busy)
 *.bmp
 *.bbl
