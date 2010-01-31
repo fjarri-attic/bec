@@ -191,7 +191,8 @@ $\Omega$ is a constant for state transitions due to external oscillating magneti
 \end{pmatrix}.
 \]
 More generally, rotation around the equatorial vector in Bloch sphere is described by the following matrix:
-\[
+\begin{equation}
+\label{rotation_matrix}
 \begin{pmatrix}
 	\Psi^\prime_1 \\	\Psi^\prime_2
 \end{pmatrix} =
@@ -201,7 +202,7 @@ More generally, rotation around the equatorial vector in Bloch sphere is describ
 \begin{pmatrix}
 	\Psi_1 \\ \Psi_2
 \end{pmatrix}.
-\]
+\end{equation}
 
 After transformation to natural units and considering the above explanation of terms, we will get the following equations:
 \[ i \frac{\partial \Psi_1}{\partial t} = \left(
@@ -275,7 +276,9 @@ Although there are some discrepancies, caused by different scales and the fact t
 \label{visibility_vs_reference}
 \end{figure}
 
-Then we may try to enable loss and detuning terms and reproduce experimental data, namely, visibility. As can be seen on figure~\ref{visibility_vs_reference}, simulation results lie close to experimental points (but differ from interpolation made by experimenters, which is totally possible, since the interpolation is a pure speculation).
+Then we may try to enable loss and detuning terms and reproduce experimental data, namely, visibility. Visibility is an experimentally measurable property of BEC and can be described as:
+\[ V = \max_{\phi} \frac{\vert N_1(\phi) - N_2(\phi) \vert}{N_1(\phi) + N_2(\phi)}, \]
+where $N_1(\phi)$ and $N_2(\phi)$ are numbers of atoms in two states after $\frac{\pi}{2}$-pulse, described by rotation matrix \ref{rotation_matrix}. As can be seen on figure~\ref{visibility_vs_reference}, simulation results lie close to experimental points (but differ from interpolation made by experimenters, which is totally possible, since the interpolation is a pure speculation).
 
 \bibliographystyle{plain}
 \bibliography{refs}
