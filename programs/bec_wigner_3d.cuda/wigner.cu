@@ -217,8 +217,8 @@ void initEvolution(value_pair *h_steady_state, CalculationParameters &params, Ev
 	cutilCheckMsg("multiplyPair");
 
 	// Equilibration phase
-//	for(value_type t = 0; t <= params.tmaxWig; t += params.dtWig)
-//		propagate(params, state, params.dtWig);
+	for(value_type t = 0; t <= params.tmaxWig; t += params.dtWig)
+		propagate(params, state, params.dtWig);
 
 	applyHalfPiPulse<<<state.grid, state.block>>>(state.a, state.b);
 	cutilCheckMsg("applyBraggPulse");

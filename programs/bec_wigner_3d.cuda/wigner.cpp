@@ -90,7 +90,7 @@ void fillCalculationParameters(CalculationParameters &params)
 	params.itmax = 3;
 
 	params.dtGP = 0.01;
-	params.tmaxWig = 2;
+	params.tmaxWig = 0;
 	params.dtWig = 0.02;
 
 	params.ne = 1;
