@@ -40,7 +40,7 @@ void initWaveVectors(CalculationParameters &params);
 void releaseWaveVectors();
 
 // Initialize calculation
-void fillCalculationParameters(CalculationParameters &params)
+void fillCalculationParameters(ModelParameters &params)
 {
 	params.N = 150000;
 
@@ -71,12 +71,12 @@ void fillCalculationParameters(CalculationParameters &params)
 
 	params.detuning = 41;
 
-	params.gamma111 = 5.4e-30; // in cm^6 / s
-	params.gamma12 = 0.78e-13; // in cm^3 / s
-	params.gamma22 = 1.194e-13; // in cm^3 / s
-	//params.gamma111 = 0;
-	//params.gamma12 = 0;
-	//params.gamma22 = 0;
+	//params.gamma111 = 5.4e-30; // in cm^6 / s
+	//params.gamma12 = 0.78e-13; // in cm^3 / s
+	//params.gamma22 = 1.194e-13; // in cm^3 / s
+	params.gamma111 = 0;
+	params.gamma12 = 0;
+	params.gamma22 = 0;
 
 	// Vacuum noise, 0.0 - 1.0
 	params.Va = 0;
@@ -89,9 +89,10 @@ void fillCalculationParameters(CalculationParameters &params)
 
 	params.itmax = 3;
 
-	params.dtGP = 0.01;
-	params.tmaxWig = 0;
-	params.dtWig = 0.02;
+	// in seconds
+	params.dt_steady = 0.00002; // time step for steady state calculation
+	params.t_equilib = 0; // equilibration time
+	params.dt_evo = 0.00004; // time step for evolution
 
 	params.ne = 1;
 }
@@ -115,31 +116,37 @@ int log2(int input)
 }
 
 // Derive dependent calculation parameters
-void fillDerivedParameters(CalculationParameters &params)
+void fillDerivedParameters(ModelParameters &model_params, CalculationParameters &params)
 {
 	value_type h_bar = 1.054571628e-34;
 	value_type a0 = 5.2917720859e-11; // Bohr radius, meters
 
 	// natural units
-	value_type w_rho = 2 * M_PI * params.fx;
-	params.l_rho = sqrt(h_bar / (params.m * w_rho));
+	value_type w_rho = 2 * M_PI * model_params.fx;
+	params.l_rho = sqrt(h_bar / (model_params.m * w_rho));
 	params.t_rho = 1 / w_rho;
-	params.lambda = params.fx / params.fz;
+	params.lambda = model_params.fx / model_params.fz;
 
+	params.nvx = model_params.nvx;
+	params.nvy = model_params.nvy;
+	params.nvz = model_params.nvz;
 	params.cells = params.nvx * params.nvy * params.nvz;
 
+	params.Va = model_params.Va;
+	params.Vb = model_params.Vb;
 	params.V = (params.Va + params.Vb) / 2.0;
 
-	params.detuning_natural = params.detuning / w_rho;
+	params.detuning = model_params.detuning / w_rho;
 
-	params.l111 = (params.gamma111 / 1e+12) / (pow(params.l_rho, 6) * w_rho);
-	params.l12 = (params.gamma12 / 1e+6) / (pow(params.l_rho, 3) * w_rho);
-	params.l22 = (params.gamma22 / 1e+6) / (pow(params.l_rho, 3) * w_rho);
+	params.l111 = (model_params.gamma111 / 1e+12) / (pow(params.l_rho, 6) * w_rho);
+	params.l12 = (model_params.gamma12 / 1e+6) / (pow(params.l_rho, 3) * w_rho);
+	params.l22 = (model_params.gamma22 / 1e+6) / (pow(params.l_rho, 3) * w_rho);
 
-	params.g11 = 4 * M_PI * params.a11 * a0 / params.l_rho;
-	params.g12 = 4 * M_PI * params.a12 * a0 / params.l_rho;
-	params.g22 = 4 * M_PI * params.a22 * a0 / params.l_rho;
+	params.g11 = 4 * M_PI * model_params.a11 * a0 / params.l_rho;
+	params.g12 = 4 * M_PI * model_params.a12 * a0 / params.l_rho;
+	params.g22 = 4 * M_PI * model_params.a22 * a0 / params.l_rho;
 
+	params.N = model_params.N;
 	params.mu = pow(15.0 * params.N * params.g11 / (16.0 * M_PI * params.lambda * sqrt(2.0)), 0.4);
 	printf("mu(TF) = %f\n", params.mu);
 
@@ -160,6 +167,12 @@ void fillDerivedParameters(CalculationParameters &params)
 	params.dkx = M_PI / params.xmax;
 	params.dky = M_PI / params.ymax;
 	params.dkz = M_PI / params.zmax;
+
+	params.itmax = model_params.itmax;
+	params.dt_steady = model_params.dt_steady / params.t_rho;
+	params.t_equilib = model_params.t_equilib / params.t_rho;
+	params.dt_evo = model_params.dt_evo / params.t_rho;
+	params.ne = model_params.ne;
 }
 
 // Returns difference in seconds between to timevals
@@ -223,7 +236,7 @@ void display(void) {
 
 	// propagate system
 	if(!pause)
-		calculateEvolution(params, state, params.dtWig);
+		calculateEvolution(params, state, params.dt_evo);
 
 	// fill vertex buffers with state graphs
 	drawState(params, state, a_xy, b_xy, a_zy, b_zy);
@@ -293,8 +306,10 @@ int initGL(int argc, char **argv, CalculationParameters &params)
 
 int main(int argc, char** argv)
 {
-	fillCalculationParameters(params);
-	fillDerivedParameters(params);
+	ModelParameters model_params;
+
+	fillCalculationParameters(model_params);
+	fillDerivedParameters(model_params, params);
 
 	if (CUTFalse == initGL(argc, argv, params))
 		return CUTFalse;

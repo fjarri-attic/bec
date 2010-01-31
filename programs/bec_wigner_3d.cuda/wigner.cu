@@ -154,7 +154,7 @@ void calculateSteadyState(value_pair *h_steady_state, CalculationParameters &par
 			break;
 
 		E = new_E;
-		t += params.dtGP;
+		t += params.dt_steady;
 	} //end time loop
 
 	//FFT into x-space
@@ -217,8 +217,8 @@ void initEvolution(value_pair *h_steady_state, CalculationParameters &params, Ev
 	cutilCheckMsg("multiplyPair");
 
 	// Equilibration phase
-	for(value_type t = 0; t <= params.tmaxWig; t += params.dtWig)
-		propagate(params, state, params.dtWig);
+	for(value_type t = 0; t <= params.t_equilib; t += params.dt_evo)
+		propagate(params, state, params.dt_evo);
 
 	applyHalfPiPulse<<<state.grid, state.block>>>(state.a, state.b);
 	cutilCheckMsg("applyBraggPulse");

@@ -21,20 +21,16 @@ typedef float2 value_pair;
 // size of half-warp (for kernel optimizations)
 #define HALF_WARP_SIZE 16
 
-struct CalculationParameters
+// initial parameters, real units
+struct ModelParameters
 {
 	// scattering lengths, in Bohr radii
 	value_type a11, a12, a22;
 
-	// in h-bar units
-	value_type g11; // nonlinear coupling in 1
-	value_type g12; // nonlinear cross-coupling
-	value_type g22; // nonlinear coupling in 2
-
 	value_type m; // mass of a particle
 	value_type fx, fy, fz; // trap frequences, Hz
 
-	int N;
+	int N; // number of particles
 
 	value_type detuning; // detuning frequency, Hz
 	value_type gamma111, gamma12, gamma22; // loss terms, cm^6/s for 111 and cm^3/s for others
@@ -43,11 +39,6 @@ struct CalculationParameters
 	value_type Va;
 	value_type Vb;
 
-	// maximum coordinates, in meters
-	value_type xmax;
-	value_type ymax;
-	value_type zmax;
-
 	// number of points in space (must be power of 2 and greater than 16)
 	int nvx;
 	int nvy;
@@ -55,28 +46,46 @@ struct CalculationParameters
 
 	int itmax; // number of iterations for mid-step integral calculations
 
-	// steady state calculation parameters
-	value_type dtGP; // time step for GP, in natural units
-
-	// evolution parameters
-	value_type tmaxWig; // equilibration time, natural units
-	value_type dtWig; // evolution time step, natural units
+	// in seconds
+	value_type dt_steady; // time step for steady-state calculation
+	value_type t_equilib; // equilibration time
+	value_type dt_evo; // evolution time step
 	int ne; // number of samples in ensemble (must be power of 2)
+};
 
 // derived parameters, natural units
+struct CalculationParameters
+{
+	int N;
+
+	value_type g11; // nonlinear coupling in 1
+	value_type g12; // nonlinear cross-coupling
+	value_type g22; // nonlinear coupling in 2
 
 	value_type mu; // chemical potential from TF approximation
 
 	int cells; // number of space cells in one ensemble
 
+	value_type Va;
+	value_type Vb;
 	value_type V; // average vacuum noise
 
 	value_type lambda; // radial trap freq. / axial trap freq.
 	value_type l_rho; // natural length
 	value_type t_rho; // natural time
 
-	value_type detuning_natural; // detuning, natural units
+	value_type detuning;
 	value_type l111, l12, l22; // loss terms, natural units
+
+	// number of points in space (must be power of 2 and greater than 16)
+	int nvx;
+	int nvy;
+	int nvz;
+
+	// maximum coordinates
+	value_type xmax;
+	value_type ymax;
+	value_type zmax;
 
 	// space step
 	value_type dx;
@@ -93,6 +102,13 @@ struct CalculationParameters
 	value_type dkx;
 	value_type dky;
 	value_type dkz;
+
+	int itmax;
+
+	value_type dt_steady;
+	value_type t_equilib;
+	value_type dt_evo;
+	int ne;
 };
 
 

@@ -128,7 +128,7 @@ __global__ void fillWithTFGroundState(value_pair *data)
 __global__ void propagateKSpaceImaginaryTime(value_pair *data)
 {
 	int index = threadIdx.x + blockDim.x * (blockIdx.x + blockIdx.y * gridDim.x);
-	value_type prop_coeff = exp(-d_params.dtGP / 2 * getWaveVectorLength(index));
+	value_type prop_coeff = exp(-d_params.dt_steady / 2 * getWaveVectorLength(index));
 	value_pair temp = data[index];
 	data[index] = cmul(temp, prop_coeff);
 }
@@ -167,7 +167,7 @@ __global__ void propagateXSpaceOneComponent(value_pair *data)
 	for(int iter = 0; iter < d_params.itmax; iter++)
 	{
 		//calculate midpoint log derivative and exponentiate
-		da = exp(d_params.dtGP / 2 * (-V - d_params.g11 * module(a)));
+		da = exp(d_params.dt_steady / 2 * (-V - d_params.g11 * module(a)));
 
 		//propagate to midpoint using log derivative
 		a = cmul(a0, da);
