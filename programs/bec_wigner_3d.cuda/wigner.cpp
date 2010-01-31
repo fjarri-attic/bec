@@ -128,9 +128,9 @@ void fillDerivedParameters(CalculationParameters &params)
 
 	params.detuning_natural = params.detuning / w_rho;
 
-	params.l111 = (params.gamma111 / 1e-12) * pow(params.l_rho, 6) / w_rho;
-	params.l12 = (params.gamma12 / 1e-6) * pow(params.l_rho, 3) / w_rho;
-	params.l22 = (params.gamma22 / 1e-6) * pow(params.l_rho, 3) / w_rho;
+	params.l111 = (params.gamma111 / 1e+12) / (pow(params.l_rho, 6) * w_rho);
+	params.l12 = (params.gamma12 / 1e+6) / (pow(params.l_rho, 3) * w_rho);
+	params.l22 = (params.gamma22 / 1e+6) / (pow(params.l_rho, 3) * w_rho);
 
 	params.g11 = 4 * M_PI * params.a11 * a0 / params.l_rho;
 	params.g12 = 4 * M_PI * params.a12 * a0 / params.l_rho;
