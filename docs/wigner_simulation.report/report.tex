@@ -232,6 +232,41 @@ where $\eta_{ijk}$ are complex random numbers with independent normally distribu
 \[ \phi_{ijk}(\mathbf{r}) = \delta(x - i\Delta x) \delta(y - j\Delta y) \delta(z - k\Delta z) / \sqrt{\Delta x \Delta y \Delta z} \]
 with $\Delta x$, $\Delta y$ and $\Delta z$ being the steps of the spatial lattice. Practically, it means that, in order to take into account the quantum noise, we must add the field of random complex numbers to the initial state (in our case it would be GPE steady state for component $\vert1\rangle$ and zero for component $\vert2\rangle$). Real and imaginary parts of these fields must be Gaussian random numbers with variance equal to $1 / 2 \sqrt{\Delta x \Delta y \Delta z}$.
 
+\section*{Implementation}
+
+The model explained above is implemented using C++ and CUDA. Calculation is performed in three steps: first, GPE for one-component gas is solved, producing the steady state. Then there is an optional equilibration phase (corresponding to the time before first $\frac{\pi}{2}$ pulse), followed by the $\frac{\pi}{2}$ pulse and evolution phase. During the evolution phase, each step propagates system state for given time step and prepares data necessary for rendering. Preparation includes second $\frac{\pi}{2}$ pulse (which does not spoil original wave-functions, so that they could be propagated further), particle density calculation, projection on two orthogonal planes and writing these projections to textures for rendering.
+
+Program uses $128\times32\times32$ lattice and calculates propagation in 1 or 4 ensembles (for quantum noise turned off or on, correspondingly), giving the following times for different stages:
+
+\begin{itemize}
+\item Steady state calculation: 3.4 s (20 $\mu$s time step)
+\item Equilibration phase (if any): 12.9 s (20 ms with 40 $\mu$s time step) per ensemble
+\item Evolution: 49.2 ms per step per ensemble
+\end{itemize}
+
+When number of ensembles multiplied by number of lattice points is low, calculation speed is affected mainly by rendering functions and decreases linearly with each additional ensemble; with lots of ensembles (or dense lattice), the bottleneck is FFT, and calculation speed depends on number of ensembles as $O(N\log{N})$.
+
+\section*{Simulation results}
+
+\begin{figure}
+\begin{center}
+\subfloat[Reference simulation]{\includegraphics[width=2.5in]{evolution_reference.png}}
+\qquad
+\subfloat[Split-step simulation]{\includegraphics[width=2.5in]{evolution_nolosses_40mus.png}}
+\end{center}
+\caption{Column density of the $\vert2\rangle$-component}
+\label{evolution_vs_reference}
+\end{figure}
+
+The results produced by the program seems to be close to experiments and to reference simulations from \cite{anderson-2009-80}. As an example consider figure~\ref{evolution_vs_reference}, which shows the evolution of the density of $\vert2\rangle$-state. It contains the image from \cite{anderson-2009-80} and simulation result with disabled loss and detuning terms and the same model parameters:
+\[ N = 150000 \]
+\[ a_{11} = 100.40 a_0, a_{12} = 97.66 a_0, a_{22} = 95.00 a_0 \]
+\[ f_x = 11.962 \textrm{ Hz}, f_y = f_z = 97.62 \textrm{ Hz} \]
+\[ m = 87 m_p \textrm{ (Rubidium)}\]
+Although there are some discrepancies, caused by different scales and the fact that reference image simulates condensate after expansion, the evolution of cloud structure goes similarly on both images.
+
+Then we may try to enable loss and detuning terms and reproduce experimental data.
+
 \bibliographystyle{plain}
 \bibliography{refs}
 
