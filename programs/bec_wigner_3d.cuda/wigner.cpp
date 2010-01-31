@@ -70,9 +70,13 @@ void fillCalculationParameters(CalculationParameters &params)
 	params.fz = 11.96;
 
 	params.detuning = 41;
-	params.gamma111 = 5.4e-30;
-	params.gamma12 = 0.78e-13;
-	params.gamma22 = 1.194e-13;
+
+	params.gamma111 = 5.4e-30; // in cm^6 / s
+	params.gamma12 = 0.78e-13; // in cm^3 / s
+	params.gamma22 = 1.194e-13; // in cm^3 / s
+	//params.gamma111 = 0;
+	//params.gamma12 = 0;
+	//params.gamma22 = 0;
 
 	// Vacuum noise, 0.0 - 1.0
 	params.Va = 0;
@@ -87,7 +91,7 @@ void fillCalculationParameters(CalculationParameters &params)
 
 	params.dtGP = 0.01;
 	params.tmaxWig = 2;
-	params.dtWig = 0.01;
+	params.dtWig = 0.02;
 
 	params.ne = 1;
 }
