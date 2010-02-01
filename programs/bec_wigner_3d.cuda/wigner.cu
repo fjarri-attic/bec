@@ -271,9 +271,6 @@ void calculateEvolution(CalculationParameters &params, EvolutionState &state, va
 	cufftSafeCall(batchfftExecute(state.plan, (cufftComplex*)state.a, (cufftComplex*)state.a, CUFFT_FORWARD));
 	cufftSafeCall(batchfftExecute(state.plan, (cufftComplex*)state.b, (cufftComplex*)state.b, CUFFT_FORWARD));
 	cutilSafeCall(cudaThreadSynchronize());
-
-	halfPiRotate<<<state.grid, state.block>>>(state.dens_a, state.dens_b, state.a, state.b, 0);
-	cutilCheckMsg("halfPiRotate");
 /*
 	value_type max = 0;
 	for(value_type alpha = 0; alpha < 2 * M_PI; alpha += 0.5)
@@ -284,6 +281,10 @@ void calculateEvolution(CalculationParameters &params, EvolutionState &state, va
 	}
 	printf("%f %f\n", state.t * params.t_rho * 1000, max);
 */
+	// second pi/2 pulse
+	halfPiRotate<<<state.grid, state.block>>>(state.dens_a, state.dens_b, state.a, state.b, 0);
+	cutilCheckMsg("halfPiRotate");
+
 	//FFT into k-space
 	cufftSafeCall(batchfftExecute(state.plan, (cufftComplex*)state.a, (cufftComplex*)state.a, CUFFT_INVERSE));
 	cufftSafeCall(batchfftExecute(state.plan, (cufftComplex*)state.b, (cufftComplex*)state.b, CUFFT_INVERSE));
