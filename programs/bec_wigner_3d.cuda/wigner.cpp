@@ -243,12 +243,14 @@ void display(void) {
 
 	int t = (int)(state.t * params.t_rho * 1000.0); // time in ms
 
+/*
 	if(t % 5 == 0)
 	{
 		char fname[255];
 		sprintf(fname, "screenshot%03d.bmp", t);
 		createBitmap(fname, state.to_bmp, params.nvz, params.nvy);
 	}
+*/
 
 	// draw graphs
 
