@@ -276,7 +276,7 @@ void calculateEvolution(CalculationParameters &params, EvolutionState &state, va
 		if(res > max)
 			max = res;
 	}
-	printf("%f %f\n", state.t, max);
+	printf("%f %f\n", state.t * params.t_rho * 1000, max);
 */
 	//FFT into k-space
 	cufftSafeCall(batchfftExecute(state.plan, (cufftComplex*)state.a, (cufftComplex*)state.a, CUFFT_INVERSE));
