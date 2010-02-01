@@ -251,6 +251,16 @@ void sparseReduce(CudaBuffer<value_type> &out, CudaBuffer<value_type> &in, int l
 	}
 }
 
+value_type getComponentRatio(CalculationParameters &params, EvolutionState &state, value_type angle)
+{
+	halfPiRotate<<<state.grid, state.block>>>(state.dens_a, state.dens_b, state.a, state.b, angle);
+	cutilCheckMsg("halfPiRotate");
+
+	value_type N1 = reduce<value_type>(state.dens_a, state.temp, params.cells * params.ne, 1);
+	value_type N2 = reduce<value_type>(state.dens_b, state.temp, params.cells * params.ne, 1);
+	return (N1 - N2) / (N1 + N2);
+}
+
 // propagate system and fill current state graph data
 void calculateEvolution(CalculationParameters &params, EvolutionState &state, value_type dt)
 {
@@ -268,13 +278,9 @@ void calculateEvolution(CalculationParameters &params, EvolutionState &state, va
 	value_type max = 0;
 	for(value_type alpha = 0; alpha < 2 * M_PI; alpha += 0.5)
 	{
-		halfPiRotate<<<state.grid, state.block>>>(state.dens_a, state.dens_b, state.a, state.b, alpha);
-		cutilCheckMsg("halfPiRotate");
-		value_type N1 = reduce<value_type>(state.dens_a, state.temp, params.cells * params.ne, 1);
-		value_type N2 = reduce<value_type>(state.dens_b, state.temp, params.cells * params.ne, 1);
-		value_type res = abs(N1 - N2) / (N1 + N2);
-		if(res > max)
-			max = res;
+		value_type ratio = getComponentRatio(params, state, alpha);
+		if(abs(ratio) > max)
+			max = abs(ratio);
 	}
 	printf("%f %f\n", state.t * params.t_rho * 1000, max);
 */
