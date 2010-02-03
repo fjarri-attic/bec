@@ -134,9 +134,12 @@ struct EvolutionState
 
 	value_type t;
 
+	bool pi_pulse_applied;
+
 	EvolutionState()
 	{
 		to_bmp = NULL;
+		pi_pulse_applied = false;
 	}
 
 	EvolutionState(const CalculationParameters &params)

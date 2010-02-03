@@ -315,6 +315,18 @@ __global__ void applyHalfPiPulse(value_pair *a, value_pair *b)
 	b[index] = cmul(cadd(cmul(a0, MAKE_VALUE_PAIR(0, -1)), b0), 1.0 / sqrt(2.0));
 }
 
+// Apply pi pulse (instantaneus approximation)
+__global__ void applyPiPulse(value_pair *a, value_pair *b)
+{
+	int index = threadIdx.x + blockDim.x * (blockIdx.x + blockIdx.y * gridDim.x);
+
+	value_pair a0 = a[index];
+	value_pair b0 = b[index];
+
+	a[index] = cmul(b0, MAKE_VALUE_PAIR(0, -1));
+	b[index] = cmul(a0, MAKE_VALUE_PAIR(0, -1));
+}
+
 __device__ __inline__ value_type density(value_pair a)
 {
 	 return module(a) - d_params.V / 2.0f;

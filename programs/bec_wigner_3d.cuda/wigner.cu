@@ -290,10 +290,9 @@ void printComponentRatioAxialProjection(CalculationParameters &params, Evolution
 	state.temp.copyTo(a_proj, params.nvz);
 	state.temp2.copyTo(b_proj, params.nvz);
 
-	value_type norm = params.N / (params.nvz * params.dx * params.dy * params.dz);
 	printf("%f", state.t * params.t_rho * 1000);
 	for(int i = 0; i < params.nvz; i++)
-		printf(" %f", (a_proj[i] - b_proj[i]) / norm);
+		printf(" %f", (a_proj[i] - b_proj[i]) / (a_proj[i] + b_proj[i]));
 	printf("\n");
 
 	delete[] a_proj;
@@ -310,7 +309,14 @@ void calculateEvolution(CalculationParameters &params, EvolutionState &state, va
 	cufftSafeCall(batchfftExecute(state.plan, (cufftComplex*)state.a, (cufftComplex*)state.a, CUFFT_FORWARD));
 	cufftSafeCall(batchfftExecute(state.plan, (cufftComplex*)state.b, (cufftComplex*)state.b, CUFFT_FORWARD));
 	cutilSafeCall(cudaThreadSynchronize());
-
+/*
+	if(!state.pi_pulse_applied && state.t * params.t_rho >= 0.03)
+	{
+		state.pi_pulse_applied = true;
+		applyPiPulse<<<state.grid, state.block>>>(state.a, state.b);
+		cutilCheckMsg("applyPiPulse");
+	}
+ */
 //	printf("%f %f\n", state.t * params.t_rho * 1000, getVisibility(params, state));
 //	printf("%f %f\n", state.t * params.t_rho * 1000, getComponentRatio(params, state, 0));
 	printComponentRatioAxialProjection(params, state);
