@@ -69,7 +69,7 @@ void fillCalculationParameters(ModelParameters &params)
 	params.fy = 97.6;
 	params.fz = 11.96;
 
-	params.detuning = 41;
+	params.detuning = -41; // In Hz
 
 	//params.gamma111 = 5.4e-30; // in cm^6 / s
 	//params.gamma12 = 0.78e-13; // in cm^3 / s
@@ -136,7 +136,7 @@ void fillDerivedParameters(ModelParameters &model_params, CalculationParameters 
 	params.Vb = model_params.Vb;
 	params.V = (params.Va + params.Vb) / 2.0;
 
-	params.detuning = model_params.detuning / w_rho;
+	params.detuning = 2 * M_PI * model_params.detuning / w_rho;
 
 	params.l111 = (model_params.gamma111 / 1e+12) / (pow(params.l_rho, 6) * w_rho);
 	params.l12 = (model_params.gamma12 / 1e+6) / (pow(params.l_rho, 3) * w_rho);

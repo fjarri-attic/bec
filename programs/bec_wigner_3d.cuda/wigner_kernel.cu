@@ -212,7 +212,7 @@ __global__ void propagateXSpaceTwoComponent(value_pair *aa, value_pair *bb, valu
 		value_pair pb = MAKE_VALUE_PAIR(
 			-(d_params.l22 * n_b + d_params.l12 * n_a) / 2,
 			//0,
-			-(-V - d_params.g22 * n_b - d_params.g12 * n_a - d_params.detuning));
+			-(-V - d_params.g22 * n_b - d_params.g12 * n_a + d_params.detuning));
 
 		// calculate midpoint log derivative and exponentiate
 		da = cexp(cmul(pa, dt / 2));
