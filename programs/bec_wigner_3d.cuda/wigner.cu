@@ -261,6 +261,45 @@ value_type getComponentRatio(CalculationParameters &params, EvolutionState &stat
 	return (N1 - N2) / (N1 + N2);
 }
 
+value_type getVisibility(CalculationParameters &params, EvolutionState &state)
+{
+	value_type max = 0;
+	for(value_type alpha = 0; alpha < 2 * M_PI; alpha += 0.5)
+	{
+		value_type ratio = getComponentRatio(params, state, alpha);
+		if(abs(ratio) > max)
+			max = abs(ratio);
+	}
+	return max;
+}
+
+void printComponentRatioAxialProjection(CalculationParameters &params, EvolutionState &state)
+{
+	halfPiRotate<<<state.grid, state.block>>>(state.dens_a, state.dens_b, state.a, state.b, 0);
+	cutilCheckMsg("halfPiRotate");
+
+	sparseReduce(state.temp, state.dens_a, params.cells * params.ne, params.cells);
+	reduce<value_type>(state.temp, state.dens_a, params.cells, params.nvz);
+
+	sparseReduce(state.temp2, state.dens_b, params.cells * params.ne, params.cells);
+	reduce<value_type>(state.temp2, state.dens_b, params.cells, params.nvz);
+
+	value_type *a_proj = new value_type[params.nvz];
+	value_type *b_proj = new value_type[params.nvz];
+
+	state.temp.copyTo(a_proj, params.nvz);
+	state.temp2.copyTo(b_proj, params.nvz);
+
+	value_type norm = params.N / (params.nvz * params.dx * params.dy * params.dz);
+	printf("%f", state.t * params.t_rho * 1000);
+	for(int i = 0; i < params.nvz; i++)
+		printf(" %f", (a_proj[i] - b_proj[i]) / norm);
+	printf("\n");
+
+	delete[] a_proj;
+	delete[] b_proj;
+}
+
 // propagate system and fill current state graph data
 void calculateEvolution(CalculationParameters &params, EvolutionState &state, value_type dt)
 {
@@ -271,16 +310,11 @@ void calculateEvolution(CalculationParameters &params, EvolutionState &state, va
 	cufftSafeCall(batchfftExecute(state.plan, (cufftComplex*)state.a, (cufftComplex*)state.a, CUFFT_FORWARD));
 	cufftSafeCall(batchfftExecute(state.plan, (cufftComplex*)state.b, (cufftComplex*)state.b, CUFFT_FORWARD));
 	cutilSafeCall(cudaThreadSynchronize());
-/*
-	value_type max = 0;
-	for(value_type alpha = 0; alpha < 2 * M_PI; alpha += 0.5)
-	{
-		value_type ratio = getComponentRatio(params, state, alpha);
-		if(abs(ratio) > max)
-			max = abs(ratio);
-	}
-	printf("%f %f\n", state.t * params.t_rho * 1000, max);
-*/
+
+//	printf("%f %f\n", state.t * params.t_rho * 1000, getVisibility(params, state));
+//	printf("%f %f\n", state.t * params.t_rho * 1000, getComponentRatio(params, state, 0));
+	printComponentRatioAxialProjection(params, state);
+
 	// second pi/2 pulse
 	halfPiRotate<<<state.grid, state.block>>>(state.dens_a, state.dens_b, state.a, state.b, 0);
 	cutilCheckMsg("halfPiRotate");
