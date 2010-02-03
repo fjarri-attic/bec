@@ -269,7 +269,7 @@ Although there are some discrepancies, caused by different scales and the fact t
 
 \begin{figure}
 \begin{center}
-\subfloat[Reference simulation]{\includegraphics[width=2.5in]{visibility_reference.png}}
+\subfloat[Reference simulation and experimental data (courtesy of Russell Anderson)]{\includegraphics[width=2.5in]{visibility_reference_7e4.png}}
 \qquad
 \subfloat[Split-step simulation]{\includegraphics[width=2.5in]{visibility.pdf}}
 \end{center}
@@ -277,9 +277,9 @@ Although there are some discrepancies, caused by different scales and the fact t
 \label{visibility_vs_reference}
 \end{figure}
 
-Then we may try to enable loss and detuning terms and reproduce experimental data, namely, visibility. Visibility is an experimentally measurable property of BEC and can be described as:
+Then we may try to reproduce another experimental result, namely, visibility measurements. Visibility can be described as:
 \[ V = \max_{\phi} \frac{\vert N_1(\phi) - N_2(\phi) \vert}{N_1(\phi) + N_2(\phi)}, \]
-where $N_1(\phi)$ and $N_2(\phi)$ are numbers of atoms in two states after $\frac{\pi}{2}$-pulse, described by rotation matrix \ref{rotation_matrix}. As can be seen on figure~\ref{visibility_vs_reference}, simulation results lie close to experimental points (but differ from interpolation made by experimenters, which is totally possible, since the interpolation is a pure speculation).
+where $N_1(\phi)$ and $N_2(\phi)$ are numbers of atoms in two states after $\frac{\pi}{2}$-pulse, described by rotation matrix \ref{rotation_matrix}. As can be seen on figure~\ref{visibility_vs_reference}, split-step simulation results lie close to reference simulation (blue dotted line), but start to differ from experimental results after approximately 400 ms (which can be explained by the incorrect values of loss terms).
 
 \bibliographystyle{plain}
 \bibliography{refs}
