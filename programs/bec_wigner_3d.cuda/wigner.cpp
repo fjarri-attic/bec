@@ -49,9 +49,9 @@ void fillCalculationParameters(ModelParameters &params)
 	// scattering lengths, in Bohr radii
 
 	// from AS presentation
-	//value_type a_11 = 100.44 * a0;
-	//value_type a_22 = 95.47 * a0;
-	//value_type a_12 = 98.09 * a0;
+	//params.a11 = 100.44;
+	//params.a22 = 95.47;
+	//params.a12 = 98.09;
 
 	// From "Spatially inhomogeneous phase evolution of a two-component Bose-Einstein condensate"
 	//value_type a_11 = 100.40 * a0;
@@ -71,20 +71,20 @@ void fillCalculationParameters(ModelParameters &params)
 
 	params.detuning = -41; // In Hz
 
-	//params.gamma111 = 5.4e-30; // in cm^6 / s
-	//params.gamma12 = 0.78e-13; // in cm^3 / s
-	//params.gamma22 = 1.194e-13; // in cm^3 / s
-	params.gamma111 = 0;
-	params.gamma12 = 0;
-	params.gamma22 = 0;
+	params.gamma111 = 5.4e-30; // in cm^6 / s
+	params.gamma12 = 0.78e-13; // in cm^3 / s
+	params.gamma22 = 1.194e-13; // in cm^3 / s
+	//params.gamma111 = 0;
+	//params.gamma12 = 0;
+	//params.gamma22 = 0;
 
 	// Vacuum noise, 0.0 - 1.0
 	params.Va = 0;
 	params.Vb = 0;
 
 	// spatial lattice size
-	params.nvx = 32;
-	params.nvy = 32;
+	params.nvx = 16;
+	params.nvy = 16;
 	params.nvz = 128;
 
 	params.itmax = 3;
