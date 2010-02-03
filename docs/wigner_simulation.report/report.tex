@@ -211,7 +211,7 @@ After transformation to natural units and considering the above explanation of t
 \right) \Psi_1, \]
 \[ i \frac{\partial \Psi_2}{\partial t} = \left(
 	-\frac{\nabla^2}{2} + V_{ext} +
-	g_{12} n_1 + g_{22} n_2 - \frac{i}{2} (l_{22} n_2 + l_{12} n_1) +
+	g_{12} n_1 + g_{22} n_2 - \frac{i}{2} (l_{22} n_2 + l_{12} n_1) -
 	\frac{\Delta}{\omega_\rho}
 \right) \Psi_2, \]
 where $l_{111}$, $l_{12}$ and $l_{22}$ are dimensionless loss terms:
@@ -221,7 +221,7 @@ These coupled equations can be solved numerically with the same split-step Fouri
 \[ \hat{D} = i \frac{\nabla^2}{2}, \]
 \[ \hat{N}_1 = -i \left( V_{ext} + g_{11} n_1 + g_{12} n_2 \right) - \frac{1}{2} \left( l_{111} n_1^2 + l_{12} n_2 \right), \]
 \[
-\hat{N}_2 = -i \left( V_{ext} + g_{12} n_1 + g_{22} n_2 + \frac{\Delta}{\omega_\rho} \right) -
+\hat{N}_2 = -i \left( V_{ext} + g_{12} n_1 + g_{22} n_2 - \frac{\Delta}{\omega_\rho} \right) -
 \frac{1}{2} \left( l_{22} n_2 + l_{12} n_1 \right).
 \]
 
