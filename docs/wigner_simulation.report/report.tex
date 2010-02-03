@@ -281,6 +281,14 @@ Then we may try to reproduce another experimental result, namely, visibility mea
 \[ V = \max_{\phi} \frac{\vert N_1(\phi) - N_2(\phi) \vert}{N_1(\phi) + N_2(\phi)}, \]
 where $N_1(\phi)$ and $N_2(\phi)$ are numbers of atoms in two states after $\frac{\pi}{2}$-pulse, described by rotation matrix \ref{rotation_matrix}. As can be seen on figure~\ref{visibility_vs_reference}, split-step simulation results lie close to reference simulation (blue dotted line), but start to differ from experimental results after approximately 400 ms (which can be explained by the incorrect values of loss terms).
 
+\begin{figure}
+\includegraphics[width=5in]{axial_view.pdf}
+\caption{Axial view over time}
+\label{axial_view}
+\end{figure}
+
+Next in line is a visualisation technique, proposed by Russell Anderson. The idea is to project density of each state to $z$-axis and render the difference between the density of two states along this axis in time. In order to avoid meaningless noise at the borders of the condensate (where the density is low), we are dividing density difference by average axial density (which equals to total number of atoms divided by simulated volume). In addition to noise elimination, it keeps the absolute value of the difference, so the revival/decay is clearly seen on the graph. Fig~\ref{axial_view} shows the example of such visualisation for detuning $\Delta = -41 \textrm{ Hz}$.
+
 \bibliographystyle{plain}
 \bibliography{refs}
 
