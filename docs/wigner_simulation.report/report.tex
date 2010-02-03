@@ -253,17 +253,18 @@ When number of ensembles multiplied by number of lattice points is low, calculat
 \begin{center}
 \subfloat[Reference simulation]{\includegraphics[width=2.5in]{evolution_reference.png}}
 \qquad
-\subfloat[Split-step simulation]{\includegraphics[width=2.5in]{evolution_nolosses_40mus.png}}
+\subfloat[Split-step simulation]{\includegraphics[width=2.5in]{evolution_losses_detuning_40mus.png}}
 \end{center}
 \caption{Column density of the $\vert2\rangle$-component}
 \label{evolution_vs_reference}
 \end{figure}
 
-The results produced by the program seems to be close to experiments and to reference simulations from \cite{anderson-2009-80}. As an example consider figure~\ref{evolution_vs_reference}, which shows the evolution of the density of $\vert2\rangle$-state. It contains the image from \cite{anderson-2009-80} and simulation result with disabled loss and detuning terms and the same model parameters:
+The results produced by the program seems to be close to experiments and to reference simulations from \cite{anderson-2009-80}. As an example consider figure~\ref{evolution_vs_reference}, which shows the evolution of the density of $\vert2\rangle$-state. It contains the image from \cite{anderson-2009-80} and the result of split-step simulation with the same model parameters:
 \[ N = 150000 \]
 \[ a_{11} = 100.40 a_0, a_{12} = 97.66 a_0, a_{22} = 95.00 a_0 \]
 \[ f_x = 11.962 \textrm{ Hz}, f_y = f_z = 97.62 \textrm{ Hz} \]
 \[ m = 87 m_p \textrm{ (Rubidium)}\]
+\[ \Delta = 1 \textrm{ Hz} \]
 Although there are some discrepancies, caused by different scales and the fact that reference image simulates condensate after expansion, the evolution of cloud structure goes similarly on both images.
 
 \begin{figure}
