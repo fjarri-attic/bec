@@ -116,7 +116,7 @@ struct EvolutionState
 {
 	batchfftHandle plan; // saved plan for FFTs
 
-	CudaBuffer<value_pair> a, b; // current state vectors
+	CudaBuffer<value_pair> a, b, complex_t1, complex_t2; // current state vectors
 
 	// temporary buffers for density calculations
 	CudaBuffer<value_type> dens_a, dens_b, temp, temp2;
@@ -161,6 +161,8 @@ struct EvolutionState
 
 		a.init(size);
 		b.init(size);
+		complex_t1.init(size);
+		complex_t2.init(size);
 		dens_a.init(size);
 		dens_b.init(size);
 		temp.init(size);
@@ -187,9 +189,7 @@ struct EvolutionState
 
 		delete[] to_bmp;
 		to_bmp = NULL;
-
 		batchfftDestroy(plan);
-
 		a.release();
 		b.release();
 		dens_a.release();
@@ -200,6 +200,8 @@ struct EvolutionState
 		dens_b_xy.release();
 		dens_a_zy.release();
 		dens_b_zy.release();
+		complex_t1.release();
+		complex_t2.release();
 	}
 
 private:
