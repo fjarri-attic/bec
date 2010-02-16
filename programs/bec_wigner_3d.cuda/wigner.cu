@@ -206,7 +206,7 @@ void initEvolution(value_pair *h_steady_state, CalculationParameters &params, Ev
 
 	// initialize ensembles
 	srand(time(0));
-	fillWithNormalDistribution(noise, 0.5 / sqrt(params.dx * params.dy * params.dz));
+	fillWithNormalDistribution(noise, 0.5f);
 	initializeEnsembles<<<state.grid, state.block>>>(state.a, state.b, steady_state, noise);
 	cutilCheckMsg("initializeEnsembles");
 

@@ -280,6 +280,17 @@ __global__ void calculateModules(value_type *output, value_pair *input)
 	output[index] = module(input[index]);
 }
 
+__device__ __inline__ value_type density(value_pair a)
+{
+	 return module(a) - d_params.V / (2.0f * d_params.dx * d_params.dy * d_params.dz);
+}
+
+__global__ void measure(value_type *output, value_pair *input)
+{
+	int index = threadIdx.x + blockDim.x * (blockIdx.x + blockIdx.y * gridDim.x);
+	output[index] = density(input[index]);
+}
+
 // Initialize ensembles with steady state + noise for evolution calculation
 __global__ void initializeEnsembles(value_pair *a, value_pair *b, value_pair *steady_state, value_pair *noise)
 {
@@ -292,14 +303,16 @@ __global__ void initializeEnsembles(value_pair *a, value_pair *b, value_pair *st
 	value_pair noise_b = noise[index + size];
 	value_pair steady_val = steady_state[index % single_size];
 
+	value_type coeff = 1.0f / sqrt(d_params.dx * d_params.dy * d_params.dz);
+
 	//Initialises a-ensemble amplitudes with vacuum noise
-	temp.x = steady_val.x +	d_params.Va * noise_a.x;
-	temp.y = steady_val.y +	d_params.Va * noise_a.y;
+	temp.x = steady_val.x +	d_params.Va * noise_a.x * coeff;
+	temp.y = steady_val.y +	d_params.Va * noise_a.y * coeff;
 	a[index] = temp;
 
 	//Initialises b-ensemble amplitudes with vacuum noise
-	temp.x = d_params.Vb * noise_b.x;
-	temp.y = d_params.Vb * noise_b.y;
+	temp.x = d_params.Vb * noise_b.x * coeff;
+	temp.y = d_params.Vb * noise_b.y * coeff;
 	b[index] = temp;
 }
 
@@ -325,11 +338,6 @@ __global__ void applyPiPulse(value_pair *a, value_pair *b)
 
 	a[index] = cmul(b0, MAKE_VALUE_PAIR(0, -1));
 	b[index] = cmul(a0, MAKE_VALUE_PAIR(0, -1));
-}
-
-__device__ __inline__ value_type density(value_pair a)
-{
-	 return module(a) - d_params.V / 2.0f;
 }
 
 // Pi/2 rotate around vector in equatorial plane, with angle alpha between it and x axis
