@@ -370,6 +370,18 @@ __global__ void smallReduce(value_type *sum, value_type *data, int n)
 	sum[index] = temp;
 }
 
+// This kernel was used for debug purposes - calculating average among ensembles
+__global__ void kernelAverage(value_pair *devs, value_pair *reduced_state, value_pair *state)
+{
+	int index = threadIdx.x + blockDim.x * (blockIdx.x + blockIdx.y * gridDim.x);
+	int single_size = d_params.cells; // number of cells in ensemble
+
+	value_pair avg = reduced_state[index % single_size] / d_params.ne;
+	value_pair temp = state[index];
+	devs[index] = MAKE_VALUE_PAIR((avg.x - temp.x) * (avg.x - temp.x),
+		(avg.y - temp.y) * (avg.y - temp.y));
+}
+
 // Fill constant memory
 void initConstants(CalculationParameters &params)
 {
