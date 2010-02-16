@@ -226,7 +226,8 @@ void initEvolution(value_pair *h_steady_state, CalculationParameters &params, Ev
 
 // reduce sparse elements instead of neighbouring ones
 // data in *in is spoiled after call
-void sparseReduce(CudaBuffer<value_type> &out, CudaBuffer<value_type> &in, int length, int final_length = 1)
+template<class T>
+void sparseReduce(CudaBuffer<T> &out, CudaBuffer<T> &in, int length, int final_length = 1)
 {
 	int coeff = length / final_length;
 
@@ -239,14 +240,14 @@ void sparseReduce(CudaBuffer<value_type> &out, CudaBuffer<value_type> &in, int l
 	// transpose cannot handle matrices with dimensions less than 16
 	if(coeff >= 16)
 	{
-		cutilSafeCall(transpose<value_type>(out, in, final_length, coeff, 1));
-		reduce<value_type>(out, in, length, final_length);
+		cutilSafeCall(transpose<T>(out, in, final_length, coeff, 1));
+		reduce<T>(out, in, length, final_length);
 	}
 	else
 	{
 		dim3 block, grid;
 		createKernelParams(block, grid, final_length, MAX_THREADS_NUM);
-		smallReduce<<<grid, block>>>(out, in, coeff);
+		smallReduce<T><<<grid, block>>>(out, in, coeff);
 		cutilCheckMsg("smallReduce");
 	}
 }
