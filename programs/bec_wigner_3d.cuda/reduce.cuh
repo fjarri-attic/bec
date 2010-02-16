@@ -7,6 +7,13 @@
 #define MAX_GRID_SIZE 32768
 #endif
 
+inline value_pair operator*(value_pair a, value_pair b) { return MAKE_VALUE_PAIR(a.x*b.x-a.y*b.y, a.x*b.y+a.y*b.x); }
+inline value_pair operator*(value_pair a, value_type b) { return MAKE_VALUE_PAIR(b*a.x, b*a.y); }
+inline value_pair operator/(value_pair a, value_type b) { return MAKE_VALUE_PAIR(a.x / b, a.y / b); }
+inline value_pair operator+(value_pair a, value_pair b) { return MAKE_VALUE_PAIR(a.x + b.x, a.y + b.y ); }
+inline value_pair operator-(value_pair a, value_pair b) { return MAKE_VALUE_PAIR(a.x - b.x, a.y - b.y ); }
+inline void operator+=(value_pair& a, const value_pair& b) { a.x += b.x; a.y += b.y; }
+inline value_type abs(value_pair a) { return a.x * a.x + a.y * a.y; }
 
 /**
  * Reduction kernel
@@ -142,7 +149,7 @@ T reduce(T* d_data, T* d_temp, int length, int final_length = 1)
 	{
 		if(d_input != d_data)
 			cutilSafeCall(cudaMemcpy(d_data, d_input, sizeof(T) * final_length, cudaMemcpyDeviceToDevice));
-		return 0;
+		return T();
 	}
 }
 
