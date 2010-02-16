@@ -299,6 +299,40 @@ void printComponentRatioAxialProjection(CalculationParameters &params, Evolution
 	delete[] b_proj;
 }
 
+void calculateAverages(CalculationParameters &params, EvolutionState &state)
+{
+	// calculate norm (sum (|psi|^2) = N)
+	calculateModules<<<state.grid, state.block>>>(state.dens_a, state.a);
+	cutilCheckMsg("calculateModules");
+	value_type a_avg_module = reduce<value_type>(state.dens_a, state.temp, params.cells * params.ne, 1) /
+		(params.cells * params.ne);
+
+	calculateModules<<<state.grid, state.block>>>(state.dens_b, state.b);
+	cutilCheckMsg("calculateModules");
+	value_type b_avg_module = reduce<value_type>(state.dens_b, state.temp, params.cells * params.ne, 1) /
+		(params.cells * params.ne);
+
+	printf("%f\n", (a_avg_module + b_avg_module) * params.cells * params.dx * params.dy * params.dz);
+	value_type norm = params.N / ((a_avg_module + b_avg_module) * params.cells);
+
+	// Calculate averages
+	cutilSafeCall(cudaMemcpy(state.complex_t1, state.a, params.cells * params.ne * sizeof(value_pair), cudaMemcpyDeviceToDevice));
+	sparseReduce<value_pair>(state.complex_t2, state.complex_t1, params.cells * params.ne, params.cells);
+	kernelAverage<<<state.grid, state.block>>>(state.complex_t1, state.complex_t2, state.a);
+	value_pair a_avg = reduce<value_pair>(state.complex_t1, state.complex_t2, params.cells * params.ne, 1) /
+		(params.cells * params.ne);
+
+	cutilSafeCall(cudaMemcpy(state.complex_t1, state.b, params.cells * params.ne * sizeof(value_pair), cudaMemcpyDeviceToDevice));
+	sparseReduce<value_pair>(state.complex_t2, state.complex_t1, params.cells * params.ne, params.cells);
+	kernelAverage<<<state.grid, state.block>>>(state.complex_t1, state.complex_t2, state.b);
+	value_pair b_avg = reduce<value_pair>(state.complex_t1, state.complex_t2, params.cells * params.ne, 1) /
+		(params.cells * params.ne);
+
+	printf("Avgs: Re(a): %f, Im(a): %f, Re(b): %f, Im(b): %f\n",
+	       a_avg.x * norm, a_avg.y * norm, b_avg.x * norm, b_avg.y * norm);
+//	printf("Avgs: Re = %f, Im = %f\n", (a_re_avg + b_re_avg) * norm, (a_im_avg + b_im_avg) * norm);
+}
+
 // propagate system and fill current state graph data
 void calculateEvolution(CalculationParameters &params, EvolutionState &state, value_type dt)
 {
