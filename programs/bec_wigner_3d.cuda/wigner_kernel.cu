@@ -353,15 +353,16 @@ __global__ void halfPiRotate(value_type *a_res, value_type *b_res, value_pair *a
 
 // Reduces a small set of arrays (if reduce power is too high it is better
 // to use transpose() + reduce())
-__global__ void smallReduce(value_type *sum, value_type *data, int n)
+template<class T>
+__global__ void smallReduce(T *sum, T *data, int n)
 {
 	int index = threadIdx.x + blockDim.x * (blockIdx.x + blockIdx.y * gridDim.x);
 
-	value_type temp = 0;
 	int size = blockDim.x * gridDim.x * gridDim.y;
 	int current_index = index;
+	T temp = data[current_index];
 
-	for(int i = 0; i < n; i++)
+	for(int i = 1; i < n; i++)
 	{
 		temp += data[current_index];
 		current_index += size;
