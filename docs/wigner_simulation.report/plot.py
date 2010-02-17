@@ -63,6 +63,19 @@ plt.axis([0, 600, 0, 1])
 plt.grid(True)
 plt.savefig('visibility_70k.pdf')
 
+no_noise_x, no_noise_y = load_xy_data('visibility_10k_no_noise.txt')
+noise_x1, noise_y1 = load_xy_data('visibility_10k_noise_16_16_128_16ens.txt')
+
+plt.figure()
+plt.plot(no_noise_x, no_noise_y, label='No quantum noise')
+plt.plot(noise_x1, noise_y1, label='With quantum noise, 16 ensembles')
+plt.legend()
+plt.xlabel('Time, ms')
+plt.ylabel('Visibility')
+plt.axis([0, 600, 0, 1.2])
+plt.grid(True)
+plt.savefig('visibility_10k.pdf')
+
 exit(0)
 # plot evolution
 

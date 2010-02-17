@@ -281,10 +281,24 @@ Then we may try to reproduce another experimental result, namely, visibility mea
 \[ V = \max_{\phi} \frac{\vert N_1(\phi) - N_2(\phi) \vert}{N_1(\phi) + N_2(\phi)}, \]
 where $N_1(\phi)$ and $N_2(\phi)$ are numbers of atoms in two states after $\frac{\pi}{2}$-pulse, described by rotation matrix \ref{rotation_matrix}. As can be seen on figure~\ref{visibility_vs_reference}, split-step simulation results for 70000 atoms lie close to reference simulation (blue dotted line), but start to differ from experimental results after approximately 400 ms. This can be explained by the incorrect values of loss terms, or by quantum noise -- as you can see, simulation with noise seems to be more close to the experiment.
 
+Current model of quantum noise seems to be affected by lattice size. As can be seen on figure~\ref{visibility_noise}, for denser lattice the results diverge noticeably from expected picture. On the other hand, number of ensembles does not play a big role (at least, for large amounts of atoms).
+
+\begin{figure}
+\includegraphics[width=5in]{visibility_150k.pdf}
+\caption{Visibility over time for different quantum noise settings, 150000 atoms}
+\label{visibility_noise}
+\end{figure}
+
 \begin{figure}
 \includegraphics[width=5in]{axial_view.pdf}
 \caption{Axial view over time}
 \label{axial_view}
+\end{figure}
+
+\begin{figure}
+\includegraphics[width=5in]{axial_pi_pulse.pdf}
+\caption{Axial view over time, with $\pi$-pulse after 30ms}
+\label{axial_pi_pulse}
 \end{figure}
 
 Next in line is a visualisation technique, proposed by Russell Anderson. The idea is to project density of each state to $z$-axis and render the difference between the density of two states along this axis in time. The difference is divided by the sum of the densities before rendering in order to correspond to spin projection. Fig~\ref{axial_view} shows the example of such visualisation for detuning $\Delta = -41 \textrm{ Hz}$. The noise at the borders of the condensate is caused by the low total density.
@@ -310,13 +324,7 @@ The last exhibit is the axial view of the same system, but with additional $\pi$
 	\Psi_1 \\ \Psi_2
 \end{pmatrix}.
 \]
-The result can be seen on Fig~\ref{axial_pi_pulse}. Comparing it to the fig~\ref{axial_view}, you can see the so called 'revival' - the amplitude of spin projection oscillations did not decrease after 120ms.
-
-\begin{figure}
-\includegraphics[width=5in]{axial_pi_pulse.pdf}
-\caption{Axial view over time, with $\pi$-pulse after 30ms}
-\label{axial_pi_pulse}
-\end{figure}
+The result can be seen on fig~\ref{axial_pi_pulse}. Comparing it to the fig~\ref{axial_view}, you can see the so called 'revival' - the amplitude of spin projection oscillations did not decrease after 120ms.
 
 \bibliographystyle{plain}
 \bibliography{refs}
