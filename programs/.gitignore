@@ -2,3 +2,5 @@
 *.bmp
 *.bin
 *.txt
+*.pyc
+
