@@ -33,18 +33,37 @@ def load_heightmap_data(file_name):
 
 # plot visibility
 
-no_noise_x, no_noise_y = load_xy_data('visibility.txt')
-noise_x, noise_y = load_xy_data('visibility_noise.txt')
+no_noise_x, no_noise_y = load_xy_data('visibility_150k_no_noise.txt')
+noise_x1, noise_y1 = load_xy_data('visibility_150k_noise_16_16_128_4ens.txt')
+noise_x2, noise_y2 = load_xy_data('visibility_150k_noise_32_32_128_4ens.txt')
+noise_x3, noise_y3 = load_xy_data('visibility_150k_noise_16_16_128_16ens.txt')
 
-plt.plot(no_noise_x, no_noise_y, label='Simulation, no quantum noise')
-plt.plot(noise_x, noise_y, label='Simulation, with quantum noise')
+plt.figure()
+plt.plot(no_noise_x, no_noise_y, label='No quantum noise')
+plt.plot(noise_x1, noise_y1, label='Noise, 16x16x128 lattice, 4 ensembles')
+plt.plot(noise_x2, noise_y2, label='Noise, 32x32x128 lattice, 4 ensembles')
+plt.plot(noise_x3, noise_y3, label='Noise, 16x16x128 lattice, 16 ensembles')
 plt.legend()
 plt.xlabel('Time, ms')
 plt.ylabel('Visibility')
 plt.axis([0, 600, 0, 1])
 plt.grid(True)
-plt.savefig('visibility.pdf')
+plt.savefig('visibility_150k.pdf')
 
+no_noise_x, no_noise_y = load_xy_data('visibility_70k_no_noise.txt')
+noise_x1, noise_y1 = load_xy_data('visibility_70k_noise_16_16_128_4ens.txt')
+
+plt.figure()
+plt.plot(no_noise_x, no_noise_y, label='No quantum noise')
+plt.plot(noise_x1, noise_y1, label='With quantum noise, 4 ensembles')
+plt.legend()
+plt.xlabel('Time, ms')
+plt.ylabel('Visibility')
+plt.axis([0, 600, 0, 1])
+plt.grid(True)
+plt.savefig('visibility_70k.pdf')
+
+exit(0)
 # plot evolution
 
 times, z = load_heightmap_data('axial_no_noise.txt')
