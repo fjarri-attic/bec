@@ -31,6 +31,23 @@ def load_heightmap_data(file_name):
 	f.close()
 	return times, arr
 
+# plot number of particles
+
+no_noise_x, no_noise_y = load_xy_data('particles_150k_no_noise.txt')
+noise_x1, noise_y1 = load_xy_data('particles_150k_16_16_128_4ens.txt')
+noise_x2, noise_y2 = load_xy_data('particles_150k_32_32_128_4ens.txt')
+
+plt.figure()
+plt.plot(no_noise_x, no_noise_y, label='No quantum noise')
+plt.plot(noise_x1, noise_y1, label='Noise, 16x16x128 lattice, 4 ensembles')
+plt.plot(noise_x2, noise_y2, label='Noise, 32x32x128 lattice, 4 ensembles')
+plt.legend()
+plt.xlabel('Time, ms')
+plt.ylabel('Numper of particles')
+plt.axis([0, 300, 0, 150000])
+plt.grid(True)
+plt.savefig('particles_150k.pdf')
+
 # plot visibility
 
 no_noise_x, no_noise_y = load_xy_data('visibility_150k_no_noise.txt')
@@ -76,7 +93,6 @@ plt.axis([0, 600, 0, 1.2])
 plt.grid(True)
 plt.savefig('visibility_10k.pdf')
 
-exit(0)
 # plot evolution
 
 times, z = load_heightmap_data('axial_no_noise.txt')

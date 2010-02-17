@@ -229,7 +229,9 @@ These coupled equations can be solved numerically with the same split-step Fouri
 
 Since we are using pseudoclassical description of the condensate, we can increase accuracy of the model by taking into account quantum noise. According to \cite{PhysRevA.58.4824}, the quantum noise can be introduced as the addition of the following wave function to the initial conditions:
 \[ \Psi_{noise}(\mathbf{r}) = \sum_{i=0}^{N_x} \sum_{j=0}^{N_y} \sum_{k=0}^{N_z} \frac{1}{2} \eta_{ijk} \phi_{ijk}(\mathbf{r}), \]
-where $\eta_{ijk}$ are complex random numbers with independent normally distributed real and imaginary parts, and $\phi_{ijk}(\mathbf{r})$ are functions from a discrete position basis
+where $\eta_{ijk}$ are complex random numbers with independent normally distributed real and imaginary parts in such a way that:
+\[ \overline{\eta_{ijk}^* \eta_{lmn}} = \delta_{il} \delta_{jm} \delta_{kn}, \]
+and $\phi_{ijk}(\mathbf{r})$ are functions from a discrete position basis
 \[ \phi_{ijk}(\mathbf{r}) = \delta(x - i\Delta x) \delta(y - j\Delta y) \delta(z - k\Delta z) / \sqrt{\Delta x \Delta y \Delta z} \]
 with $\Delta x$, $\Delta y$ and $\Delta z$ being the steps of the spatial lattice. Practically, it means that, in order to take into account the quantum noise, we must add the field of random complex numbers to the initial state (in our case it would be GPE steady state for component $\vert1\rangle$ and zero for component $\vert2\rangle$). Real and imaginary parts of these fields must be Gaussian random numbers with variance equal to $1 / 2 \sqrt{\Delta x \Delta y \Delta z}$.
 
@@ -281,22 +283,34 @@ Then we may try to reproduce another experimental result, namely, visibility mea
 \[ V = \max_{\phi} \frac{\vert N_1(\phi) - N_2(\phi) \vert}{N_1(\phi) + N_2(\phi)}, \]
 where $N_1(\phi)$ and $N_2(\phi)$ are numbers of atoms in two states after $\frac{\pi}{2}$-pulse, described by rotation matrix \ref{rotation_matrix}. As can be seen on figure~\ref{visibility_vs_reference}, split-step simulation results for 70000 atoms lie close to reference simulation (blue dotted line), but start to differ from experimental results after approximately 400 ms. This can be explained by the incorrect values of loss terms, or by quantum noise -- as you can see, simulation with noise seems to be more close to the experiment.
 
-Current model of quantum noise seems to be affected by lattice size. As can be seen on figure~\ref{visibility_noise}, for denser lattice the results diverge noticeably from expected picture. On the other hand, number of ensembles does not play a big role (at least, for large amounts of atoms).
-
 \begin{figure}
-\includegraphics[width=5in]{visibility_150k.pdf}
+\includegraphics[width=4.5in]{visibility_150k.pdf}
 \caption{Visibility over time for different quantum noise settings, 150000 atoms}
 \label{visibility_noise}
 \end{figure}
 
 \begin{figure}
-\includegraphics[width=5in]{axial_view.pdf}
+\includegraphics[width=4.5in]{visibility_10k.pdf}
+\caption{Visibility over time, 10000 atoms}
+\label{visibility_noise_10k}
+\end{figure}
+
+\begin{figure}
+\includegraphics[width=4.5in]{particles_150k.pdf}
+\caption{Visibility over time for different quantum noise settings, 150000 atoms}
+\label{particle_number}
+\end{figure}
+
+Current model of quantum noise seems to be affected by lattice size. As can be seen on figure~\ref{visibility_noise}, for denser lattice the results diverge noticeably from expected picture. On the other hand, number of ensembles does not play a big role (at least, for large amounts of atoms). For low amounts of atoms, simulation with noise gives ugly pictures like figure~\ref{visibility_noise_10k}. Noise also contributes in particle loss over time, see figure~\ref{particle_number} for particle number changes over time for different noise settings.
+
+\begin{figure}
+\includegraphics[width=4.5in]{axial_view.pdf}
 \caption{Axial view over time}
 \label{axial_view}
 \end{figure}
 
 \begin{figure}
-\includegraphics[width=5in]{axial_pi_pulse.pdf}
+\includegraphics[width=4.5in]{axial_pi_pulse.pdf}
 \caption{Axial view over time, with $\pi$-pulse after 30ms}
 \label{axial_pi_pulse}
 \end{figure}
