@@ -13,13 +13,14 @@ from globals import *
 
 class GroundState:
 
-	def __init__(self, precision, constants, mempool):
+	def __init__(self, gpu, precision, constants, mempool):
 		self._precision = precision
 		self._constants = copy.deepcopy(constants)
 		self._mempool = mempool
+		self._gpu = gpu
 
-	def create(self, gpu=True):
-		if gpu:
+	def create(self):
+		if self._gpu:
 			return self.gpuCreate()
 		else:
 			return self.cpuCreate()

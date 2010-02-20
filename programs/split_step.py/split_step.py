@@ -18,8 +18,8 @@ constants = Constants(Model)
 mempool = GPUPool(stub=True)
 gpu = True
 
-gs = GroundState(precision, constants, mempool)
-gs_gpu = gs.create(gpu=gpu)
+gs = GroundState(gpu, precision, constants, mempool)
+gs_gpu = gs.create()
 
 gs_gpu_h = numpy.empty(constants.shape, dtype=precision.complex.dtype)
 cuda.memcpy_dtoh(gs_gpu_h, gs_gpu)
