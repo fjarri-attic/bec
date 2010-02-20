@@ -1,8 +1,6 @@
 from pycuda.autoinit import device
 from pycuda.driver import device_attribute
-from pycuda.tools import DeviceMemoryPool
 
-mempool = DeviceMemoryPool()
 
 def log2(x):
 	"""Auxiliary function, calculating binary logarithm for integer"""
