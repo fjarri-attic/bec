@@ -1,10 +1,13 @@
+import math
+import copy
 from mako.template import Template
 import numpy
-import pycuda.driver as cuda
-from pycuda.compiler import SourceModule
-import math
 
-import copy
+try:
+	import pycuda.driver as cuda
+	from pycuda.compiler import SourceModule
+except:
+	pass
 
 from globals import *
 
@@ -33,7 +36,7 @@ class GroundState:
 
 					potential = (x * x + y * y + z * z / (self._constants.lambda_ * self._constants.lambda_)) / 2
 					e = self._constants.mu - potential
-					res[i, j, k] = math.sqrt(max(e / self._constants.g11, 0))
+					res[k, j, i] = math.sqrt(max(e / self._constants.g11, 0))
 
 		return res
 
@@ -103,5 +106,3 @@ def fillKVectorsTexture(constants, texref):
 	cuda.matrix_to_texref(vector, texref, order="F")
 	texref.set_filter_mode(cuda.filter_mode.POINT)
 	texref.set_address_mode(0, cuda.address_mode.CLAMP)
-
-
