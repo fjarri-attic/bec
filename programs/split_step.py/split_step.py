@@ -1,29 +1,29 @@
 import math
-
 import matplotlib
-
 import numpy
 import pycuda.autoinit
-from pycuda.compiler import SourceModule
+from pycuda.tools import DeviceMemoryPool
 import pycuda.driver as cuda
 
 from config import Model, precision
 from constants import *
 from steady import *
 
-Model.nvx = 32
-Model.nvy = 32
 constants = Constants(Model)
-constants.ensembles = 4
+#mempool = DeviceMemoryPool()
 
-#gs_cpu = createTFGroundStateCPU(constants)
-#gs_gpu = createTFGroundStateGPU(precision, constants)
+class NoPool:
+	def allocate(self, size):
+		return cuda.mem_alloc(size)
+mempool = NoPool()
+gs = GroundState(precision, constants, mempool)
 
-#gs = numpy.empty(gs_cpu.shape)
-#cuda.memcpy_dtoh(gs, gs_gpu)
+gs_cpu = gs.create(gpu=False)
+gs_gpu = gs.create(gpu=True)
 
-#print numpy.sum(numpy.abs(gs_cpu) - numpy.abs(gs) / numpy.sum(numpy.abs(gs_cpu)))
-#exit(0)
+gs_gpu_h = numpy.empty(gs_cpu.shape, dtype=precision.complex.dtype)
+cuda.memcpy_dtoh(gs_gpu_h, gs_gpu)
+
 
 def sum(a):
 	abs_a = numpy.abs(a)
