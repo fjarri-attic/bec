@@ -1,6 +1,25 @@
-from pycuda.autoinit import device
-from pycuda.driver import device_attribute
+try:
+	from pycuda.autoinit import device
+	from pycuda.driver import device_attribute
+	import pycuda.driver as cuda
+	from pycuda.tools import DeviceMemoryPool
+	pycuda_available = True
+except:
+	pycuda_available = False
 
+
+class GPUPool:
+
+	def __init__(self, stub=False):
+		if not pycuda_available:
+			self.allocate = None
+			return
+
+		if stub:
+			self.allocate = cuda.mem_alloc
+		else:
+			self._pool = DeviceMemoryPool()
+			self.allocate = self._pool.allocate
 
 def log2(x):
 	"""Auxiliary function, calculating binary logarithm for integer"""
