@@ -20,7 +20,7 @@ class Constants:
 		self.nvy = model.nvy
 		self.nvz = model.nvz
 		self.cells = self.nvx * self.nvy * self.nvz
-		self.shape = (self.nvx, self.nvy, self.nvz)
+		self.shape = (self.nvz, self.nvy, self.nvx)
 
 		self.V1 = model.V1
 		self.V2 = model.V2
