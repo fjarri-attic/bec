@@ -21,6 +21,10 @@ class GPUPool:
 			self._pool = DeviceMemoryPool()
 			self.allocate = self._pool.allocate
 
+	def __call__(self, size):
+		return self.allocate(size)
+
+
 def log2(x):
 	"""Auxiliary function, calculating binary logarithm for integer"""
 	pows = [1]

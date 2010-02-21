@@ -20,7 +20,7 @@ gpu = True
 
 gs = GroundState(gpu, precision, constants, mempool)
 gs_gpu = gs.create()
+gs_gpu_h = gs_gpu.get()
 
-gs_gpu_h = numpy.empty(constants.shape, dtype=precision.complex.dtype)
-cuda.memcpy_dtoh(gs_gpu_h, gs_gpu)
 print numpy.sum(numpy.abs(gs_gpu_h))
+
