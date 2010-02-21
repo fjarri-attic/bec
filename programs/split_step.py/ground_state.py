@@ -55,10 +55,9 @@ class GroundState:
 			{
 				int index = threadIdx.x + blockDim.x * (blockIdx.x + blockIdx.y * gridDim.x);
 
-				//${precision.scalar.name} e = ${constants.mu} - potential(index);
-				${precision.scalar.name} e = ${constants.mu} - tex1Dfetch(potentials, index);
+				${precision.scalar.name} e = (${precision.scalar.name})${constants.mu} - tex1Dfetch(potentials, index);
 				if(e > 0)
-					data[index] = ${precision.complex.ctr}(sqrt(e / ${constants.g11}), 0);
+					data[index] = ${precision.complex.ctr}(sqrt(e / (${precision.scalar.name})${constants.g11}), 0);
 				else
 					data[index] = ${precision.complex.ctr}(0, 0);
 			}
