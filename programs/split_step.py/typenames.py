@@ -1,9 +1,10 @@
 import numpy
 
 try:
-	import pycudafft
+	from pycudafft import SINGLE_PRECISION, DOUBLE_PRECISION
 except:
-	pass
+	SINGLE_PRECISION = None
+	DOUBLE_PRECISION = None
 
 class _Type:
 	def __init__(self, name, dtype):
@@ -24,5 +25,5 @@ _double_float = _Type('double', numpy.float64)
 _single_complex = _Type('float2', numpy.complex64)
 _double_complex = _Type('double2', numpy.complex128)
 
-single_precision = _Precision(_single_float, _single_complex, pycudafft.SINGLE_PRECISION)
-double_precision = _Precision(_double_float, _double_complex, pycudafft.DOUBLE_PRECISION)
+single_precision = _Precision(_single_float, _single_complex, SINGLE_PRECISION)
+double_precision = _Precision(_double_float, _double_complex, DOUBLE_PRECISION)
