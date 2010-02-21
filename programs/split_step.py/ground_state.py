@@ -22,6 +22,8 @@ class GroundState:
 
 		if self._gpu:
 			self._gpuPrepare()
+		else:
+			self._cpuPrepare()
 
 	def create(self):
 		if self._gpu:
@@ -29,18 +31,17 @@ class GroundState:
 		else:
 			return self.cpuCreate()
 
+	def _cpuPrepare(self):
+		potentials = fillPotentialsArray(self._precision, self._constants)
+		self._potentials = potentials.reshape(self._constants.nvz, self._constants.nvy, self._constants.nvx)
+
 	def cpuCreate(self):
 		res = numpy.empty(self._constants.shape, dtype=self._precision.complex.dtype)
 
 		for i in xrange(self._constants.nvx):
 			for j in xrange(self._constants.nvy):
 				for k in xrange(self._constants.nvz):
-					x = -self._constants.xmax + self._constants.dx * i
-					y = -self._constants.ymax + self._constants.dy * j
-					z = -self._constants.zmax + self._constants.dz * k
-
-					potential = (x * x + y * y + z * z / (self._constants.lambda_ * self._constants.lambda_)) / 2
-					e = self._constants.mu - potential
+					e = self._constants.mu - self._potentials[k, j, i]
 					res[k, j, i] = math.sqrt(max(e / self._constants.g11, 0))
 
 		return res
@@ -81,8 +82,7 @@ class GroundState:
 		self._func.prepared_call(self._grid, res.gpudata)
 		return res
 
-def fillPotentialsTexture(precision, constants, texref):
-
+def fillPotentialsArray(precision, constants):
 	potentials = numpy.empty(constants.cells, dtype=precision.scalar.dtype)
 
 	for i in xrange(constants.nvx):
@@ -95,6 +95,10 @@ def fillPotentialsTexture(precision, constants, texref):
 				index = i + j * constants.nvx + k * constants.nvy * constants.nvx
 				potentials[index] = (x * x + y * y + z * z / (constants.lambda_ * constants.lambda_)) / 2
 
+	return potentials
+
+def fillPotentialsTexture(precision, constants, texref):
+	potentials = fillPotentialsArray(precision, constants)
 	cuda.matrix_to_texref(potentials.reshape(1, constants.cells), texref, order="C")
 	texref.set_filter_mode(cuda.filter_mode.POINT)
 	texref.set_address_mode(0, cuda.address_mode.CLAMP)
