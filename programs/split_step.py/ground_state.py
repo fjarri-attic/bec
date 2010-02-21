@@ -20,6 +20,9 @@ class GroundState:
 		self._mempool = mempool
 		self._gpu = gpu
 
+		if self._gpu:
+			self._gpuPrepare()
+
 	def create(self):
 		if self._gpu:
 			return self.gpuCreate()
@@ -42,7 +45,7 @@ class GroundState:
 
 		return res
 
-	def gpuCreate(self):
+	def _gpuPrepare(self):
 		kernel_template = Template("""
 			texture<${precision.scalar.name}, 1> potentials;
 
@@ -64,18 +67,18 @@ class GroundState:
 			precision=self._precision,
 			constants=self._constants)
 
-		module = SourceModule(kernel_src)
-		func = module.get_function("fillWithTFGroundState")
-		texref = module.get_texref("potentials")
-		fillPotentialsTexture(self._precision, self._constants, texref)
+		self._module = SourceModule(kernel_src)
 
-		block, grid = getExecutionParameters(func, self._constants.cells)
+		self._func = self._module.get_function("fillWithTFGroundState")
+		self._texref = self._module.get_texref("potentials")
+		fillPotentialsTexture(self._precision, self._constants, self._texref)
 
+		block, self._grid = getExecutionParameters(self._func, self._constants.cells)
+		self._func.prepare("P", block=block)
+
+	def gpuCreate(self):
 		res = gpuarray.GPUArray(self._constants.shape, self._precision.complex.dtype, allocator=self._mempool)
-
-		func.prepare("P", block=block)
-		func.prepared_call(grid, res.gpudata)
-
+		self._func.prepared_call(self._grid, res.gpudata)
 		return res
 
 def fillPotentialsTexture(precision, constants, texref):
