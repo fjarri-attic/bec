@@ -6,6 +6,7 @@ import numpy
 try:
 	import pycuda.driver as cuda
 	from pycuda.compiler import SourceModule
+	from pycuda import gpuarray
 except:
 	pass
 
@@ -43,27 +44,15 @@ class GroundState:
 
 	def gpuCreate(self):
 		kernel_template = Template("""
-			// Returns external potential energy for given lattice node
-			__device__ __inline__ ${precision.scalar.name} potential(int index)
-			{
-				int k = index >> (${constants.nvx_pow} + ${constants.nvy_pow});
-				index -= (k << (${constants.nvx_pow} + ${constants.nvy_pow}));
-				int j = index >> ${constants.nvx_pow};
-				int i = index - (j << ${constants.nvx_pow});
-
-				${precision.scalar.name} x = -${constants.xmax} + ${constants.dx} * i;
-				${precision.scalar.name} y = -${constants.ymax} + ${constants.dy} * j;
-				${precision.scalar.name} z = -${constants.zmax} + ${constants.dz} * k;
-
-				return (x * x + y * y + z * z / (${constants.lambda_} * ${constants.lambda_})) / 2;
-			}
+			texture<${precision.scalar.name}, 1> potentials;
 
 			// fill given buffer with ground state, obtained from Thomas-Fermi approximation
 			__global__ void fillWithTFGroundState(${precision.complex.name} *data)
 			{
 				int index = threadIdx.x + blockDim.x * (blockIdx.x + blockIdx.y * gridDim.x);
 
-				${precision.scalar.name} e = ${constants.mu} - potential(index);
+				//${precision.scalar.name} e = ${constants.mu} - potential(index);
+				${precision.scalar.name} e = ${constants.mu} - tex1Dfetch(potentials, index);
 				if(e > 0)
 					data[index] = ${precision.complex.ctr}(sqrt(e / ${constants.g11}), 0);
 				else
@@ -77,15 +66,35 @@ class GroundState:
 
 		module = SourceModule(kernel_src)
 		func = module.get_function("fillWithTFGroundState")
+		texref = module.get_texref("potentials")
+		fillPotentialsTexture(self._precision, self._constants, texref)
+
 		block, grid = getExecutionParameters(func, self._constants.cells)
 
-		res = self._mempool.allocate(self._constants.cells * self._precision.complex.nbytes)
+		res = gpuarray.GPUArray(self._constants.shape, self._precision.complex.dtype, allocator=self._mempool)
 
 		func.prepare("P", block=block)
-		func.prepared_call(grid, res)
+		func.prepared_call(grid, res.gpudata)
 
 		return res
 
+def fillPotentialsTexture(precision, constants, texref):
+
+	potentials = numpy.empty(constants.cells, dtype=precision.scalar.dtype)
+
+	for i in xrange(constants.nvx):
+		for j in xrange(constants.nvy):
+			for k in xrange(constants.nvz):
+				x = -constants.xmax + i * constants.dx
+				y = -constants.ymax + j * constants.dy
+				z = -constants.zmax + k * constants.dz
+
+				index = i + j * constants.nvx + k * constants.nvy * constants.nvx
+				potentials[index] = (x * x + y * y + z * z / (constants.lambda_ * constants.lambda_)) / 2
+
+	cuda.matrix_to_texref(potentials.reshape(1, constants.cells), texref, order="C")
+	texref.set_filter_mode(cuda.filter_mode.POINT)
+	texref.set_address_mode(0, cuda.address_mode.CLAMP)
 
 def fillKVectorsTexture(constants, texref):
 
@@ -104,6 +113,6 @@ def fillKVectorsTexture(constants, texref):
 
 		vectors[index] = (kx * kx + ky * ky + kz * kz) / 2
 
-	cuda.matrix_to_texref(vector, texref, order="F")
+	cuda.matrix_to_texref(vectors, texref, order="F")
 	texref.set_filter_mode(cuda.filter_mode.POINT)
 	texref.set_address_mode(0, cuda.address_mode.CLAMP)
