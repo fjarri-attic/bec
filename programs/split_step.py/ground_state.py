@@ -32,8 +32,7 @@ class GroundState:
 			return self.cpuCreate()
 
 	def _cpuPrepare(self):
-		potentials = fillPotentialsArray(self._precision, self._constants)
-		self._potentials = potentials.reshape(self._constants.nvz, self._constants.nvy, self._constants.nvx)
+		self._potentials = fillPotentialsArray(self._precision, self._constants)
 
 	def cpuCreate(self):
 		res = numpy.empty(self._constants.shape, dtype=self._precision.complex.dtype)
@@ -82,7 +81,7 @@ class GroundState:
 		return res
 
 def fillPotentialsArray(precision, constants):
-	potentials = numpy.empty(constants.cells, dtype=precision.scalar.dtype)
+	potentials = numpy.empty(constants.shape, dtype=precision.scalar.dtype)
 
 	for i in xrange(constants.nvx):
 		for j in xrange(constants.nvy):
@@ -91,8 +90,7 @@ def fillPotentialsArray(precision, constants):
 				y = -constants.ymax + j * constants.dy
 				z = -constants.zmax + k * constants.dz
 
-				index = i + j * constants.nvx + k * constants.nvy * constants.nvx
-				potentials[index] = (x * x + y * y + z * z / (constants.lambda_ * constants.lambda_)) / 2
+				potentials[k, j, i] = (x * x + y * y + z * z / (constants.lambda_ * constants.lambda_)) / 2
 
 	return potentials
 
