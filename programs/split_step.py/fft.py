@@ -7,14 +7,13 @@ import numpy
 
 class NumpyPlan:
 
-	def __init__(self, x, y, z, dtype):
+	def __init__(self, x, y, z):
 		self._x = x
 		self._y = y
 		self._z = z
-		self._dtype = dtype
 
-	def execute(self, data_in, inverse=False, data_out=None, batch=1):
-		res = numpy.empty(data_in.shape, dtype=self._dtype)
+	def execute(self, data_in, data_out=None, inverse=False, batch=1):
+		res = numpy.empty(data_in.shape, dtype=data_in.dtype)
 
 		func = numpy.fft.ifftn if inverse else numpy.fft.fftn
 
@@ -28,8 +27,8 @@ class NumpyPlan:
 		else:
 			data_out[:,:,:] = res
 
-def createPlan(gpu, x, y, z, batch, precision):
+def createPlan(gpu, x, y, z, precision):
 	if gpu:
 		return pycudafft.FFTPlan(x, y=y, z=z, precision=precision.fft_precision, normalize=True)
 	else:
-		return NumpyPlan(x, y, z, dtype=precision.dtype)
+		return NumpyPlan(x, y, z)
