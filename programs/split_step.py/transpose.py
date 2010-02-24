@@ -1,7 +1,11 @@
 from mako.template import Template
-from pycuda.autoinit import device
-from pycuda.compiler import SourceModule
-from pycuda.driver import device_attribute
+
+try:
+	from pycuda.autoinit import device
+	from pycuda.compiler import SourceModule
+	from pycuda.driver import device_attribute
+except:
+	pass
 
 _kernel_template = Template("""
 /**
