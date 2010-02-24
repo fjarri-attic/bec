@@ -111,14 +111,15 @@ class ParticleStatistics(PairedCalculation):
 		self._plan.execute(state, kstate, inverse=True, batch=state.size / self._constants.cells)
 
 		res = numpy.empty(state.shape, dtype=self._precision.scalar.dtype)
+
+		n = numpy.abs(state) ** 2
+		xk = state * kstate
 		for e in xrange(state.size / self._constants.cells):
-			for i in xrange(self._constants.nvx):
-				for j in xrange(self._constants.nvy):
-					for k in xrange(self._constants.nvz):
-						n = numpy.abs(state[k,j,i]) ** 2
-						res[e * self._constants.cells + k,j,i] = numpy.abs(
-							n * (self._potentials[k,j,i] + self._constants.g11 * n / coeff) +
-							state[k,j,i] * kstate[k,j,i] * self._kvectors[k,j,i])
+			start = e * self._constants.cells
+			stop = (e + 1) * self._constants.cells
+			res[start:stop,:,:] = numpy.abs(n[start:stop,:,:] * (self._potentials +
+				n[start:stop,:,:] * (self._constants.g11 / coeff)) +
+				xk[start:stop,:,:] * self._kvectors)
 
 		return self._reduce(res) / (state.size / self._constants.cells) * self._constants.dV / self._constants.N
 
@@ -219,10 +220,45 @@ class GPEGroundState(PairedCalculation):
 		self._kvectors = fillKVectorsArray(self._precision, self._constants)
 
 	def _cpu_create(self):
-		tf_gs = self._tf_gs.create()
-		print "N = " + str(self._statistics.countParticles(tf_gs, subtract_noise=False))
-		print "E = " + str(self._statistics.countEnergy(tf_gs))
-		print "mu = " + str(self._statistics.countMu(tf_gs))
+		gs = self._tf_gs.create()
+
+		E = 0
+		new_E = self._statistics.countEnergy(gs)
+
+		self._plan.execute(gs, inverse=True)
+
+		while abs(E - new_E) / E > 1e-6:
+			E = new_E
+
+			gs *= numpy.exp(self._kvectors * (-self._constants.dt_steady / 2)) # k-space propagation
+			self._plan.execute(gs) # FFT to x-space
+
+			# x-space propagation
+			gs0 = gs.copy()
+			for iter in xrange(self._constants.itmax):
+				abs_gs = numpy.abs(gs)
+				d_gs = numpy.exp((self._potentials + abs_gs * abs_gs * self._constants.g11) *
+					(-self._constants.dt_steady / 2))
+				gs = gs0 * d_gs
+			gs *= d_gs
+
+			self._plan.execute(gs, inverse=True) # FFT to k-space
+			gs *= numpy.exp(self._kvectors * (-self._constants.dt_steady / 2)) # k-space propagation
+			self._plan.execute(gs) # FFT to x-space
+
+			# renormalize
+			N = self._statistics.countParticles(gs, subtract_noise=False)
+			gs *= math.sqrt(self._constants.N / N)
+
+			new_E = self._statistics.countEnergy(gs)
+
+			self._plan.execute(gs, inverse=True)
+
+		self._plan.execute(gs) # FFT to x-state
+
+		print "N = " + str(self._statistics.countParticles(gs, subtract_noise=False))
+		print "E = " + str(self._statistics.countEnergy(gs))
+		print "mu = " + str(self._statistics.countMu(gs))
 
 	def _gpu_create(self):
 		tf_gs = self._tf_gs.create()
