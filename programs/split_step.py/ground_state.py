@@ -11,30 +11,34 @@ except:
 	pass
 
 from globals import *
+from fft import createPlan
+from reduce import getReduce
 
-class GroundState:
+
+class PairedCalculation:
+	def __init__(self, gpu):
+		prefix = "_gpu_" if gpu else "_cpu_"
+
+		for attr in dir(self):
+			if attr.startswith(prefix):
+				name = attr[len(prefix):]
+				self.__dict__[name] = getattr(self, attr)
+
+
+class TFGroundState(PairedCalculation):
 
 	def __init__(self, gpu, precision, constants, mempool):
+		PairedCalculation.__init__(self, gpu)
 		self._precision = precision
 		self._constants = copy.deepcopy(constants)
 		self._mempool = mempool
-		self._gpu = gpu
 
-		if self._gpu:
-			self._gpuPrepare()
-		else:
-			self._cpuPrepare()
+		self._prepare()
 
-	def create(self):
-		if self._gpu:
-			return self.gpuCreate()
-		else:
-			return self.cpuCreate()
-
-	def _cpuPrepare(self):
+	def _cpu__prepare(self):
 		self._potentials = fillPotentialsArray(self._precision, self._constants)
 
-	def cpuCreate(self):
+	def _cpu_create(self):
 		res = numpy.empty(self._constants.shape, dtype=self._precision.complex.dtype)
 
 		for i in xrange(self._constants.nvx):
@@ -45,78 +49,237 @@ class GroundState:
 
 		return res
 
-	def _gpuPrepare(self):
+	def _gpu__prepare(self):
 		kernel_template = Template("""
-			texture<${precision.scalar.name}, 1> potentials;
+			texture<${p.scalar.name}, 1> potentials;
 
 			// fill given buffer with ground state, obtained from Thomas-Fermi approximation
-			__global__ void fillWithTFGroundState(${precision.complex.name} *data)
+			__global__ void fillWithTFGroundState(${p.complex.name} *data)
 			{
-				int index = threadIdx.x + blockDim.x * (blockIdx.x + blockIdx.y * gridDim.x);
+				int index = GLOBAL_INDEX;
 
-				${precision.scalar.name} e = (${precision.scalar.name})${constants.mu} - tex1Dfetch(potentials, index);
+				${p.scalar.name} e = (${p.scalar.name})${c.mu} - tex1Dfetch(potentials, index);
 				if(e > 0)
-					data[index] = ${precision.complex.ctr}(sqrt(e / (${precision.scalar.name})${constants.g11}), 0);
+					data[index] = ${p.complex.ctr}(sqrt(e / (${p.scalar.name})${c.g11}), 0);
 				else
-					data[index] = ${precision.complex.ctr}(0, 0);
+					data[index] = ${p.complex.ctr}(0, 0);
 			}
 		""")
 
-		kernel_src = kernel_template.render(
-			precision=self._precision,
-			constants=self._constants)
-
-		self._module = SourceModule(kernel_src)
-
-		self._func = self._module.get_function("fillWithTFGroundState")
+		self._module = compileSource(kernel_template, self._precision, self._constants)
+		self._func = FunctionWrapper(self._module, "fillWithTFGroundState", "P")
 		self._texref = self._module.get_texref("potentials")
 		fillPotentialsTexture(self._precision, self._constants, self._texref)
 
-		block, self._grid = getExecutionParameters(self._func, self._constants.cells)
-		self._func.prepare("P", block=block)
-
-	def gpuCreate(self):
+	def _gpu_create(self):
 		res = gpuarray.GPUArray(self._constants.shape, self._precision.complex.dtype, allocator=self._mempool)
-		self._func.prepared_call(self._grid, res.gpudata)
+		self._func(self._constants.cells, res.gpudata)
 		return res
 
-def fillPotentialsArray(precision, constants):
-	potentials = numpy.empty(constants.shape, dtype=precision.scalar.dtype)
 
-	for i in xrange(constants.nvx):
-		for j in xrange(constants.nvy):
-			for k in xrange(constants.nvz):
-				x = -constants.xmax + i * constants.dx
-				y = -constants.ymax + j * constants.dy
-				z = -constants.zmax + k * constants.dz
+class ParticleStatistics(PairedCalculation):
 
-				potentials[k, j, i] = (x * x + y * y + z * z / (constants.lambda_ * constants.lambda_)) / 2
+	def __init__(self, gpu, precision, constants, mempool):
+		PairedCalculation.__init__(self, gpu)
+		self._precision = precision
+		self._constants = copy.deepcopy(constants)
+		self._mempool = mempool
 
-	return potentials
+		self._plan = createPlan(gpu, constants.nvx, constants.nvy, constants.nvz, precision)
+		self._reduce = getReduce(gpu, precision, mempool)
 
-def fillPotentialsTexture(precision, constants, texref):
-	potentials = fillPotentialsArray(precision, constants)
-	cuda.matrix_to_texref(potentials.reshape(1, constants.cells), texref, order="C")
-	texref.set_filter_mode(cuda.filter_mode.POINT)
-	texref.set_address_mode(0, cuda.address_mode.CLAMP)
+		self._prepare()
 
-def fillKVectorsTexture(constants, texref):
+	def _cpu__prepare(self):
+		self._potentials = fillPotentialsArray(self._precision, self._constants)
+		self._kvectors = fillKVectorsArray(self._precision, self._constants)
 
-	kvalue = lambda i, dk, N: dk * (i - N) if 2 * i > N else dk * i
+	def _cpu__getAverageDensity(self, state, subtract_noise=True):
+		res = numpy.zeros(self._constants.shape, dtype=self._precision.scalar.dtype)
+		noise_term = self._constants.V / (2 * self._constants.dV) if subtract_noise else 0
 
-	vectors = numpy.empty(constants.cells, dtype=precision.scalar.dtype)
-	for index in xrange(constants.cells):
-		k = index >> (constants.nvx_pow + constants.nvy_pow)
-		k_shift = (k << (constants.nvx_pow + constants.nvy_pow))
-		j = (index - k_shift) >> constants.nvx_pow
-		i = (index - k_shift) - (j << constants.nvx_pow)
+		abs_values = numpy.abs(state)
+		normalized_values = abs_values * abs_values - noise_term
+		return self._reduce.sparse(normalized_values, self._constants.cells) / \
+			(state.size / self._constants.cells) * self._constants.dV
 
-		kx = kvalue(i, params.dkx, params.nvx)
-		ky = kvalue(j, params.dky, params.nvy)
-		kz = kvalue(k, params.dkz, params.nvz)
+	def _cpu_countParticles(self, state, subtract_noise=True):
+		return self._reduce(self._getAverageDensity(state, subtract_noise=subtract_noise))
 
-		vectors[index] = (kx * kx + ky * ky + kz * kz) / 2
+	def _cpu__countState(self, state, coeff):
+		kstate = numpy.empty(state.shape, dtype=self._precision.complex.dtype)
+		self._plan.execute(state, kstate, inverse=True, batch=state.size / self._constants.cells)
 
-	cuda.matrix_to_texref(vectors, texref, order="F")
-	texref.set_filter_mode(cuda.filter_mode.POINT)
-	texref.set_address_mode(0, cuda.address_mode.CLAMP)
+		res = numpy.empty(state.shape, dtype=self._precision.scalar.dtype)
+		for e in xrange(state.size / self._constants.cells):
+			for i in xrange(self._constants.nvx):
+				for j in xrange(self._constants.nvy):
+					for k in xrange(self._constants.nvz):
+						n = numpy.abs(state[k,j,i]) ** 2
+						res[e * self._constants.cells + k,j,i] = numpy.abs(
+							n * (self._potentials[k,j,i] + self._constants.g11 * n / coeff) +
+							state[k,j,i] * kstate[k,j,i] * self._kvectors[k,j,i])
+
+		return self._reduce(res) / (state.size / self._constants.cells) * self._constants.dV / self._constants.N
+
+	def _cpu_countEnergy(self, state):
+		return self._countState(state, 2)
+
+	def _cpu_countMu(self, state):
+		return self._countState(state, 1)
+
+	def _gpu__prepare(self):
+		kernel_template = Template("""
+			texture<${p.scalar.name}, 1> potentials;
+			texture<${p.scalar.name}, 1> kvectors;
+
+			__global__ void calculateDensity(${p.scalar.name} *res, ${p.complex.name} *state)
+			{
+				int index = GLOBAL_INDEX;
+				res[index] = squared_abs(state[index]);
+			}
+
+			__global__ void calculateNoisedDensity(${p.scalar.name} *res, ${p.complex.name} *state)
+			{
+				int index = GLOBAL_INDEX;
+				${p.scalar.name} noise_term = 0.5 * ${c.V} / (${c.dx} * ${c.dy} * ${c.dz});
+				res[index] = squared_abs(state[index]) - noise_term;
+			}
+
+			%for name, coeff in (('Energy', 2), ('Mu', 1)):
+				__global__ void calculate${name}(${p.scalar.name} *res,
+					${p.complex.name} *xstate, ${p.complex.name} *kstate)
+				{
+					int index = GLOBAL_INDEX;
+					${p.scalar.name} n_a = squared_abs(xstate[index]);
+					${p.complex.name} differential = xstate[index] * kstate[index] * tex1Dfetch(kvectors, index);
+					${p.scalar.name} nonlinear = n_a * (tex1Dfetch(potentials, index) +
+						(${p.scalar.name})${c.g11} * n_a / ${coeff});
+
+					// differential.y will be equal to 0, because \psi * D \psi is a real number
+					res[index] = nonlinear + differential.x;
+				}
+			%endfor
+		""")
+
+		self._module = compileSource(kernel_template, self._precision, self._constants)
+
+		self._calculate_mu = FunctionWrapper(self._module, "calculateMu", "PPP")
+		self._calculate_energy = FunctionWrapper(self._module, "calculateEnergy", "PPP")
+		self._calculate_density = FunctionWrapper(self._module, "calculateDensity", "PP")
+		self._calculate_noised_density = FunctionWrapper(self._module, "calculateNoisedDensity", "PP")
+
+		self._potentials_texref = self._module.get_texref("potentials")
+		self._kvectors_texref = self._module.get_texref("kvectors")
+
+		fillPotentialsTexture(self._precision, self._constants, self._potentials_texref)
+		fillKVectorsTexture(self._precision, self._constants, self._kvectors_texref)
+
+	def _gpu_countParticles(self, state, subtract_noise=True):
+		density = gpuarray.GPUArray(state.shape, self._precision.scalar.dtype, allocator=self._mempool)
+		if subtract_noise:
+			self._calculate_noised_density(state.size, density.gpudata, state.gpudata)
+		else:
+			self._calculate_density(state.size, density.gpudata, state.gpudata)
+		return self._reduce(density) / (state.size / self._constants.cells) * self._constants.dV
+
+	def _gpu_countEnergy(self, state):
+		kstate = gpuarray.GPUArray(state.shape, dtype=self._precision.complex.dtype, allocator=self._mempool)
+		res = gpuarray.GPUArray(state.shape, dtype=self._precision.scalar.dtype, allocator=self._mempool)
+		self._plan.execute(state, kstate, inverse=True, batch=state.size / self._constants.cells)
+		self._calculate_energy(state.size, res.gpudata, state.gpudata, kstate.gpudata)
+		return self._reduce(res) / (state.size / self._constants.cells) * self._constants.dV / self._constants.N
+
+	def _gpu_countMu(self, state):
+		kstate = gpuarray.GPUArray(state.shape, dtype=self._precision.complex.dtype, allocator=self._mempool)
+		res = gpuarray.GPUArray(state.shape, dtype=self._precision.scalar.dtype, allocator=self._mempool)
+		self._plan.execute(state, kstate, inverse=True, batch=state.size / self._constants.cells)
+		self._calculate_mu(state.size, res.gpudata, state.gpudata, kstate.gpudata)
+		return self._reduce(res) / (state.size / self._constants.cells) * self._constants.dV / self._constants.N
+
+
+class GPEGroundState(PairedCalculation):
+
+	def __init__(self, gpu, precision, constants, mempool):
+		PairedCalculation.__init__(self, gpu)
+
+		self._precision = precision
+		self._constants = copy.deepcopy(constants)
+		self._mempool = mempool
+		self._gpu = gpu
+
+		self._tf_gs = TFGroundState(gpu, precision, constants, mempool)
+		self._plan = createPlan(gpu, constants.nvx, constants.nvy, constants.nvz, precision)
+		self._statistics = ParticleStatistics(gpu, precision, constants, mempool)
+
+		self._prepare()
+
+	def _cpu__prepare(self):
+		self._potentials = fillPotentialsArray(self._precision, self._constants)
+		self._kvectors = fillKVectorsArray(self._precision, self._constants)
+
+	def _cpu_create(self):
+		tf_gs = self._tf_gs.create()
+		print "N = " + str(self._statistics.countParticles(tf_gs, subtract_noise=False))
+		print "E = " + str(self._statistics.countEnergy(tf_gs))
+		print "mu = " + str(self._statistics.countMu(tf_gs))
+
+	def _gpu_create(self):
+		tf_gs = self._tf_gs.create()
+		print "N = " + str(self._statistics.countParticles(tf_gs, subtract_noise=False))
+		print "E = " + str(self._statistics.countEnergy(tf_gs))
+		print "mu = " + str(self._statistics.countMu(tf_gs))
+
+	def _gpu__prepare(self):
+		kernel_template = Template("""
+			texture<${p.scalar.name}, 1> potentials;
+			texture<${p.scalar.name}, 1> kvectors;
+
+			// Propagates state vector in k-space for steady state calculation (i.e., in imaginary time)
+			__global__ void propagateKSpaceImaginaryTime(${p.complex.name} *data)
+			{
+				int index = GLOBAL_INDEX;
+				${p.scalar.name} prop_coeff = exp(-${c.dt_steady} / 2 * tex1Dfetch(kvectors, index));
+				${p.complex.name} temp = data[index];
+				data[index] = temp * prop_coeff;
+			}
+
+			// Propagates state in x-space for steady state calculation
+			__global__ void propagateXSpaceOneComponent(${p.complex.name} *data)
+			{
+				int index = GLOBAL_INDEX;
+
+				${p.complex.name} a = data[index];
+
+				//store initial x-space field
+				${p.complex.name} a0 = a;
+
+				${p.scalar.name} da;
+				${p.scalar.name} V = tex1Dfetch(potentials, index);
+
+				//iterate to midpoint solution
+				for(int iter = 0; iter < ${c.itmax}; iter++)
+				{
+					//calculate midpoint log derivative and exponentiate
+					da = exp(${c.dt_steady} / 2 * (-V - ${c.g11} * squared_abs(a)));
+
+					//propagate to midpoint using log derivative
+					a = a0 * da;
+				}
+
+				//propagate to endpoint using log derivative
+				data[index] = a * da;
+			}
+		""")
+
+		defines = KERNEL_DEFINES.render(p=self._precision)
+		kernel_src = kernel_template.render(p=self._precision, c=self._constants)
+
+		self._module = SourceModule(defines + kernel_src, no_extern_c=True)
+
+		#self._kpropagate = FunctionWrapper(self._module.get_function("propagateKSpaceImaginaryTime"),
+		#	"P", self._constants.cells)
+		#self._xpropagate = FunctionWrapper(self._module.get_function("propagateXSpaceOneComponent"),
+		#	"P", self._constants.cells)
+		self._potentials_texref = self._module.get_texref("potentials")
+		self._kvectors_texref = self._module.get_texref("kvectors")
