@@ -1,19 +1,25 @@
-from pycuda.autoinit import device
-from pycuda.driver import device_attribute
-import pycuda.driver as cuda
-import pycuda.gpuarray as gpuarray
-from pycuda.compiler import SourceModule
+try:
+	from pycuda.autoinit import device
+	from pycuda.driver import device_attribute
+	import pycuda.driver as cuda
+	import pycuda.gpuarray as gpuarray
+	from pycuda.compiler import SourceModule
+except:
+	pass
 
 from mako.template import Template
 import numpy
 
 from globals import *
+from transpose import Transpose
 
 class Reduce:
 
 	def __init__(self, precision, mempool):
 		self._precision = precision
 		self._mempool = mempool
+		self._tr_scalar = Transpose(precision.scalar)
+		self._tr_complex = Transpose(precision.complex)
 
 		kernel_template = Template("""
 		extern "C" {
@@ -127,6 +133,18 @@ class Reduce:
 		else:
 			return data_in
 
+	def sparse(self, array, final_length=1):
+		if final_length == 1:
+			return self(array)
+
+		res = gpuaray.GPUArray(array.shape, dtype=array.dtype, allocator=self._mempool)
+		reduce_power = array.size / final_length
+		if array.dtype == self._precision.scalar.dtype:
+			self._tr_scalar(res, array, final_length, reduce_power)
+		else:
+			self._tr_complex(res, array, final_length, reduce_power)
+
+		return self(res, final_length=final_length)
 
 class CPUReduce:
 
@@ -144,6 +162,13 @@ class CPUReduce:
 
 		return res
 
+	def sparse(self, array, final_length=1):
+
+		if final_length == 1:
+			return self(array)
+
+		reduce_power = array.size / final_length
+		return self(numpy.transpose(array.reshape(final_length, reduce_power)), final_length=final_length)
 
 def getReduce(gpu, precision, mempool):
 	if gpu:
