@@ -256,26 +256,61 @@ class GPEGroundState(PairedCalculation):
 
 		self._plan.execute(gs) # FFT to x-state
 
-		print "N = " + str(self._statistics.countParticles(gs, subtract_noise=False))
-		print "E = " + str(self._statistics.countEnergy(gs))
-		print "mu = " + str(self._statistics.countMu(gs))
+		print "Ground state calculation:" + \
+			" N = " + str(self._statistics.countParticles(gs, subtract_noise=False)) + \
+			" E = " + str(self._statistics.countEnergy(gs)) + \
+			" mu = " + str(self._statistics.countMu(gs))
 
 	def _gpu_create(self):
-		tf_gs = self._tf_gs.create()
-		print "N = " + str(self._statistics.countParticles(tf_gs, subtract_noise=False))
-		print "E = " + str(self._statistics.countEnergy(tf_gs))
-		print "mu = " + str(self._statistics.countMu(tf_gs))
+		gs = self._tf_gs.create()
+
+		E = 0
+		new_E = self._statistics.countEnergy(gs)
+
+		self._plan.execute(gs, inverse=True)
+
+		while abs(E - new_E) / E > 1e-6:
+			E = new_E
+
+			self._kpropagate(self._constants.cells, gs.gpudata)
+			self._plan.execute(gs) # FFT to x-space
+			self._xpropagate(self._constants.cells, gs.gpudata)
+			self._plan.execute(gs, inverse=True) # FFT to k-space
+			self._kpropagate(self._constants.cells, gs.gpudata)
+			self._plan.execute(gs) # FFT to x-space
+
+			# renormalize
+			N = self._statistics.countParticles(gs, subtract_noise=False)
+			self._multiply(self._constants.cells, gs.gpudata, math.sqrt(self._constants.N / N))
+
+			new_E = self._statistics.countEnergy(gs)
+
+			self._plan.execute(gs, inverse=True)
+
+		self._plan.execute(gs) # FFT to x-state
+
+		print "Ground state calculation:" + \
+			" N = " + str(self._statistics.countParticles(gs, subtract_noise=False)) + \
+			" E = " + str(self._statistics.countEnergy(gs)) + \
+			" mu = " + str(self._statistics.countMu(gs))
 
 	def _gpu__prepare(self):
 		kernel_template = Template("""
 			texture<${p.scalar.name}, 1> potentials;
 			texture<${p.scalar.name}, 1> kvectors;
 
+			__global__ void multiply(${p.complex.name} *data, ${p.scalar.name} coeff)
+			{
+				int index = GLOBAL_INDEX;
+				data[index] = data[index] * coeff;
+			}
+
 			// Propagates state vector in k-space for steady state calculation (i.e., in imaginary time)
 			__global__ void propagateKSpaceImaginaryTime(${p.complex.name} *data)
 			{
 				int index = GLOBAL_INDEX;
-				${p.scalar.name} prop_coeff = exp(-${c.dt_steady} / 2 * tex1Dfetch(kvectors, index));
+				${p.scalar.name} prop_coeff = exp(tex1Dfetch(kvectors, index) *
+					${p.scalar.name}(${-c.dt_steady / 2}));
 				${p.complex.name} temp = data[index];
 				data[index] = temp * prop_coeff;
 			}
@@ -297,7 +332,8 @@ class GPEGroundState(PairedCalculation):
 				for(int iter = 0; iter < ${c.itmax}; iter++)
 				{
 					//calculate midpoint log derivative and exponentiate
-					da = exp(${c.dt_steady} / 2 * (-V - ${c.g11} * squared_abs(a)));
+					da = exp(${p.scalar.name}(${c.dt_steady / 2}) *
+						(-V - ${p.scalar.name}(${c.g11}) * squared_abs(a)));
 
 					//propagate to midpoint using log derivative
 					a = a0 * da;
@@ -308,14 +344,13 @@ class GPEGroundState(PairedCalculation):
 			}
 		""")
 
-		defines = KERNEL_DEFINES.render(p=self._precision)
-		kernel_src = kernel_template.render(p=self._precision, c=self._constants)
+		self._module = compileSource(kernel_template, self._precision, self._constants)
 
-		self._module = SourceModule(defines + kernel_src, no_extern_c=True)
-
-		#self._kpropagate = FunctionWrapper(self._module.get_function("propagateKSpaceImaginaryTime"),
-		#	"P", self._constants.cells)
-		#self._xpropagate = FunctionWrapper(self._module.get_function("propagateXSpaceOneComponent"),
-		#	"P", self._constants.cells)
+		self._kpropagate = FunctionWrapper(self._module, "propagateKSpaceImaginaryTime", "P")
+		self._xpropagate = FunctionWrapper(self._module, "propagateXSpaceOneComponent", "P")
+		self._multiply = FunctionWrapper(self._module, "multiply", "Pf")
 		self._potentials_texref = self._module.get_texref("potentials")
 		self._kvectors_texref = self._module.get_texref("kvectors")
+
+		fillPotentialsTexture(self._precision, self._constants, self._potentials_texref)
+		fillKVectorsTexture(self._precision, self._constants, self._kvectors_texref)
