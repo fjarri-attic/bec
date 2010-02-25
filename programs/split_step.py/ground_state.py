@@ -15,16 +15,6 @@ from fft import createPlan
 from reduce import getReduce
 
 
-class PairedCalculation:
-	def __init__(self, gpu):
-		prefix = "_gpu_" if gpu else "_cpu_"
-
-		for attr in dir(self):
-			if attr.startswith(prefix):
-				name = attr[len(prefix):]
-				self.__dict__[name] = getattr(self, attr)
-
-
 class TFGroundState(PairedCalculation):
 
 	def __init__(self, gpu, precision, constants, mempool):
