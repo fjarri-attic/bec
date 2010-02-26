@@ -75,6 +75,11 @@ KERNEL_DEFINES = Template("""
 	{ return a.x * a.x + a.y * a.y; }
 	inline void operator+=(${p.complex.name}& a, const ${p.complex.name}& b)
 	{ a.x += b.x; a.y += b.y; }
+	inline __device__ ${p.complex.name} cexp(${p.complex.name} a)
+	{
+		${p.scalar.name} module = exp(a.x);
+		return ${p.complex.ctr}(module * cos(a.y), module * sin(a.y));
+	}
 
 	#define GLOBAL_INDEX (threadIdx.x + blockDim.x * (blockIdx.x + blockIdx.y * gridDim.x))
 """)
