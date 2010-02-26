@@ -223,8 +223,18 @@ class TwoComponentBEC(PairedCalculation):
 		self._t += dt
 
 	def _cpu__prepare(self):
-		self._potentials = fillPotentialsArray(self._precision, self._constants)
-		self._kvectors = fillKVectorsArray(self._precision, self._constants)
+		potentials = fillPotentialsArray(self._precision, self._constants)
+		kvectors = fillKVectorsArray(self._precision, self._constants)
+
+		self._potentials = numpy.empty(self._constants.ens_shape, dtype=self._precision.complex.dtype)
+		self._kvectors = numpy.empty(self._constants.ens_shape, dtype=self._precision.complex.dtype)
+
+		for e in range(self._constants.ensembles):
+			start = e * self._constants.nvz
+			stop = (e + 1) * self._constants.nvz
+
+			self._potentials[start:stop,:,:] = potentials
+			self._kvectors[start:stop,:,:] = kvectors
 
 	def _cpu_reset(self):
 		gs = self._gs.create()
