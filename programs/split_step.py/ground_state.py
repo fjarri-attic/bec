@@ -323,15 +323,14 @@ class GPEGroundState(PairedCalculation):
 				${p.scalar.name} V = tex1Dfetch(potentials, index);
 
 				//iterate to midpoint solution
-				for(int iter = 0; iter < ${c.itmax}; iter++)
-				{
+				%for iter in range(c.itmax):
 					//calculate midpoint log derivative and exponentiate
 					da = exp(${p.scalar.name}(${c.dt_steady / 2}) *
 						(-V - ${p.scalar.name}(${c.g11}) * squared_abs(a)));
 
 					//propagate to midpoint using log derivative
 					a = a0 * da;
-				}
+				%endfor
 
 				//propagate to endpoint using log derivative
 				data[index] = a * da;
