@@ -223,6 +223,20 @@ class TwoComponentBEC(PairedCalculation):
 
 		self._t += dt
 
+	def _runCallbacks(self, callbacks):
+		# transform to x-space
+		self._plan.execute(self._a, batch=self._constants.ensembles)
+		self._plan.execute(self._b, batch=self._constants.ensembles)
+
+		for callback in callbacks:
+			callback(self._t * self._constants.t_rho, self._a, self._b)
+		callback_t = 0
+
+		# transform to k-space
+		self._plan.execute(self._a, batch=self._constants.ensembles, inverse=True)
+		self._plan.execute(self._b, batch=self._constants.ensembles, inverse=True)
+
+
 	def runEvolution(self, tstop, callbacks, callback_dt=0):
 		self._t = 0
 		callback_t = 0
@@ -231,14 +245,6 @@ class TwoComponentBEC(PairedCalculation):
 			callback_t += self._constants.dt_evo * self._constants.t_rho
 
 			if callback_t > callback_dt:
-				# transform to x-space
-				self._plan.execute(self._a, batch=self._constants.ensembles)
-				self._plan.execute(self._b, batch=self._constants.ensembles)
+				self._runCallbacks(callbacks)
 
-				for callback in callbacks:
-					callback(self._t * self._constants.t_rho, self._a, self._b)
-				callback_t = 0
-
-				# transform to k-space
-				self._plan.execute(self._a, batch=self._constants.ensembles, inverse=True)
-				self._plan.execute(self._b, batch=self._constants.ensembles, inverse=True)
+		self._runCallbacks(callbacks)
