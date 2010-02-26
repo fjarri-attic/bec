@@ -4,6 +4,7 @@ try:
 	import pycuda.driver as cuda
 	from pycuda.tools import DeviceMemoryPool
 	from pycuda.compiler import SourceModule
+	import pycuda.gpuarray as gpuarray
 	pycuda_available = True
 except:
 	pycuda_available = False
@@ -139,9 +140,13 @@ def fillPotentialsArray(precision, constants):
 
 def fillPotentialsTexture(precision, constants, texref):
 	potentials = fillPotentialsArray(precision, constants)
-	cuda.matrix_to_texref(potentials.reshape(1, constants.cells), texref, order="C")
+	array = gpuarray.to_gpu(potentials)
+	texref.set_address(array.gpudata, array.size * potentials.itemsize, allow_offset=False)
+	#cuda.matrix_to_texref(potentials.reshape(1, constants.cells), texref, order="C")
+	texref.set_format(cuda.array_format.FLOAT, 1)
 	texref.set_filter_mode(cuda.filter_mode.POINT)
 	texref.set_address_mode(0, cuda.address_mode.CLAMP)
+	return array
 
 def fillKVectorsArray(precision, constants):
 
@@ -162,6 +167,10 @@ def fillKVectorsArray(precision, constants):
 
 def fillKVectorsTexture(precision, constants, texref):
 	kvectors = fillKVectorsArray(precision, constants)
-	cuda.matrix_to_texref(kvectors.reshape(1, constants.cells), texref, order="C")
+	array = gpuarray.to_gpu(kvectors)
+	texref.set_address(array.gpudata, array.size * kvectors.itemsize, allow_offset=False)
+	#cuda.matrix_to_texref(kvectors.reshape(1, constants.cells), texref, order="C")
+	texref.set_format(cuda.array_format.FLOAT, 1)
 	texref.set_filter_mode(cuda.filter_mode.POINT)
 	texref.set_address_mode(0, cuda.address_mode.CLAMP)
+	return array

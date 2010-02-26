@@ -59,7 +59,7 @@ class TFGroundState(PairedCalculation):
 		self._module = compileSource(kernel_template, self._precision, self._constants)
 		self._func = FunctionWrapper(self._module, "fillWithTFGroundState", "P")
 		self._texref = self._module.get_texref("potentials")
-		fillPotentialsTexture(self._precision, self._constants, self._texref)
+		self._potentials_array = fillPotentialsTexture(self._precision, self._constants, self._texref)
 
 	def _gpu_create(self):
 		res = gpuarray.GPUArray(self._constants.shape, self._precision.complex.dtype, allocator=self._mempool)
@@ -163,8 +163,8 @@ class ParticleStatistics(PairedCalculation):
 		self._potentials_texref = self._module.get_texref("potentials")
 		self._kvectors_texref = self._module.get_texref("kvectors")
 
-		fillPotentialsTexture(self._precision, self._constants, self._potentials_texref)
-		fillKVectorsTexture(self._precision, self._constants, self._kvectors_texref)
+		self._potentials_array = fillPotentialsTexture(self._precision, self._constants, self._potentials_texref)
+		self._kvectors_array = fillKVectorsTexture(self._precision, self._constants, self._kvectors_texref)
 
 	def _gpu_countParticles(self, state, subtract_noise=True):
 		density = gpuarray.GPUArray(state.shape, self._precision.scalar.dtype, allocator=self._mempool)
@@ -345,5 +345,5 @@ class GPEGroundState(PairedCalculation):
 		self._potentials_texref = self._module.get_texref("potentials")
 		self._kvectors_texref = self._module.get_texref("kvectors")
 
-		fillPotentialsTexture(self._precision, self._constants, self._potentials_texref)
-		fillKVectorsTexture(self._precision, self._constants, self._kvectors_texref)
+		self._potentials_array = fillPotentialsTexture(self._precision, self._constants, self._potentials_texref)
+		self._kvectors_array = fillKVectorsTexture(self._precision, self._constants, self._kvectors_texref)

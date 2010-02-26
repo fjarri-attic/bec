@@ -176,8 +176,8 @@ class TwoComponentBEC(PairedCalculation):
 		self._potentials_texref = self._module.get_texref("potentials")
 		self._kvectors_texref = self._module.get_texref("kvectors")
 
-		fillPotentialsTexture(self._precision, self._constants, self._potentials_texref)
-		fillKVectorsTexture(self._precision, self._constants, self._kvectors_texref)
+		self._potentials_array = fillPotentialsTexture(self._precision, self._constants, self._potentials_texref)
+		self._kvectors_array = fillKVectorsTexture(self._precision, self._constants, self._kvectors_texref)
 
 	def _gpu_reset(self):
 		size = self._constants.cells * self._constants.ensembles
