@@ -179,6 +179,14 @@ class TwoComponentBEC(PairedCalculation):
 		self._potentials_array = fillPotentialsTexture(self._precision, self._constants, self._potentials_texref)
 		self._kvectors_array = fillKVectorsTexture(self._precision, self._constants, self._kvectors_texref)
 
+	def _to_kspace(self):
+		self._plan.execute(self._a, batch=self._constants.ensembles, inverse=True)
+		self._plan.execute(self._b, batch=self._constants.ensembles, inverse=True)
+
+	def _to_xspace(self):
+		self._plan.execute(self._a, batch=self._constants.ensembles)
+		self._plan.execute(self._b, batch=self._constants.ensembles)
+
 	def _gpu_reset(self):
 		size = self._constants.cells * self._constants.ensembles
 		randoms = (numpy.random.normal(scale=0.5, size=2 * size) +
@@ -190,9 +198,7 @@ class TwoComponentBEC(PairedCalculation):
 		self._b = gpuarray.GPUArray(self._constants.ens_shape, self._precision.complex.dtype, self._mempool)
 		self._init_ensembles(size, self._a.gpudata, self._b.gpudata, gs.gpudata, randoms_gpu.gpudata)
 
-		# transform to k-space
-		self._plan.execute(self._a, batch=self._constants.ensembles, inverse=True)
-		self._plan.execute(self._b, batch=self._constants.ensembles, inverse=True)
+		self._to_kspace()
 
 		# equilibration
 		if self._constants.t_equilib > 0:
@@ -207,19 +213,89 @@ class TwoComponentBEC(PairedCalculation):
 	def _gpu_propagate(self, dt):
 
 		size = self._constants.cells * self._constants.ensembles
+
 		self._kpropagate(size, self._a.gpudata, self._b.gpudata, dt)
-
-		# transform to x-space
-		self._plan.execute(self._a, batch=self._constants.ensembles)
-		self._plan.execute(self._b, batch=self._constants.ensembles)
-
+		self._to_xspace()
 		self._xpropagate(size, self._a.gpudata, self._b.gpudata, dt)
-
-		# transform to k-space
-		self._plan.execute(self._a, batch=self._constants.ensembles, inverse=True)
-		self._plan.execute(self._b, batch=self._constants.ensembles, inverse=True)
-
+		self._to_kspace()
 		self._kpropagate(size, self._a.gpudata, self._b.gpudata, dt)
+
+		self._t += dt
+
+	def _cpu__prepare(self):
+		self._potentials = fillPotentialsArray(self._precision, self._constants)
+		self._kvectors = fillKVectorsArray(self._precision, self._constants)
+
+	def _cpu_reset(self):
+		gs = self._gs.create()
+
+		coeff = 1.0 / math.sqrt(self._constants.dV)
+		self._a = numpy.empty(self._constants.ens_shape, dtype=self._precision.complex.dtype)
+		self._b = numpy.empty(self._constants.ens_shape, dtype=self._precision.complex.dtype)
+
+		for e in range(self._constants.ensembles):
+			start = e * self._constants.nvz
+			stop = (e + 1) * self._constants.nvz
+
+			self._a[start:stop,:,:] = gs + numpy.random.normal(scale=0.5, size=self._constants.shape) * coeff * self._constants.V1 + \
+				1j * numpy.random.normal(scale=0.5, size=self._constants.shape) * coeff * self._constants.V1
+			self._b[start:stop,:,:] = numpy.random.normal(scale=0.5, size=self._constants.shape) * coeff * self._constants.V2 + \
+				1j * numpy.random.normal(scale=0.5, size=self._constants.shape) * coeff * self._constants.V2
+
+		self._to_kspace()
+
+		# equilibration
+		if self._constants.t_equilib > 0:
+			for t in xrange(0, self._constants.t_equilib, self._constants.dt_evo):
+				self.propagate(self._constants.dt_evo)
+
+		self._t = 0
+
+		# TODO: where should pi/2 pulse occur - in x-space or in k-space?
+
+		# first pi/2 pulse
+		a0 = self._a.copy()
+		b0 = self._b.copy()
+		self._a = (a0 - 1j * b0) * math.sqrt(0.5)
+		self._b = (b0 - 1j * a0) * math.sqrt(0.5)
+
+	def _cpu_propagate(self, dt):
+		size = self._constants.cells * self._constants.ensembles
+		kcoeff = numpy.exp(1j * self._kvectors * (-dt / 2))
+
+		self._a *= kcoeff
+		self._b *= kcoeff
+
+		self._to_xspace()
+
+		a0 = self._a.copy()
+		b0 = self._b.copy()
+
+		for iter in xrange(self._constants.itmax):
+			n_a = numpy.abs(self._a)
+			n_b = numpy.abs(self._b)
+
+			n_a = n_a * n_a
+			n_b = n_b * n_b
+
+			pa = -(n_a * n_a * self._constants.l111 + n_b * self._constants.l12) / 2 + \
+				1j * (-(-self._potentials - n_a * self._constants.g11 - n_b * self._constants.g12))
+			pb = -(n_b * self._constants.l22 + n_a * self._constants.l12) / 2 + \
+				1j * (-(-self._potentials - n_b * self._constants.g22 - n_a * self._constants.g12 + self._constants.detuning))
+
+			da = numpy.exp(pa * (dt / 2))
+			db = numpy.exp(pb * (dt / 2))
+
+			self._a = a0 * da
+			self._b = b0 * db
+
+		self._a *= da
+		self._b *= db
+
+		self._to_kspace()
+
+		self._a *= kcoeff
+		self._b *= kcoeff
 
 		self._t += dt
 
