@@ -341,7 +341,7 @@ class GPEGroundState(PairedCalculation):
 
 		self._kpropagate = FunctionWrapper(self._module, "propagateKSpaceImaginaryTime", "P")
 		self._xpropagate = FunctionWrapper(self._module, "propagateXSpaceOneComponent", "P")
-		self._multiply = FunctionWrapper(self._module, "multiply", "Pf")
+		self._multiply = FunctionWrapper(self._module, "multiply", "P" + self._precision.scalar.ctype)
 		self._potentials_texref = self._module.get_texref("potentials")
 		self._kvectors_texref = self._module.get_texref("kvectors")
 
