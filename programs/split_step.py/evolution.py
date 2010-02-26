@@ -230,7 +230,6 @@ class TwoComponentBEC(PairedCalculation):
 
 		for callback in callbacks:
 			callback(self._t * self._constants.t_rho, self._a, self._b)
-		callback_t = 0
 
 		# transform to k-space
 		self._plan.execute(self._a, batch=self._constants.ensembles, inverse=True)
@@ -246,5 +245,6 @@ class TwoComponentBEC(PairedCalculation):
 
 			if callback_t > callback_dt:
 				self._runCallbacks(callbacks)
+				callback_t = 0
 
 		self._runCallbacks(callbacks)
