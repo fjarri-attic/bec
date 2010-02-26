@@ -43,8 +43,8 @@ class Model:
 	#gamma22 = 0
 
 	# Vacuum noise, 0.0 or 1.0
-	V1 = 0
-	V2 = 0
+	V1 = 1
+	V2 = 1
 
 	# spatial lattice size
 	nvx = 16
@@ -58,7 +58,7 @@ class Model:
 	t_equilib = 0 # equilibration time
 	dt_evo = 0.00004 # time step for evolution
 
-	ensembles = 4 # number of ensembles
+	ensembles = 1 # number of ensembles
 
 	border = 1.2 # defines, how big is calculation area as compared to cloud size
 
