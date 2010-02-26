@@ -251,6 +251,8 @@ class GPEGroundState(PairedCalculation):
 			" E = " + str(self._statistics.countEnergy(gs)) + \
 			" mu = " + str(self._statistics.countMu(gs))
 
+		return gs
+
 	def _gpu_create(self):
 		gs = self._tf_gs.create()
 
@@ -283,6 +285,8 @@ class GPEGroundState(PairedCalculation):
 			" N = " + str(self._statistics.countParticles(gs, subtract_noise=False)) + \
 			" E = " + str(self._statistics.countEnergy(gs)) + \
 			" mu = " + str(self._statistics.countMu(gs))
+
+		return gs
 
 	def _gpu__prepare(self):
 		kernel_template = Template("""
