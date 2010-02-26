@@ -63,3 +63,4 @@ class Constants:
 		self.t_equilib = model.t_equilib / self.t_rho
 		self.dt_evo = model.dt_evo / self.t_rho
 		self.ensembles = model.ensembles
+		self.ens_shape = (self.ensembles * self.nvz, self.nvy, self.nvx)
