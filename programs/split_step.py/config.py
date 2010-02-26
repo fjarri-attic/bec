@@ -35,9 +35,9 @@ class Model:
 	detuning = -41
 
 	# loss terms
-	gamma111 = 5.4e-36
-	gamma12 = 0.78e-16
-	gamma22 = 1.194e-16
+	gamma111 = 5.4e-42
+	gamma12 = 0.78e-19
+	gamma22 = 1.194e-19
 	#gamma111 = 0
 	#gamma12 = 0
 	#gamma22 = 0
