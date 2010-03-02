@@ -6,7 +6,6 @@ import time
 try:
 	import pycuda.autoinit
 	import pycuda.driver as cuda
-	mempool = GPUPool()
 except:
 	pass
 
@@ -36,7 +35,7 @@ class ParticleNumberPlotter(PairedCalculation):
 		print "Particle loss: " + str((self.initialN - self.N) / self.initialN * 100) + "%"
 
 
-mempool = GPUPool(stub=True)
+mempool = GPUPool()
 gpu = True
 
 for ensembles, points in ((1, 16), (4, 16), (1, 32), (4, 32)):
