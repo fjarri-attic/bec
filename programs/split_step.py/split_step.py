@@ -12,10 +12,11 @@ except:
 import matplotlib.pyplot as plt
 
 from globals import *
-from config import Model, precision
+from config import Model
 from constants import Constants
 from ground_state import GPEGroundState, ParticleStatistics
 from evolution import TwoComponentBEC
+import typenames
 
 class ParticleNumberPlotter(PairedCalculation):
 
@@ -35,6 +36,7 @@ class ParticleNumberPlotter(PairedCalculation):
 		print "Particle loss: " + str((self.initialN - self.N) / self.initialN * 100) + "%"
 
 
+precision = typenames.single_precision
 mempool = GPUPool()
 gpu = True
 

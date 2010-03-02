@@ -61,5 +61,3 @@ class Model:
 	ensembles = 1 # number of ensembles
 
 	border = 1.2 # defines, how big is calculation area as compared to cloud size
-
-precision = typenames.single_precision
