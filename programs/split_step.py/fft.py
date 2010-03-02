@@ -29,6 +29,6 @@ class NumpyPlan:
 
 def createPlan(gpu, x, y, z, precision):
 	if gpu:
-		return pycudafft.FFTPlan(x, y=y, z=z, precision=precision.fft_precision, normalize=True)
+		return pycudafft.FFTPlan((x, y, z), dtype=precision.complex.dtype, normalize=True)
 	else:
 		return NumpyPlan(x, y, z)
