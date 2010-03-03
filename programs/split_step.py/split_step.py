@@ -29,7 +29,6 @@ class ParticleNumberPlotter(PairedCalculation):
 	def __call__(self, t, a, b):
 		Na = self.stats.countParticles(a)
 		Nb = self.stats.countParticles(b)
-		#print t, Na + Nb
 		self.N = Na + Nb
 
 	def showLoss(self):
@@ -40,7 +39,10 @@ precision = typenames.single_precision
 mempool = GPUPool()
 gpu = True
 
-for ensembles, points in ((1, 16), (4, 16), (1, 32), (4, 32)):
+#tests = ((1, 16), (4, 16), (1, 32), (4, 32))
+tests = ((1, 16),)
+
+for ensembles, points in tests:
 	m = Model()
 	m.nvx = points
 	m.nvy = points
@@ -59,5 +61,10 @@ for ensembles, points in ((1, 16), (4, 16), (1, 32), (4, 32)):
 	constants = Constants(m)
 	bec = TwoComponentBEC(gpu, precision, constants, mempool)
 	pnumber = ParticleNumberPlotter(gpu, precision, constants, mempool)
-	bec.runEvolution(0.3, [pnumber], callback_dt=0.005)
+
+	t1 = time.time()
+	bec.runEvolution(0.3, [pnumber], callback_dt=5)
+	t2 = time.time()
+	print "Time spent: " + str(t2 - t1) + " s"
+
 	pnumber.showLoss()

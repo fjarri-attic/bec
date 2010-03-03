@@ -22,6 +22,12 @@ class Reduce:
 		self._tr_complex = Transpose(precision.complex)
 
 		kernel_template = Template("""
+		inline ${p.complex.name} operator+(${p.complex.name} a, ${p.complex.name} b)
+		{ return ${p.complex.ctr}(a.x + b.x, a.y + b.y); }
+
+		inline void operator+=(${p.complex.name}& a, const ${p.complex.name}& b)
+		{ a.x += b.x; a.y += b.y; }
+
 		extern "C" {
 		%for typename in (p.scalar.name, p.complex.name):
 		%for block_size in [2 ** x for x in xrange(log2(max_block_size) + 1)]:
@@ -74,10 +80,9 @@ class Reduce:
 		self._max_block_size = device.get_attribute(device_attribute.MAX_BLOCK_DIM_X)
 		warp_size =device.get_attribute(device_attribute.WARP_SIZE)
 
-		defines = KERNEL_DEFINES.render(p=self._precision)
 		kernel_src = kernel_template.render(p=self._precision,
 			warp_size=warp_size, max_block_size=self._max_block_size, log2=log2)
-		module = SourceModule(defines + kernel_src, no_extern_c=True)
+		module = SourceModule(kernel_src, no_extern_c=True)
 
 		self._scalar_kernels = {}
 		for block_size in [2 ** x for x in xrange(log2(self._max_block_size) + 1)]:

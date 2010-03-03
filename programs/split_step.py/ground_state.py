@@ -40,7 +40,7 @@ class TFGroundState(PairedCalculation):
 		return res
 
 	def _gpu__prepare(self):
-		kernel_template = Template("""
+		kernel_template = """
 			texture<${p.scalar.name}, 1> potentials;
 
 			// fill given buffer with ground state, obtained from Thomas-Fermi approximation
@@ -54,7 +54,7 @@ class TFGroundState(PairedCalculation):
 				else
 					data[index] = ${p.complex.ctr}(0, 0);
 			}
-		""")
+		"""
 
 		self._module = compileSource(kernel_template, self._precision, self._constants)
 		self._func = FunctionWrapper(self._module, "fillWithTFGroundState", "P")
@@ -120,7 +120,7 @@ class ParticleStatistics(PairedCalculation):
 		return self._countState(state, 1)
 
 	def _gpu__prepare(self):
-		kernel_template = Template("""
+		kernel_template = """
 			texture<${p.scalar.name}, 1> potentials;
 			texture<${p.scalar.name}, 1> kvectors;
 
@@ -151,7 +151,7 @@ class ParticleStatistics(PairedCalculation):
 					res[index] = nonlinear + differential.x;
 				}
 			%endfor
-		""")
+		"""
 
 		self._module = compileSource(kernel_template, self._precision, self._constants)
 
@@ -289,7 +289,7 @@ class GPEGroundState(PairedCalculation):
 		return gs
 
 	def _gpu__prepare(self):
-		kernel_template = Template("""
+		kernel_template = """
 			texture<${p.scalar.name}, 1> potentials;
 			texture<${p.scalar.name}, 1> kvectors;
 
@@ -335,7 +335,7 @@ class GPEGroundState(PairedCalculation):
 				//propagate to endpoint using log derivative
 				data[index] = a * da;
 			}
-		""")
+		"""
 
 		self._module = compileSource(kernel_template, self._precision, self._constants)
 

@@ -1,3 +1,7 @@
+"""
+Auxiliary functions and classes.
+"""
+
 try:
 	from pycuda.autoinit import device
 	from pycuda.driver import device_attribute
@@ -14,6 +18,7 @@ import numpy
 
 
 class GPUPool:
+	"""Auxiliary allocator class"""
 
 	def __init__(self, stub=False):
 		if not pycuda_available:
@@ -24,13 +29,19 @@ class GPUPool:
 			self.allocate = cuda.mem_alloc
 		else:
 			self._pool = DeviceMemoryPool()
-			self.allocate = self._pool.allocate
+			#self.allocate = self._pool.allocate
 
 	def __call__(self, size):
-		return self.allocate(size)
+		return self._pool.allocate(size)
 
 
 class PairedCalculation:
+	"""
+	Base class for paired GPU/CPU calculations.
+	Depending on initializing parameter, it will make visible either _gpu_
+	or _cpu_ methods.
+	"""
+
 	def __init__(self, gpu):
 		prefix = "_gpu_" if gpu else "_cpu_"
 
@@ -41,6 +52,10 @@ class PairedCalculation:
 
 
 class FunctionWrapper:
+	"""
+	Wrapper for elementwise Cuda kernel. Caches prepared functions for
+	calls with same element number.
+	"""
 
 	def __init__(self, module, name, arg_list, block_size=None):
 		self._module = module
@@ -63,36 +78,40 @@ class FunctionWrapper:
 		func_ref.prepared_call(grid, *args)
 
 
-KERNEL_DEFINES = Template("""
-	inline ${p.complex.name} operator+(${p.complex.name} a, ${p.complex.name} b)
-	{ return ${p.complex.ctr}(a.x + b.x, a.y + b.y); }
-	inline ${p.complex.name} operator-(${p.complex.name} a, ${p.complex.name} b)
-	{ return ${p.complex.ctr}(a.x - b.x, a.y - b.y); }
-	inline ${p.complex.name} operator*(${p.complex.name} a, ${p.scalar.name}  b)
-	{ return ${p.complex.ctr}(b * a.x, b * a.y); }
-	inline ${p.complex.name} operator*(${p.complex.name} a, ${p.complex.name} b)
-	{ return ${p.complex.ctr}(a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x); }
-	inline __device__ ${p.scalar.name} squared_abs(${p.complex.name} a)
-	{ return a.x * a.x + a.y * a.y; }
-	inline void operator+=(${p.complex.name}& a, const ${p.complex.name}& b)
-	{ a.x += b.x; a.y += b.y; }
-	inline __device__ ${p.complex.name} cexp(${p.complex.name} a)
-	{
-		${p.scalar.name} module = exp(a.x);
-		return ${p.complex.ctr}(module * cos(a.y), module * sin(a.y));
-	}
-
-	#define GLOBAL_INDEX (threadIdx.x + blockDim.x * (blockIdx.x + blockIdx.y * gridDim.x))
-""")
-
-
 def compileSource(source, precision, constants, **kwds):
-	defines = KERNEL_DEFINES.render(p=precision)
-	kernel_src = source.render(p=precision, c=constants, **kwds)
+	"""
+	Adds helper functions and defines to given source, renders it,
+	compiles and returns Cuda module.
+	"""
+
+	kernel_defines = Template("""
+		inline ${p.complex.name} operator+(${p.complex.name} a, ${p.complex.name} b)
+		{ return ${p.complex.ctr}(a.x + b.x, a.y + b.y); }
+		inline ${p.complex.name} operator-(${p.complex.name} a, ${p.complex.name} b)
+		{ return ${p.complex.ctr}(a.x - b.x, a.y - b.y); }
+		inline ${p.complex.name} operator*(${p.complex.name} a, ${p.scalar.name}  b)
+		{ return ${p.complex.ctr}(b * a.x, b * a.y); }
+		inline ${p.complex.name} operator*(${p.complex.name} a, ${p.complex.name} b)
+		{ return ${p.complex.ctr}(a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x); }
+		inline __device__ ${p.scalar.name} squared_abs(${p.complex.name} a)
+		{ return a.x * a.x + a.y * a.y; }
+		inline void operator+=(${p.complex.name}& a, const ${p.complex.name}& b)
+		{ a.x += b.x; a.y += b.y; }
+		inline __device__ ${p.complex.name} cexp(${p.complex.name} a)
+		{
+			${p.scalar.name} module = exp(a.x);
+			return ${p.complex.ctr}(module * cos(a.y), module * sin(a.y));
+		}
+
+		#define GLOBAL_INDEX (threadIdx.x + blockDim.x * (blockIdx.x + blockIdx.y * gridDim.x))
+	""")
+
+	defines = kernel_defines.render(p=precision)
+	kernel_src = Template(source).render(p=precision, c=constants, **kwds)
 	return SourceModule(defines + "extern \"C\" {\n" + kernel_src + "\n}", no_extern_c=True)
 
 def log2(x):
-	"""Auxiliary function, calculating binary logarithm for integer"""
+	"""Calculates binary logarithm for integer"""
 	pows = [1]
 	while x > 2 ** pows[-1]:
 		pows.append(pows[-1] * 2)
@@ -105,6 +124,11 @@ def log2(x):
 	return res
 
 def getExecutionParameters(func, elements, block_size=None):
+	"""
+	Returns grid and block for given function.
+	If block size is set, checks that it is available.
+	"""
+
 	max_block_size = device.get_attribute(device_attribute.MAX_BLOCK_DIM_X)
 	max_registers = device.get_attribute(device_attribute.MAX_REGISTERS_PER_BLOCK)
 
@@ -125,6 +149,8 @@ def getExecutionParameters(func, elements, block_size=None):
 	return (block_size, 1, 1), (blocks_num_x, blocks_num_y)
 
 def fillPotentialsArray(precision, constants):
+	"""Returns array with values of external potential energy."""
+
 	potentials = numpy.empty(constants.shape, dtype=precision.scalar.dtype)
 
 	for i in xrange(constants.nvx):
@@ -139,16 +165,19 @@ def fillPotentialsArray(precision, constants):
 	return potentials
 
 def fillPotentialsTexture(precision, constants, texref):
+	"""Fill texture with values of external potential energy"""
+
 	potentials = fillPotentialsArray(precision, constants)
 	array = gpuarray.to_gpu(potentials)
 	texref.set_address(array.gpudata, array.size * potentials.itemsize, allow_offset=False)
-	#cuda.matrix_to_texref(potentials.reshape(1, constants.cells), texref, order="C")
+
 	texref.set_format(cuda.array_format.FLOAT, 1)
 	texref.set_filter_mode(cuda.filter_mode.POINT)
 	texref.set_address_mode(0, cuda.address_mode.CLAMP)
 	return array
 
 def fillKVectorsArray(precision, constants):
+	"""Returns array with values of k-space vectors."""
 
 	kvalue = lambda i, dk, N: dk * (i - N) if 2 * i > N else dk * i
 	kvectors = numpy.empty(constants.shape, dtype=precision.scalar.dtype)
@@ -166,10 +195,12 @@ def fillKVectorsArray(precision, constants):
 	return kvectors
 
 def fillKVectorsTexture(precision, constants, texref):
+	"""Fills texture with values of k-space vectors."""
+
 	kvectors = fillKVectorsArray(precision, constants)
 	array = gpuarray.to_gpu(kvectors)
 	texref.set_address(array.gpudata, array.size * kvectors.itemsize, allow_offset=False)
-	#cuda.matrix_to_texref(kvectors.reshape(1, constants.cells), texref, order="C")
+
 	texref.set_format(cuda.array_format.FLOAT, 1)
 	texref.set_filter_mode(cuda.filter_mode.POINT)
 	texref.set_address_mode(0, cuda.address_mode.CLAMP)

@@ -33,7 +33,7 @@ class TwoComponentBEC(PairedCalculation):
 
 	def _gpu__prepare(self):
 
-		kernels = Template("""
+		kernels = """
 			<%!
 				from math import sqrt
 			%>
@@ -165,7 +165,7 @@ class TwoComponentBEC(PairedCalculation):
 				a_res[index] = squared_abs(a_new) - ${c.V / (2 * c.dV)};
 				b_res[index] = squared_abs(b_new) - ${c.V / (2 * c.dV)};
 			}
-		""")
+		"""
 
 		self._module = compileSource(kernels, self._precision, self._constants)
 		self._init_ensembles = FunctionWrapper(self._module, "initializeEnsembles", "PPPP")
