@@ -316,4 +316,5 @@ class TwoComponentBEC(PairedCalculation):
 				self._runCallbacks(callbacks)
 				callback_t = 0
 
-		self._runCallbacks(callbacks)
+		if callback_dt > tstop:
+			self._runCallbacks(callbacks)
