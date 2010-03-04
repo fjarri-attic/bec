@@ -2,6 +2,8 @@
 Different meters for particle states (measuring particles number, energy and so on)
 """
 
+import math
+
 from globals import *
 from fft import createPlan
 from reduce import getReduce
@@ -35,6 +37,11 @@ class ParticleStatistics(PairedCalculation):
 		normalized_values = abs_values * abs_values - noise_term
 		return self._reduce.sparse(normalized_values, self._constants.cells) / \
 			(state.size / self._constants.cells) * self._constants.dV
+
+	def _cpu_getStatesRatio(self, a, b):
+		Na = self._reduce(self._getAverageDensity(a))
+		Nb = self._reduce(self._getAverageDensity(b))
+		return (Na - Nb) / (Na + Nb)
 
 	def _cpu_countParticles(self, state, subtract_noise=True):
 		return self._reduce(self._getAverageDensity(state, subtract_noise=subtract_noise))
@@ -76,8 +83,17 @@ class ParticleStatistics(PairedCalculation):
 			__global__ void calculateNoisedDensity(${p.scalar.name} *res, ${p.complex.name} *state)
 			{
 				int index = GLOBAL_INDEX;
-				${p.scalar.name} noise_term = 0.5 * ${c.V} / (${c.dx} * ${c.dy} * ${c.dz});
+				${p.scalar.name} noise_term = (${p.scalar.name})${0.5 * c.V / c.dV};
 				res[index] = squared_abs(state[index]) - noise_term;
+			}
+
+			__global__ void calculateTwoStateNoisedDensity(${p.scalar.name} *a_res,
+				${p.scalar.name} *b_res, ${p.complex.name} *a_state, ${p.complex.name} *b_state)
+			{
+				int index = GLOBAL_INDEX;
+				${p.scalar.name} noise_term = (${p.scalar.name})${0.5 * c.V / c.dV};
+				a_res[index] = squared_abs(a_state[index]) - noise_term;
+				b_res[index] = squared_abs(b_state[index]) - noise_term;
 			}
 
 			%for name, coeff in (('Energy', 2), ('Mu', 1)):
@@ -102,6 +118,7 @@ class ParticleStatistics(PairedCalculation):
 		self._calculate_energy = FunctionWrapper(self._module, "calculateEnergy", "PPP")
 		self._calculate_density = FunctionWrapper(self._module, "calculateDensity", "PP")
 		self._calculate_noised_density = FunctionWrapper(self._module, "calculateNoisedDensity", "PP")
+		self._calculate_two_states_density = FunctionWrapper(self._module, "calculateTwoStateNoisedDensity", "PPPP")
 
 		self._potentials_texref = self._module.get_texref("potentials")
 		self._kvectors_texref = self._module.get_texref("kvectors")
@@ -117,6 +134,15 @@ class ParticleStatistics(PairedCalculation):
 			self._calculate_density(state.size, density.gpudata, state.gpudata)
 		return self._reduce(density) / (state.size / self._constants.cells) * self._constants.dV
 
+	def _gpu_getStatesRatio(self, a, b):
+		a_density = self.allocate(a.shape, self._precision.scalar.dtype)
+		b_density = self.allocate(b.shape, self._precision.scalar.dtype)
+		self._calculate_two_states_density(a.size, a_density.gpudata, b_density.gpudata,
+			a.gpudata, b.gpudata)
+		Na = self._reduce(a_density)
+		Nb = self._reduce(b_density)
+		return (Na - Nb) / (Na + Nb)
+
 	def _gpu_countEnergy(self, state):
 		kstate = self.allocate(state.shape, dtype=self._precision.complex.dtype)
 		res = self.allocate(state.shape, dtype=self._precision.scalar.dtype)
@@ -130,3 +156,71 @@ class ParticleStatistics(PairedCalculation):
 		self._plan.execute(state, kstate, inverse=True, batch=state.size / self._constants.cells)
 		self._calculate_mu(state.size, res.gpudata, state.gpudata, kstate.gpudata)
 		return self._reduce(res) / (state.size / self._constants.cells) * self._constants.dV / self._constants.N
+
+
+class VisibilityMeter(PairedCalculation):
+
+	def __init__(self, gpu, precision, constants, mempool):
+
+		PairedCalculation.__init__(self, gpu, mempool)
+		self._precision = precision
+		self._constants = constants
+
+		self._statistics = ParticleStatistics(gpu, precision, constants, mempool)
+
+		self._prepare()
+
+	def _cpu__prepare(self):
+		pass
+
+	def _gpu__prepare(self):
+
+		kernels = """
+			<%! import math %>
+
+			// Pi/2 rotate around vector in equatorial plane, with angle alpha between it and x axis
+			__global__ void halfPiRotate(${p.complex.name} *a_res, ${p.complex.name} *b_res, ${p.complex.name} *a,
+				${p.complex.name} *b, ${p.scalar.name} alpha)
+			{
+				int index = GLOBAL_INDEX;
+
+				${p.complex.name} a0 = a[index];
+				${p.complex.name} b0 = b[index];
+
+				${p.scalar.name} cosa = cos(alpha);
+				${p.scalar.name} sina = sin(alpha);
+
+				a_res[index] = (a0 + b0 * ${p.complex.ctr}(sina, -cosa)) *
+					(${p.scalar.name})${math.sqrt(0.5)};
+				b_res[index] = (a0 * ${p.complex.ctr}(-sina, -cosa) + b0) *
+					(${p.scalar.name})${math.sqrt(0.5)};
+			}
+		"""
+
+		self._module = compileSource(kernels, self._precision, self._constants)
+		self._half_pi_rotate_func = FunctionWrapper(self._module, "halfPiRotate",
+			"PPPP" + self._precision.scalar.ctype)
+
+	def _gpu__halfPiRotate(self, a_buffer, b_buffer, a, b, alpha):
+		self._half_pi_rotate_func(a.size, a_buffer.gpudata, b_buffer.gpudata, a.gpudata, b.gpudata, alpha)
+
+	def _cpu__halfPiRotate(self, a_buffer, b_buffer, a, b, alpha):
+		coeff1 = math.sin(alpha) - 1j * math.cos(alpha)
+		coeff2 = -math.sin(alpha) - 1j * math.cos(alpha)
+		a_buffer[:,:,:] = (a + b * coeff1) * math.sqrt(0.5)
+		b_buffer[:,:,:] = (a * coeff2 + b) * math.sqrt(0.5)
+
+	def get(self, a, b):
+		a_buffer = self.allocate(a.shape, a.dtype)
+		b_buffer = self.allocate(b.shape, b.dtype)
+
+		points = 5
+		max = 0
+		for i in range(points):
+			alpha = 2 * math.pi * i / points
+			self._halfPiRotate(a_buffer, b_buffer, a, b, alpha)
+			ratio = abs(self._statistics.getStatesRatio(a_buffer, b_buffer))
+
+			if ratio > max:
+				max = ratio
+		return max
