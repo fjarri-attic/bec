@@ -305,6 +305,9 @@ class TwoComponentBEC(PairedCalculation):
 	def runEvolution(self, tstop, callbacks, callback_dt=0):
 		self._t = 0
 		callback_t = 0
+
+		self._runCallbacks(callbacks)
+
 		while self._t * self._constants.t_rho < tstop:
 			self.propagate(self._constants.dt_evo)
 			callback_t += self._constants.dt_evo * self._constants.t_rho
