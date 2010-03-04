@@ -1,7 +1,6 @@
 """
 Split-step calculation parameters
 """
-import typenames
 
 class Model:
 	"""

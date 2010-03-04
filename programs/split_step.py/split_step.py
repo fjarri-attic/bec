@@ -12,7 +12,7 @@ except:
 import matplotlib.pyplot as plt
 
 from globals import *
-from config import Model
+from model import Model
 from constants import Constants
 from ground_state import GPEGroundState, ParticleStatistics
 from evolution import TwoComponentBEC
@@ -63,7 +63,7 @@ for ensembles, points in tests:
 	pnumber = ParticleNumberPlotter(gpu, precision, constants, mempool)
 
 	t1 = time.time()
-	bec.runEvolution(0.3, [pnumber], callback_dt=5)
+	bec.runEvolution(0.1, [pnumber], callback_dt=5)
 	t2 = time.time()
 	print "Time spent: " + str(t2 - t1) + " s"
 
