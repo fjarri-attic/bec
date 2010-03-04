@@ -171,25 +171,6 @@ class TwoComponentBEC(PairedCalculation):
 				a[index] = b0 * ${p.complex.ctr}(0, -1);
 				b[index] = a0 * ${p.complex.ctr}(0, -1);
 			}
-
-			// Pi/2 rotate around vector in equatorial plane, with angle alpha between it and x axis
-			__global__ void halfPiRotate(${p.scalar.name} *a_res, ${p.scalar.name} *b_res, ${p.complex.name} *a,
-				${p.complex.name} *b, ${p.scalar.name} alpha)
-			{
-				int index = GLOBAL_INDEX;
-
-				${p.complex.name} a0 = a[index];
-				${p.complex.name} b0 = b[index];
-
-				${p.scalar.name} cosa = cos(alpha);
-				${p.scalar.name} sina = sin(alpha);
-
-				${p.complex.name} a_new = (a0 + b0 * ${p.complex.ctr}(sina, -cosa)) * ${sqrt(0.5)};
-				${p.complex.name} b_new = (a0 * ${p.complex.ctr}(-sina, -cosa) + b0) * ${sqrt(0.5)};
-
-				a_res[index] = squared_abs(a_new) - ${c.V / (2 * c.dV)};
-				b_res[index] = squared_abs(b_new) - ${c.V / (2 * c.dV)};
-			}
 		"""
 
 		self._module = compileSource(kernels, self._precision, self._constants)
