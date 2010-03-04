@@ -42,13 +42,25 @@ class PairedCalculation:
 	or _cpu_ methods.
 	"""
 
-	def __init__(self, gpu):
+	def __init__(self, gpu, mempool):
 		prefix = "_gpu_" if gpu else "_cpu_"
 
 		for attr in dir(self):
 			if attr.startswith(prefix):
 				name = attr[len(prefix):]
 				self.__dict__[name] = getattr(self, attr)
+
+		self.__mempool = mempool
+		if gpu:
+			self.allocate = self.__gpu_allocate
+		else:
+			self.allocate = self.__cpu_allocate
+
+	def __gpu_allocate(self, shape, dtype):
+		return gpuarray.GPUArray(shape, dtype=dtype, allocator=self.__mempool)
+
+	def __cpu_allocate(self, shape, dtype):
+		return numpy.empty(shape, dtype=dtype)
 
 
 class FunctionWrapper:
