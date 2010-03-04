@@ -249,7 +249,7 @@ class TwoComponentBEC(PairedCalculation):
 			self._a.gpudata, self._b.gpudata, dt)
 
 	def _cpu__kpropagate(self, dt):
-		kcoeff = numpy.exp(1j * self._kvectors * (-dt / 2))
+		kcoeff = numpy.exp(self._kvectors * (1j * dt / 2))
 		self._a *= kcoeff
 		self._b *= kcoeff
 
