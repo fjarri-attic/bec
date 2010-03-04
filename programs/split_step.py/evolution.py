@@ -1,3 +1,7 @@
+"""
+Classes, modeling the evolution of BEC.
+"""
+
 import math
 import copy
 from mako.template import Template
@@ -16,7 +20,12 @@ from reduce import getReduce
 from ground_state import GPEGroundState
 from meters import ParticleStatistics
 
+
 class TwoComponentBEC(PairedCalculation):
+	"""
+	Calculates evolution of two-component BEC, using split-step propagation
+	of paired GPEs.
+	"""
 
 	def __init__(self, gpu, precision, constants, mempool):
 		PairedCalculation.__init__(self, gpu)
@@ -31,6 +40,23 @@ class TwoComponentBEC(PairedCalculation):
 		self._prepare()
 		self.reset()
 
+	def _cpu__prepare(self):
+		potentials = fillPotentialsArray(self._precision, self._constants)
+		kvectors = fillKVectorsArray(self._precision, self._constants)
+
+		self._potentials = numpy.empty(self._constants.ens_shape, dtype=self._precision.complex.dtype)
+		self._kvectors = numpy.empty(self._constants.ens_shape, dtype=self._precision.complex.dtype)
+
+		# copy potentials and kvectors making these matrices have the same size
+		# as the many-ensemble state
+		# it requires additional memory, but makes other code look simpler
+		for e in range(self._constants.ensembles):
+			start = e * self._constants.nvz
+			stop = (e + 1) * self._constants.nvz
+
+			self._potentials[start:stop,:,:] = potentials
+			self._kvectors[start:stop,:,:] = kvectors
+
 	def _gpu__prepare(self):
 
 		kernels = """
@@ -43,21 +69,20 @@ class TwoComponentBEC(PairedCalculation):
 
 			// Initialize ensembles with steady state + noise for evolution calculation
 			__global__ void initializeEnsembles(${p.complex.name} *a, ${p.complex.name} *b,
-				${p.complex.name} *steady_state, ${p.complex.name} *noise)
+				${p.complex.name} *steady_state, ${p.complex.name} *a_randoms,
+				${p.complex.name} *b_randoms)
 			{
 				int index = GLOBAL_INDEX;
 
-				${p.complex.name} noise_a = noise[index];
-				${p.complex.name} noise_b = noise[index + ${c.cells * c.ensembles}];
 				${p.complex.name} steady_val = steady_state[index % ${c.cells}];
 
 				${p.scalar.name} coeff = (${p.scalar.name})${1.0 / sqrt(c.dV)};
 
 				//Initialises a-ensemble amplitudes with vacuum noise
-				a[index] = steady_val + noise_a * (${c.V1} * coeff);
+				a[index] = steady_val + a_randoms[index] * (${c.V1} * coeff);
 
 				//Initialises b-ensemble amplitudes with vacuum noise
-				b[index] = noise_b * (${c.V2} * coeff);
+				b[index] = b_randoms[index] * (${c.V2} * coeff);
 			}
 
 			// Propagates state vector in k-space for evolution calculation (i.e., in real time)
@@ -168,10 +193,10 @@ class TwoComponentBEC(PairedCalculation):
 		"""
 
 		self._module = compileSource(kernels, self._precision, self._constants)
-		self._init_ensembles = FunctionWrapper(self._module, "initializeEnsembles", "PPPP")
-		self._kpropagate = FunctionWrapper(self._module, "propagateKSpaceRealTime", "PP" + self._precision.scalar.ctype)
-		self._xpropagate = FunctionWrapper(self._module, "propagateXSpaceTwoComponent", "PP" + self._precision.scalar.ctype)
-		self._half_pi_pulse = FunctionWrapper(self._module, "applyHalfPiPulse", "PP")
+		self._init_ensembles_func = FunctionWrapper(self._module, "initializeEnsembles", "PPPPP")
+		self._kpropagate_func = FunctionWrapper(self._module, "propagateKSpaceRealTime", "PP" + self._precision.scalar.ctype)
+		self._xpropagate_func = FunctionWrapper(self._module, "propagateXSpaceTwoComponent", "PP" + self._precision.scalar.ctype)
+		self._half_pi_pulse_func = FunctionWrapper(self._module, "applyHalfPiPulse", "PP")
 
 		self._potentials_texref = self._module.get_texref("potentials")
 		self._kvectors_texref = self._module.get_texref("kvectors")
@@ -179,67 +204,27 @@ class TwoComponentBEC(PairedCalculation):
 		self._potentials_array = fillPotentialsTexture(self._precision, self._constants, self._potentials_texref)
 		self._kvectors_array = fillKVectorsTexture(self._precision, self._constants, self._kvectors_texref)
 
-	def _to_kspace(self):
+	def _toKSpace(self):
 		self._plan.execute(self._a, batch=self._constants.ensembles, inverse=True)
 		self._plan.execute(self._b, batch=self._constants.ensembles, inverse=True)
 
-	def _to_xspace(self):
+	def _toXSpace(self):
 		self._plan.execute(self._a, batch=self._constants.ensembles)
 		self._plan.execute(self._b, batch=self._constants.ensembles)
 
-	def _gpu_reset(self):
-		size = self._constants.cells * self._constants.ensembles
-		randoms = (numpy.random.normal(scale=0.5, size=2 * size) +
-			1j * numpy.random.normal(scale=0.5, size=2 * size)).astype(self._precision.complex.dtype)
-		randoms_gpu = gpuarray.to_gpu(randoms)
-		gs = self._gs.create()
-
+	def _gpu__initEnsembles(self, gs, a_randoms, b_randoms):
+		a_randoms_gpu = gpuarray.to_gpu(a_randoms, allocator=self._mempool)
+		b_randoms_gpu = gpuarray.to_gpu(b_randoms, allocator=self._mempool)
 		self._a = gpuarray.GPUArray(self._constants.ens_shape, self._precision.complex.dtype, self._mempool)
 		self._b = gpuarray.GPUArray(self._constants.ens_shape, self._precision.complex.dtype, self._mempool)
-		self._init_ensembles(size, self._a.gpudata, self._b.gpudata, gs.gpudata, randoms_gpu.gpudata)
+		self._init_ensembles_func(self._constants.cells * self._constants.ensembles,
+			self._a.gpudata, self._b.gpudata, gs.gpudata,
+			a_randoms_gpu.gpudata, b_randoms_gpu.gpudata)
 
-		self._to_kspace()
-
-		# equilibration
-		if self._constants.t_equilib > 0:
-			for t in xrange(0, self._constants.t_equilib, self._constants.dt_evo):
-				self.propagate(self._constants.dt_evo)
-
-		self._t = 0
-
-		# first pi/2 pulse
-		self._half_pi_pulse(size, self._a.gpudata, self._b.gpudata)
-
-	def _gpu_propagate(self, dt):
-
+	def _cpu__initEnsembles(self, gs, a_randoms, b_randoms):
+		coeff = 1.0 / math.sqrt(self._constants.dV)
 		size = self._constants.cells * self._constants.ensembles
 
-		self._kpropagate(size, self._a.gpudata, self._b.gpudata, dt)
-		self._to_xspace()
-		self._xpropagate(size, self._a.gpudata, self._b.gpudata, dt)
-		self._to_kspace()
-		self._kpropagate(size, self._a.gpudata, self._b.gpudata, dt)
-
-		self._t += dt
-
-	def _cpu__prepare(self):
-		potentials = fillPotentialsArray(self._precision, self._constants)
-		kvectors = fillKVectorsArray(self._precision, self._constants)
-
-		self._potentials = numpy.empty(self._constants.ens_shape, dtype=self._precision.complex.dtype)
-		self._kvectors = numpy.empty(self._constants.ens_shape, dtype=self._precision.complex.dtype)
-
-		for e in range(self._constants.ensembles):
-			start = e * self._constants.nvz
-			stop = (e + 1) * self._constants.nvz
-
-			self._potentials[start:stop,:,:] = potentials
-			self._kvectors[start:stop,:,:] = kvectors
-
-	def _cpu_reset(self):
-		gs = self._gs.create()
-
-		coeff = 1.0 / math.sqrt(self._constants.dV)
 		self._a = numpy.empty(self._constants.ens_shape, dtype=self._precision.complex.dtype)
 		self._b = numpy.empty(self._constants.ens_shape, dtype=self._precision.complex.dtype)
 
@@ -247,37 +232,32 @@ class TwoComponentBEC(PairedCalculation):
 			start = e * self._constants.nvz
 			stop = (e + 1) * self._constants.nvz
 
-			self._a[start:stop,:,:] = gs + numpy.random.normal(scale=0.5, size=self._constants.shape) * coeff * self._constants.V1 + \
-				1j * numpy.random.normal(scale=0.5, size=self._constants.shape) * coeff * self._constants.V1
-			self._b[start:stop,:,:] = numpy.random.normal(scale=0.5, size=self._constants.shape) * coeff * self._constants.V2 + \
-				1j * numpy.random.normal(scale=0.5, size=self._constants.shape) * coeff * self._constants.V2
+			self._a[start:stop,:,:] = gs + a_randoms[start:stop,:,:] * coeff * self._constants.V1
+			self._b[start:stop,:,:] = b_randoms[start:stop,:,:] * coeff * self._constants.V2
 
-		self._to_kspace()
+	def _gpu__halfPiPulse(self):
+		self._half_pi_pulse_func(self._constants.cells * self._constants.ensembles, self._a.gpudata, self._b.gpudata)
 
-		# equilibration
-		if self._constants.t_equilib > 0:
-			for t in xrange(0, self._constants.t_equilib, self._constants.dt_evo):
-				self.propagate(self._constants.dt_evo)
-
-		self._t = 0
-
-		# TODO: where should pi/2 pulse occur - in x-space or in k-space?
-
-		# first pi/2 pulse
+	def _cpu__halfPiPulse(self):
 		a0 = self._a.copy()
 		b0 = self._b.copy()
 		self._a = (a0 - 1j * b0) * math.sqrt(0.5)
 		self._b = (b0 - 1j * a0) * math.sqrt(0.5)
 
-	def _cpu_propagate(self, dt):
-		size = self._constants.cells * self._constants.ensembles
-		kcoeff = numpy.exp(1j * self._kvectors * (-dt / 2))
+	def _gpu__kpropagate(self, dt):
+		self._kpropagate_func(self._constants.cells * self._constants.ensembles,
+			self._a.gpudata, self._b.gpudata, dt)
 
+	def _cpu__kpropagate(self, dt):
+		kcoeff = numpy.exp(1j * self._kvectors * (-dt / 2))
 		self._a *= kcoeff
 		self._b *= kcoeff
 
-		self._to_xspace()
+	def _gpu__xpropagate(self, dt):
+		self._xpropagate_func(self._constants.cells * self._constants.ensembles,
+			self._a.gpudata, self._b.gpudata, dt)
 
+	def _cpu__xpropagate(self, dt):
 		a0 = self._a.copy()
 		b0 = self._b.copy()
 
@@ -302,25 +282,44 @@ class TwoComponentBEC(PairedCalculation):
 		self._a *= da
 		self._b *= db
 
-		self._to_kspace()
+	def reset(self):
 
-		self._a *= kcoeff
-		self._b *= kcoeff
+		a_randoms = (numpy.random.normal(scale=0.5, size=self._constants.ens_shape) +
+			1j * numpy.random.normal(scale=0.5, size=self._constants.ens_shape)).astype(self._precision.complex.dtype)
+		b_randoms = (numpy.random.normal(scale=0.5, size=self._constants.ens_shape) +
+			1j * numpy.random.normal(scale=0.5, size=self._constants.ens_shape)).astype(self._precision.complex.dtype)
+
+		gs = self._gs.create()
+
+		self._initEnsembles(gs, a_randoms, b_randoms)
+
+		# equilibration
+		self._toKSpace()
+		if self._constants.t_equilib > 0:
+			for t in xrange(0, self._constants.t_equilib, self._constants.dt_evo):
+				self.propagate(self._constants.dt_evo)
+
+		self._t = 0
+
+		# first pi/2 pulse
+		# TODO: is it really done in k-space?
+		self._halfPiPulse()
+
+	def propagate(self, dt):
+
+		self._kpropagate(dt)
+		self._toXSpace()
+		self._xpropagate(dt)
+		self._toKSpace()
+		self._kpropagate(dt)
 
 		self._t += dt
 
 	def _runCallbacks(self, callbacks):
-		# transform to x-space
-		self._plan.execute(self._a, batch=self._constants.ensembles)
-		self._plan.execute(self._b, batch=self._constants.ensembles)
-
+		self._toXSpace()
 		for callback in callbacks:
 			callback(self._t * self._constants.t_rho, self._a, self._b)
-
-		# transform to k-space
-		self._plan.execute(self._a, batch=self._constants.ensembles, inverse=True)
-		self._plan.execute(self._b, batch=self._constants.ensembles, inverse=True)
-
+		self._toKSpace()
 
 	def runEvolution(self, tstop, callbacks, callback_dt=0):
 		self._t = 0
