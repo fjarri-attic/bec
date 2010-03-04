@@ -102,72 +102,6 @@ class GPEGroundState(PairedCalculation):
 		self._potentials = fillPotentialsArray(self._precision, self._constants)
 		self._kvectors = fillKVectorsArray(self._precision, self._constants)
 
-	def _cpu__kpropagate(self):
-		self._gs *= numpy.exp(self._kvectors * (-self._constants.dt_steady / 2)) # k-space propagation
-
-	def _gpu__kpropagate(self):
-		self._kpropagate_func(self._constants.cells, self._gs.gpudata)
-
-	def _gpu__xpropagate(self):
-		self._xpropagate_func(self._constants.cells, self._gs.gpudata)
-
-	def _cpu__xpropagate(self):
-		gs0 = self._gs.copy()
-		for iter in xrange(self._constants.itmax):
-			abs_gs = numpy.abs(self._gs)
-			d_gs = numpy.exp((self._potentials + abs_gs * abs_gs * self._constants.g11) *
-				(-self._constants.dt_steady / 2))
-			self._gs = gs0 * d_gs
-		self._gs *= d_gs
-
-	def _cpu__renormalize(self, coeff):
-		self._gs *= coeff
-
-	def _gpu__renormalize(self, coeff):
-		self._multiply_func(self._constants.cells, self._gs.gpudata, coeff)
-
-	def create(self):
-
-		self._gs = self._tf_gs.create()
-		plan = self._plan
-		stats = self._statistics
-
-		E = 0
-		new_E = stats.countEnergy(self._gs)
-
-		plan.execute(self._gs, inverse=True) # FFT to k-space
-
-		while abs(E - new_E) / E > self._precision:
-
-			# propagation
-
-			self._kpropagate()
-			plan.execute(self._gs) # FFT to x-space
-			self._xpropagate()
-			plan.execute(self._gs, inverse=True) # FFT to k-space
-			self._kpropagate()
-
-			# normalization
-
-			plan.execute(self._gs) # FFT to x-space
-
-			# renormalize
-			N = stats.countParticles(self._gs, subtract_noise=False)
-			self._renormalize(math.sqrt(self._constants.N / N))
-
-			E = new_E
-			new_E = stats.countEnergy(self._gs)
-			plan.execute(self._gs, inverse=True) # FFT to k-space
-
-		plan.execute(self._gs) # FFT to x-state
-
-		print "Ground state calculation:" + \
-			" N = " + str(stats.countParticles(self._gs, subtract_noise=False)) + \
-			" E = " + str(stats.countEnergy(self._gs)) + \
-			" mu = " + str(stats.countMu(self._gs))
-
-		return self._gs
-
 	def _gpu__prepare(self):
 		kernel_template = """
 			texture<${p.scalar.name}, 1> potentials;
@@ -227,3 +161,69 @@ class GPEGroundState(PairedCalculation):
 
 		self._potentials_array = fillPotentialsTexture(self._precision, self._constants, self._potentials_texref)
 		self._kvectors_array = fillKVectorsTexture(self._precision, self._constants, self._kvectors_texref)
+
+	def _cpu__kpropagate(self):
+		self._gs *= numpy.exp(self._kvectors * (-self._constants.dt_steady / 2)) # k-space propagation
+
+	def _gpu__kpropagate(self):
+		self._kpropagate_func(self._constants.cells, self._gs.gpudata)
+
+	def _cpu__xpropagate(self):
+		gs0 = self._gs.copy()
+		for iter in xrange(self._constants.itmax):
+			abs_gs = numpy.abs(self._gs)
+			d_gs = numpy.exp((self._potentials + abs_gs * abs_gs * self._constants.g11) *
+				(-self._constants.dt_steady / 2))
+			self._gs = gs0 * d_gs
+		self._gs *= d_gs
+
+	def _gpu__xpropagate(self):
+		self._xpropagate_func(self._constants.cells, self._gs.gpudata)
+
+	def _cpu__renormalize(self, coeff):
+		self._gs *= coeff
+
+	def _gpu__renormalize(self, coeff):
+		self._multiply_func(self._constants.cells, self._gs.gpudata, coeff)
+
+	def create(self):
+
+		self._gs = self._tf_gs.create()
+		plan = self._plan
+		stats = self._statistics
+
+		E = 0
+		new_E = stats.countEnergy(self._gs)
+
+		plan.execute(self._gs, inverse=True) # FFT to k-space
+
+		while abs(E - new_E) / E > self._precision:
+
+			# propagation
+
+			self._kpropagate()
+			plan.execute(self._gs) # FFT to x-space
+			self._xpropagate()
+			plan.execute(self._gs, inverse=True) # FFT to k-space
+			self._kpropagate()
+
+			# normalization
+
+			plan.execute(self._gs) # FFT to x-space
+
+			# renormalize
+			N = stats.countParticles(self._gs, subtract_noise=False)
+			self._renormalize(math.sqrt(self._constants.N / N))
+
+			E = new_E
+			new_E = stats.countEnergy(self._gs)
+			plan.execute(self._gs, inverse=True) # FFT to k-space
+
+		plan.execute(self._gs) # FFT to x-state
+
+		print "Ground state calculation:" + \
+			" N = " + str(stats.countParticles(self._gs, subtract_noise=False)) + \
+			" E = " + str(stats.countEnergy(self._gs)) + \
+			" mu = " + str(stats.countMu(self._gs))
+
+		return self._gs
