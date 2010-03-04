@@ -26,10 +26,9 @@ class TFGroundState(PairedCalculation):
 	"""
 
 	def __init__(self, gpu, precision, constants, mempool):
-		PairedCalculation.__init__(self, gpu)
+		PairedCalculation.__init__(self, gpu, mempool)
 		self._precision = precision
 		self._constants = copy.deepcopy(constants)
-		self._mempool = mempool
 
 		self._prepare()
 
@@ -37,7 +36,7 @@ class TFGroundState(PairedCalculation):
 		self._potentials = fillPotentialsArray(self._precision, self._constants)
 
 	def _cpu_create(self):
-		res = numpy.empty(self._constants.shape, dtype=self._precision.complex.dtype)
+		res = self.allocate(self._constants.shape, self._precision.complex.dtype)
 
 		for i in xrange(self._constants.nvx):
 			for j in xrange(self._constants.nvy):
@@ -70,7 +69,7 @@ class TFGroundState(PairedCalculation):
 		self._potentials_array = fillPotentialsTexture(self._precision, self._constants, self._texref)
 
 	def _gpu_create(self):
-		res = gpuarray.GPUArray(self._constants.shape, self._precision.complex.dtype, allocator=self._mempool)
+		res = self.allocate(self._constants.shape, self._precision.complex.dtype)
 		self._func(self._constants.cells, res.gpudata)
 		return res
 
@@ -81,12 +80,10 @@ class GPEGroundState(PairedCalculation):
 	"""
 
 	def __init__(self, gpu, precision, constants, mempool):
-		PairedCalculation.__init__(self, gpu)
+		PairedCalculation.__init__(self, gpu, mempool)
 
 		self._precision = precision
 		self._constants = copy.deepcopy(constants)
-		self._mempool = mempool
-		self._gpu = gpu
 
 		self._tf_gs = TFGroundState(gpu, precision, constants, mempool)
 		self._plan = createPlan(gpu, constants.nvx, constants.nvy, constants.nvz, precision)

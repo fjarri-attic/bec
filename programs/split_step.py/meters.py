@@ -14,7 +14,7 @@ class ParticleStatistics(PairedCalculation):
 	"""
 
 	def __init__(self, gpu, precision, constants, mempool):
-		PairedCalculation.__init__(self, gpu)
+		PairedCalculation.__init__(self, gpu, mempool)
 		self._precision = precision
 		self._constants = constants
 		self._mempool = mempool
@@ -29,7 +29,6 @@ class ParticleStatistics(PairedCalculation):
 		self._kvectors = fillKVectorsArray(self._precision, self._constants)
 
 	def _cpu__getAverageDensity(self, state, subtract_noise=True):
-		res = numpy.zeros(self._constants.shape, dtype=self._precision.scalar.dtype)
 		noise_term = self._constants.V / (2 * self._constants.dV) if subtract_noise else 0
 
 		abs_values = numpy.abs(state)
@@ -41,10 +40,10 @@ class ParticleStatistics(PairedCalculation):
 		return self._reduce(self._getAverageDensity(state, subtract_noise=subtract_noise))
 
 	def _cpu__countState(self, state, coeff):
-		kstate = numpy.empty(state.shape, dtype=self._precision.complex.dtype)
+		kstate = self.allocate(state.shape, dtype=self._precision.complex.dtype)
 		self._plan.execute(state, kstate, inverse=True, batch=state.size / self._constants.cells)
 
-		res = numpy.empty(state.shape, dtype=self._precision.scalar.dtype)
+		res = self.allocate(state.shape, dtype=self._precision.scalar.dtype)
 
 		n = numpy.abs(state) ** 2
 		xk = state * kstate
@@ -111,7 +110,7 @@ class ParticleStatistics(PairedCalculation):
 		self._kvectors_array = fillKVectorsTexture(self._precision, self._constants, self._kvectors_texref)
 
 	def _gpu_countParticles(self, state, subtract_noise=True):
-		density = gpuarray.GPUArray(state.shape, self._precision.scalar.dtype, allocator=self._mempool)
+		density = self.allocate(state.shape, self._precision.scalar.dtype)
 		if subtract_noise:
 			self._calculate_noised_density(state.size, density.gpudata, state.gpudata)
 		else:
@@ -119,15 +118,15 @@ class ParticleStatistics(PairedCalculation):
 		return self._reduce(density) / (state.size / self._constants.cells) * self._constants.dV
 
 	def _gpu_countEnergy(self, state):
-		kstate = gpuarray.GPUArray(state.shape, dtype=self._precision.complex.dtype, allocator=self._mempool)
-		res = gpuarray.GPUArray(state.shape, dtype=self._precision.scalar.dtype, allocator=self._mempool)
+		kstate = self.allocate(state.shape, dtype=self._precision.complex.dtype)
+		res = self.allocate(state.shape, dtype=self._precision.scalar.dtype)
 		self._plan.execute(state, kstate, inverse=True, batch=state.size / self._constants.cells)
 		self._calculate_energy(state.size, res.gpudata, state.gpudata, kstate.gpudata)
 		return self._reduce(res) / (state.size / self._constants.cells) * self._constants.dV / self._constants.N
 
 	def _gpu_countMu(self, state):
-		kstate = gpuarray.GPUArray(state.shape, dtype=self._precision.complex.dtype, allocator=self._mempool)
-		res = gpuarray.GPUArray(state.shape, dtype=self._precision.scalar.dtype, allocator=self._mempool)
+		kstate = self.allocate(state.shape, dtype=self._precision.complex.dtype)
+		res = self.allocate(state.shape, dtype=self._precision.scalar.dtype)
 		self._plan.execute(state, kstate, inverse=True, batch=state.size / self._constants.cells)
 		self._calculate_mu(state.size, res.gpudata, state.gpudata, kstate.gpudata)
 		return self._reduce(res) / (state.size / self._constants.cells) * self._constants.dV / self._constants.N

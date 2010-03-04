@@ -28,7 +28,7 @@ class TwoComponentBEC(PairedCalculation):
 	"""
 
 	def __init__(self, gpu, precision, constants, mempool):
-		PairedCalculation.__init__(self, gpu)
+		PairedCalculation.__init__(self, gpu, mempool)
 		self._precision = precision
 		self._constants = constants
 		self._mempool = mempool
@@ -196,8 +196,7 @@ class TwoComponentBEC(PairedCalculation):
 	def _gpu__initEnsembles(self, gs, a_randoms, b_randoms):
 		a_randoms_gpu = gpuarray.to_gpu(a_randoms, allocator=self._mempool)
 		b_randoms_gpu = gpuarray.to_gpu(b_randoms, allocator=self._mempool)
-		self._a = gpuarray.GPUArray(self._constants.ens_shape, self._precision.complex.dtype, self._mempool)
-		self._b = gpuarray.GPUArray(self._constants.ens_shape, self._precision.complex.dtype, self._mempool)
+
 		self._init_ensembles_func(self._constants.cells * self._constants.ensembles,
 			self._a.gpudata, self._b.gpudata, gs.gpudata,
 			a_randoms_gpu.gpudata, b_randoms_gpu.gpudata)
@@ -205,9 +204,6 @@ class TwoComponentBEC(PairedCalculation):
 	def _cpu__initEnsembles(self, gs, a_randoms, b_randoms):
 		coeff = 1.0 / math.sqrt(self._constants.dV)
 		size = self._constants.cells * self._constants.ensembles
-
-		self._a = numpy.empty(self._constants.ens_shape, dtype=self._precision.complex.dtype)
-		self._b = numpy.empty(self._constants.ens_shape, dtype=self._precision.complex.dtype)
 
 		for e in range(self._constants.ensembles):
 			start = e * self._constants.nvz
@@ -264,6 +260,9 @@ class TwoComponentBEC(PairedCalculation):
 		self._b *= db
 
 	def reset(self):
+
+		self._a = self.allocate(self._constants.ens_shape, self._precision.complex.dtype)
+		self._b = self.allocate(self._constants.ens_shape, self._precision.complex.dtype)
 
 		a_randoms = (numpy.random.normal(scale=0.5, size=self._constants.ens_shape) +
 			1j * numpy.random.normal(scale=0.5, size=self._constants.ens_shape)).astype(self._precision.complex.dtype)
