@@ -16,13 +16,13 @@ from model import Model
 from constants import Constants
 from ground_state import GPEGroundState
 from evolution import TwoComponentBEC
-from meters import ParticleStatistics
+from meters import ParticleStatistics, VisibilityMeter
 import typenames
 
 class ParticleNumberPlotter(PairedCalculation):
 
 	def __init__(self, gpu, precision, constants, mempool):
-		PairedCalculation.__init__(self, gpu)
+		PairedCalculation.__init__(self, gpu, mempool)
 		self.stats = ParticleStatistics(gpu, precision, constants, mempool)
 		self.initialN = constants.N
 		self.N = constants.N
@@ -30,10 +30,20 @@ class ParticleNumberPlotter(PairedCalculation):
 	def __call__(self, t, a, b):
 		Na = self.stats.countParticles(a)
 		Nb = self.stats.countParticles(b)
+		print t, Na, Nb
 		self.N = Na + Nb
 
 	def showLoss(self):
 		print "Particle loss: " + str((self.initialN - self.N) / self.initialN * 100) + "%"
+
+class VisibilityPlotter(PairedCalculation):
+
+	def __init__(self, gpu, precision, constants, mempool):
+		PairedCalculation.__init__(self, gpu, mempool)
+		self.visibility = VisibilityMeter(gpu, precision, constants, mempool)
+
+	def __call__(self, t, a, b):
+		print t, self.visibility.get(a, b)
 
 
 precision = typenames.single_precision
@@ -61,11 +71,11 @@ for ensembles, points in tests:
 
 	constants = Constants(m)
 	bec = TwoComponentBEC(gpu, precision, constants, mempool)
+
 	pnumber = ParticleNumberPlotter(gpu, precision, constants, mempool)
+	vplotter = VisibilityPlotter(gpu, precision, constants, mempool)
 
 	t1 = time.time()
-	bec.runEvolution(0.1, [pnumber], callback_dt=5)
+	bec.runEvolution(0.1, [vplotter], callback_dt=0.005)
 	t2 = time.time()
 	print "Time spent: " + str(t2 - t1) + " s"
-
-	pnumber.showLoss()
