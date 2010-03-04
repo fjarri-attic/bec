@@ -174,6 +174,10 @@ def fillPotentialsTexture(precision, constants, texref):
 	texref.set_format(cuda.array_format.FLOAT, 1)
 	texref.set_filter_mode(cuda.filter_mode.POINT)
 	texref.set_address_mode(0, cuda.address_mode.CLAMP)
+
+	# returning the array so that caller can assure that it won't be destroyed
+	# as long as texture is needed (set_address() does not keep the reference to
+	# array object)
 	return array
 
 def fillKVectorsArray(precision, constants):
@@ -204,4 +208,8 @@ def fillKVectorsTexture(precision, constants, texref):
 	texref.set_format(cuda.array_format.FLOAT, 1)
 	texref.set_filter_mode(cuda.filter_mode.POINT)
 	texref.set_address_mode(0, cuda.address_mode.CLAMP)
+
+	# returning the array so that caller can assure that it won't be destroyed
+	# as long as texture is needed (set_address() does not keep the reference to
+	# array object)
 	return array
