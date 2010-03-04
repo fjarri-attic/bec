@@ -14,8 +14,9 @@ import matplotlib.pyplot as plt
 from globals import *
 from model import Model
 from constants import Constants
-from ground_state import GPEGroundState, ParticleStatistics
+from ground_state import GPEGroundState
 from evolution import TwoComponentBEC
+from meters import ParticleStatistics
 import typenames
 
 class ParticleNumberPlotter(PairedCalculation):

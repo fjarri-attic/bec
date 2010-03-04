@@ -1,6 +1,9 @@
+"""
+Ground state calculation classes
+"""
+
 import math
 import copy
-from mako.template import Template
 import numpy
 
 try:
@@ -12,10 +15,15 @@ except:
 
 from globals import *
 from fft import createPlan
+from meters import ParticleStatistics
 from reduce import getReduce
 
 
 class TFGroundState(PairedCalculation):
+	"""
+	Ground state, calculated using Thomas-Fermi approximation
+	(kinetic energy == 0)
+	"""
 
 	def __init__(self, gpu, precision, constants, mempool):
 		PairedCalculation.__init__(self, gpu)
@@ -67,129 +75,10 @@ class TFGroundState(PairedCalculation):
 		return res
 
 
-class ParticleStatistics(PairedCalculation):
-
-	def __init__(self, gpu, precision, constants, mempool):
-		PairedCalculation.__init__(self, gpu)
-		self._precision = precision
-		self._constants = copy.deepcopy(constants)
-		self._mempool = mempool
-
-		self._plan = createPlan(gpu, constants.nvx, constants.nvy, constants.nvz, precision)
-		self._reduce = getReduce(gpu, precision, mempool)
-
-		self._prepare()
-
-	def _cpu__prepare(self):
-		self._potentials = fillPotentialsArray(self._precision, self._constants)
-		self._kvectors = fillKVectorsArray(self._precision, self._constants)
-
-	def _cpu__getAverageDensity(self, state, subtract_noise=True):
-		res = numpy.zeros(self._constants.shape, dtype=self._precision.scalar.dtype)
-		noise_term = self._constants.V / (2 * self._constants.dV) if subtract_noise else 0
-
-		abs_values = numpy.abs(state)
-		normalized_values = abs_values * abs_values - noise_term
-		return self._reduce.sparse(normalized_values, self._constants.cells) / \
-			(state.size / self._constants.cells) * self._constants.dV
-
-	def _cpu_countParticles(self, state, subtract_noise=True):
-		return self._reduce(self._getAverageDensity(state, subtract_noise=subtract_noise))
-
-	def _cpu__countState(self, state, coeff):
-		kstate = numpy.empty(state.shape, dtype=self._precision.complex.dtype)
-		self._plan.execute(state, kstate, inverse=True, batch=state.size / self._constants.cells)
-
-		res = numpy.empty(state.shape, dtype=self._precision.scalar.dtype)
-
-		n = numpy.abs(state) ** 2
-		xk = state * kstate
-		for e in xrange(state.size / self._constants.cells):
-			start = e * self._constants.cells
-			stop = (e + 1) * self._constants.cells
-			res[start:stop,:,:] = numpy.abs(n[start:stop,:,:] * (self._potentials +
-				n[start:stop,:,:] * (self._constants.g11 / coeff)) +
-				xk[start:stop,:,:] * self._kvectors)
-
-		return self._reduce(res) / (state.size / self._constants.cells) * self._constants.dV / self._constants.N
-
-	def _cpu_countEnergy(self, state):
-		return self._countState(state, 2)
-
-	def _cpu_countMu(self, state):
-		return self._countState(state, 1)
-
-	def _gpu__prepare(self):
-		kernel_template = """
-			texture<${p.scalar.name}, 1> potentials;
-			texture<${p.scalar.name}, 1> kvectors;
-
-			__global__ void calculateDensity(${p.scalar.name} *res, ${p.complex.name} *state)
-			{
-				int index = GLOBAL_INDEX;
-				res[index] = squared_abs(state[index]);
-			}
-
-			__global__ void calculateNoisedDensity(${p.scalar.name} *res, ${p.complex.name} *state)
-			{
-				int index = GLOBAL_INDEX;
-				${p.scalar.name} noise_term = 0.5 * ${c.V} / (${c.dx} * ${c.dy} * ${c.dz});
-				res[index] = squared_abs(state[index]) - noise_term;
-			}
-
-			%for name, coeff in (('Energy', 2), ('Mu', 1)):
-				__global__ void calculate${name}(${p.scalar.name} *res,
-					${p.complex.name} *xstate, ${p.complex.name} *kstate)
-				{
-					int index = GLOBAL_INDEX;
-					${p.scalar.name} n_a = squared_abs(xstate[index]);
-					${p.complex.name} differential = xstate[index] * kstate[index] * tex1Dfetch(kvectors, index);
-					${p.scalar.name} nonlinear = n_a * (tex1Dfetch(potentials, index) +
-						(${p.scalar.name})${c.g11} * n_a / ${coeff});
-
-					// differential.y will be equal to 0, because \psi * D \psi is a real number
-					res[index] = nonlinear + differential.x;
-				}
-			%endfor
-		"""
-
-		self._module = compileSource(kernel_template, self._precision, self._constants)
-
-		self._calculate_mu = FunctionWrapper(self._module, "calculateMu", "PPP")
-		self._calculate_energy = FunctionWrapper(self._module, "calculateEnergy", "PPP")
-		self._calculate_density = FunctionWrapper(self._module, "calculateDensity", "PP")
-		self._calculate_noised_density = FunctionWrapper(self._module, "calculateNoisedDensity", "PP")
-
-		self._potentials_texref = self._module.get_texref("potentials")
-		self._kvectors_texref = self._module.get_texref("kvectors")
-
-		self._potentials_array = fillPotentialsTexture(self._precision, self._constants, self._potentials_texref)
-		self._kvectors_array = fillKVectorsTexture(self._precision, self._constants, self._kvectors_texref)
-
-	def _gpu_countParticles(self, state, subtract_noise=True):
-		density = gpuarray.GPUArray(state.shape, self._precision.scalar.dtype, allocator=self._mempool)
-		if subtract_noise:
-			self._calculate_noised_density(state.size, density.gpudata, state.gpudata)
-		else:
-			self._calculate_density(state.size, density.gpudata, state.gpudata)
-		return self._reduce(density) / (state.size / self._constants.cells) * self._constants.dV
-
-	def _gpu_countEnergy(self, state):
-		kstate = gpuarray.GPUArray(state.shape, dtype=self._precision.complex.dtype, allocator=self._mempool)
-		res = gpuarray.GPUArray(state.shape, dtype=self._precision.scalar.dtype, allocator=self._mempool)
-		self._plan.execute(state, kstate, inverse=True, batch=state.size / self._constants.cells)
-		self._calculate_energy(state.size, res.gpudata, state.gpudata, kstate.gpudata)
-		return self._reduce(res) / (state.size / self._constants.cells) * self._constants.dV / self._constants.N
-
-	def _gpu_countMu(self, state):
-		kstate = gpuarray.GPUArray(state.shape, dtype=self._precision.complex.dtype, allocator=self._mempool)
-		res = gpuarray.GPUArray(state.shape, dtype=self._precision.scalar.dtype, allocator=self._mempool)
-		self._plan.execute(state, kstate, inverse=True, batch=state.size / self._constants.cells)
-		self._calculate_mu(state.size, res.gpudata, state.gpudata, kstate.gpudata)
-		return self._reduce(res) / (state.size / self._constants.cells) * self._constants.dV / self._constants.N
-
-
 class GPEGroundState(PairedCalculation):
+	"""
+	Calculates GPE ground state using split-step propagation in imaginary time.
+	"""
 
 	def __init__(self, gpu, precision, constants, mempool):
 		PairedCalculation.__init__(self, gpu)
@@ -205,88 +94,79 @@ class GPEGroundState(PairedCalculation):
 
 		self._prepare()
 
+		# condition for stopping propagation -
+		# relative difference between state energies of two successive steps
+		self._precision = 1e-6
+
 	def _cpu__prepare(self):
 		self._potentials = fillPotentialsArray(self._precision, self._constants)
 		self._kvectors = fillKVectorsArray(self._precision, self._constants)
 
-	def _cpu_create(self):
-		gs = self._tf_gs.create()
+	def _cpu__kpropagate(self):
+		self._gs *= numpy.exp(self._kvectors * (-self._constants.dt_steady / 2)) # k-space propagation
+
+	def _gpu__kpropagate(self):
+		self._kpropagate_func(self._constants.cells, self._gs.gpudata)
+
+	def _gpu__xpropagate(self):
+		self._xpropagate_func(self._constants.cells, self._gs.gpudata)
+
+	def _cpu__xpropagate(self):
+		gs0 = self._gs.copy()
+		for iter in xrange(self._constants.itmax):
+			abs_gs = numpy.abs(self._gs)
+			d_gs = numpy.exp((self._potentials + abs_gs * abs_gs * self._constants.g11) *
+				(-self._constants.dt_steady / 2))
+			self._gs = gs0 * d_gs
+		self._gs *= d_gs
+
+	def _cpu__renormalize(self, coeff):
+		self._gs *= coeff
+
+	def _gpu__renormalize(self, coeff):
+		self._multiply_func(self._constants.cells, self._gs.gpudata, coeff)
+
+	def create(self):
+
+		self._gs = self._tf_gs.create()
+		plan = self._plan
+		stats = self._statistics
 
 		E = 0
-		new_E = self._statistics.countEnergy(gs)
+		new_E = stats.countEnergy(self._gs)
 
-		self._plan.execute(gs, inverse=True)
+		plan.execute(self._gs, inverse=True) # FFT to k-space
 
-		while abs(E - new_E) / E > 1e-6:
-			E = new_E
+		while abs(E - new_E) / E > self._precision:
 
-			gs *= numpy.exp(self._kvectors * (-self._constants.dt_steady / 2)) # k-space propagation
-			self._plan.execute(gs) # FFT to x-space
+			# propagation
 
-			# x-space propagation
-			gs0 = gs.copy()
-			for iter in xrange(self._constants.itmax):
-				abs_gs = numpy.abs(gs)
-				d_gs = numpy.exp((self._potentials + abs_gs * abs_gs * self._constants.g11) *
-					(-self._constants.dt_steady / 2))
-				gs = gs0 * d_gs
-			gs *= d_gs
+			self._kpropagate()
+			plan.execute(self._gs) # FFT to x-space
+			self._xpropagate()
+			plan.execute(self._gs, inverse=True) # FFT to k-space
+			self._kpropagate()
 
-			self._plan.execute(gs, inverse=True) # FFT to k-space
-			gs *= numpy.exp(self._kvectors * (-self._constants.dt_steady / 2)) # k-space propagation
-			self._plan.execute(gs) # FFT to x-space
+			# normalization
+
+			plan.execute(self._gs) # FFT to x-space
 
 			# renormalize
-			N = self._statistics.countParticles(gs, subtract_noise=False)
-			gs *= math.sqrt(self._constants.N / N)
+			N = stats.countParticles(self._gs, subtract_noise=False)
+			self._renormalize(math.sqrt(self._constants.N / N))
 
-			new_E = self._statistics.countEnergy(gs)
-
-			self._plan.execute(gs, inverse=True)
-
-		self._plan.execute(gs) # FFT to x-state
-
-		print "Ground state calculation:" + \
-			" N = " + str(self._statistics.countParticles(gs, subtract_noise=False)) + \
-			" E = " + str(self._statistics.countEnergy(gs)) + \
-			" mu = " + str(self._statistics.countMu(gs))
-
-		return gs
-
-	def _gpu_create(self):
-		gs = self._tf_gs.create()
-
-		E = 0
-		new_E = self._statistics.countEnergy(gs)
-
-		self._plan.execute(gs, inverse=True)
-
-		while abs(E - new_E) / E > 1e-6:
 			E = new_E
+			new_E = stats.countEnergy(self._gs)
+			plan.execute(self._gs, inverse=True) # FFT to k-space
 
-			self._kpropagate(self._constants.cells, gs.gpudata)
-			self._plan.execute(gs) # FFT to x-space
-			self._xpropagate(self._constants.cells, gs.gpudata)
-			self._plan.execute(gs, inverse=True) # FFT to k-space
-			self._kpropagate(self._constants.cells, gs.gpudata)
-			self._plan.execute(gs) # FFT to x-space
-
-			# renormalize
-			N = self._statistics.countParticles(gs, subtract_noise=False)
-			self._multiply(self._constants.cells, gs.gpudata, math.sqrt(self._constants.N / N))
-
-			new_E = self._statistics.countEnergy(gs)
-
-			self._plan.execute(gs, inverse=True)
-
-		self._plan.execute(gs) # FFT to x-state
+		plan.execute(self._gs) # FFT to x-state
 
 		print "Ground state calculation:" + \
-			" N = " + str(self._statistics.countParticles(gs, subtract_noise=False)) + \
-			" E = " + str(self._statistics.countEnergy(gs)) + \
-			" mu = " + str(self._statistics.countMu(gs))
+			" N = " + str(stats.countParticles(self._gs, subtract_noise=False)) + \
+			" E = " + str(stats.countEnergy(self._gs)) + \
+			" mu = " + str(stats.countMu(self._gs))
 
-		return gs
+		return self._gs
 
 	def _gpu__prepare(self):
 		kernel_template = """
@@ -339,9 +219,9 @@ class GPEGroundState(PairedCalculation):
 
 		self._module = compileSource(kernel_template, self._precision, self._constants)
 
-		self._kpropagate = FunctionWrapper(self._module, "propagateKSpaceImaginaryTime", "P")
-		self._xpropagate = FunctionWrapper(self._module, "propagateXSpaceOneComponent", "P")
-		self._multiply = FunctionWrapper(self._module, "multiply", "P" + self._precision.scalar.ctype)
+		self._kpropagate_func = FunctionWrapper(self._module, "propagateKSpaceImaginaryTime", "P")
+		self._xpropagate_func = FunctionWrapper(self._module, "propagateXSpaceOneComponent", "P")
+		self._multiply_func = FunctionWrapper(self._module, "multiply", "P" + self._precision.scalar.ctype)
 		self._potentials_texref = self._module.get_texref("potentials")
 		self._kvectors_texref = self._module.get_texref("kvectors")
 
