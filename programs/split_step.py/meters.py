@@ -69,6 +69,15 @@ class ParticleStatistics(PairedCalculation):
 	def _cpu_countMu(self, state):
 		return self._countState(state, 1)
 
+	def _cpu_getVisibility(self, a, b):
+		Na = self._reduce(self._getAverageDensity(a))
+		Nb = self._reduce(self._getAverageDensity(b))
+
+		Ka = self._reduce(a * numpy.conj(b)) / (a.size / self._constants.cells) * self._constants.dV
+		Kb = self._reduce(b * numpy.conj(a)) / (a.size / self._constants.cells) * self._constants.dV
+
+		return 2 * math.sqrt(abs(Ka * Kb)) / (Na + Nb)
+
 	def _gpu__prepare(self):
 		kernel_template = """
 			texture<${p.scalar.name}, 1> potentials;
@@ -96,6 +105,19 @@ class ParticleStatistics(PairedCalculation):
 				b_res[index] = squared_abs(b_state[index]) - noise_term;
 			}
 
+			__global__ void calculateTwoStatesInteraction(${p.complex.name} *a_res,
+				${p.complex.name} *b_res, ${p.complex.name} *a, ${p.complex.name} *b)
+			{
+				int index = GLOBAL_INDEX;
+				${p.scalar.name} noise_term = (${p.scalar.name})${0.5 * c.V / c.dV};
+
+				${p.complex.name} a0 = a[index];
+				${p.complex.name} b0 = b[index];
+
+				a_res[index] = a0 * ${p.complex.ctr}(b0.x, -b0.y);
+				b_res[index] = b0 * ${p.complex.ctr}(a0.x, -a0.y);
+			}
+
 			%for name, coeff in (('Energy', 2), ('Mu', 1)):
 				__global__ void calculate${name}(${p.scalar.name} *res,
 					${p.complex.name} *xstate, ${p.complex.name} *kstate)
@@ -119,6 +141,7 @@ class ParticleStatistics(PairedCalculation):
 		self._calculate_density = FunctionWrapper(self._module, "calculateDensity", "PP")
 		self._calculate_noised_density = FunctionWrapper(self._module, "calculateNoisedDensity", "PP")
 		self._calculate_two_states_density = FunctionWrapper(self._module, "calculateTwoStateNoisedDensity", "PPPP")
+		self._calculate_two_states_interaction = FunctionWrapper(self._module, "calculateTwoStatesInteraction", "PPPP")
 
 		self._potentials_texref = self._module.get_texref("potentials")
 		self._kvectors_texref = self._module.get_texref("kvectors")
@@ -156,6 +179,27 @@ class ParticleStatistics(PairedCalculation):
 		self._plan.execute(state, kstate, inverse=True, batch=state.size / self._constants.cells)
 		self._calculate_mu(state.size, res.gpudata, state.gpudata, kstate.gpudata)
 		return self._reduce(res) / (state.size / self._constants.cells) * self._constants.dV / self._constants.N
+
+	def _gpu_getVisibility(self, a, b):
+		a_density = self.allocate(a.shape, self._precision.scalar.dtype)
+		b_density = self.allocate(b.shape, self._precision.scalar.dtype)
+
+		a_interaction = self.allocate(a.shape, self._precision.complex.dtype)
+		b_interaction = self.allocate(a.shape, self._precision.complex.dtype)
+
+		self._calculate_two_states_density(a.size, a_density.gpudata, b_density.gpudata,
+			a.gpudata, b.gpudata)
+
+		self._calculate_two_states_interaction(a.size, a_interaction.gpudata, b_interaction.gpudata,
+			a.gpudata, b.gpudata)
+
+		Na = self._reduce(a_density)
+		Nb = self._reduce(b_density)
+
+		Ka = self._reduce(a_interaction)
+		Kb = self._reduce(b_interaction)
+
+		return 2 * math.sqrt(abs(Ka * Kb)) / (Na + Nb)
 
 
 class VisibilityMeter(PairedCalculation):
