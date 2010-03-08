@@ -249,10 +249,11 @@ class TwoComponentBEC(PairedCalculation):
 			n_a = n_a * n_a
 			n_b = n_b * n_b
 
-			pa = -(n_a * n_a * self._constants.l111 + n_b * self._constants.l12) / 2 + \
-				1j * (-(-self._potentials - n_a * self._constants.g11 - n_b * self._constants.g12))
-			pb = -(n_b * self._constants.l22 + n_a * self._constants.l12) / 2 + \
-				1j * (-(-self._potentials - n_b * self._constants.g22 - n_a * self._constants.g12 + self._constants.detuning))
+			pa = n_a * n_a * (-self._constants.l111 / 2) + n_b * (-self._constants.l12 / 2) + \
+				1j * (self._potentials + n_a * self._constants.g11 + n_b * self._constants.g12)
+
+			pb = n_b * (-self._constants.l22 / 2) + n_a * (-self._constants.l12 / 2) + \
+				1j * (self._potentials + n_b * self._constants.g22 + n_a * self._constants.g12 - self._constants.detuning)
 
 			da = numpy.exp(pa * (dt / 2))
 			db = numpy.exp(pb * (dt / 2))
