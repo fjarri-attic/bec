@@ -37,6 +37,10 @@ class TwoComponentBEC(PairedCalculation):
 		self._plan = createPlan(gpu, constants.nvx, constants.nvy, constants.nvz, precision)
 		self._stats = ParticleStatistics(gpu, precision, constants, mempool)
 
+		# indicates whether current state is in midstep (i.e, right after propagation
+		# in x-space and FFT to k-space)
+		self._midstep = False
+
 		self._prepare()
 		self.reset()
 
@@ -259,6 +263,11 @@ class TwoComponentBEC(PairedCalculation):
 		self._a *= da
 		self._b *= db
 
+	def _finishStep(self, dt):
+		if self._midstep:
+			self._kpropagate(dt)
+			self._midstep = False
+
 	def reset(self):
 
 		self._a = self.allocate(self._constants.ens_shape, self._precision.complex.dtype)
@@ -282,20 +291,28 @@ class TwoComponentBEC(PairedCalculation):
 		self._t = 0
 
 		# first pi/2 pulse
-		# TODO: is it really done in k-space?
+		# can be done both in x-space and in k-space, because
+		# it is a linear transformation
 		self._halfPiPulse()
 
 	def propagate(self, dt):
 
-		self._kpropagate(dt)
+		# replace two dt/2 k-space propagation by one dt propagation,
+		# if there were no rendering between them
+		if self._midstep:
+			self._kpropagate(dt * 2)
+		else:
+			self._kpropagate(dt)
+
 		self._toXSpace()
 		self._xpropagate(dt)
+		self._midstep = True
 		self._toKSpace()
-		self._kpropagate(dt)
 
 		self._t += dt
 
 	def _runCallbacks(self, callbacks):
+		self._finishStep(self._constants.dt_evo)
 		self._toXSpace()
 		for callback in callbacks:
 			callback(self._t * self._constants.t_rho, self._a, self._b)
