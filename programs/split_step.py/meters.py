@@ -38,11 +38,6 @@ class ParticleStatistics(PairedCalculation):
 		return self._reduce.sparse(normalized_values, self._constants.cells) / \
 			(state.size / self._constants.cells) * self._constants.dV
 
-	def _cpu_getStatesRatio(self, a, b):
-		Na = self._reduce(self._getAverageDensity(a))
-		Nb = self._reduce(self._getAverageDensity(b))
-		return (Na - Nb) / (Na + Nb)
-
 	def _cpu_countParticles(self, state, subtract_noise=True):
 		return self._reduce(self._getAverageDensity(state, subtract_noise=subtract_noise))
 
@@ -73,8 +68,10 @@ class ParticleStatistics(PairedCalculation):
 		Na = self._reduce(self._getAverageDensity(a))
 		Nb = self._reduce(self._getAverageDensity(b))
 
-		Ka = self._reduce(a * numpy.conj(b)) / (a.size / self._constants.cells) * self._constants.dV
-		Kb = self._reduce(b * numpy.conj(a)) / (a.size / self._constants.cells) * self._constants.dV
+		coeff = self._constants.dV / (a.size / self._constants.cells)
+
+		Ka = self._reduce(a * numpy.conj(b)) * coeff
+		Kb = self._reduce(b * numpy.conj(a)) * coeff
 
 		return 2 * math.sqrt(abs(Ka * Kb)) / (Na + Nb)
 
@@ -157,15 +154,6 @@ class ParticleStatistics(PairedCalculation):
 			self._calculate_density(state.size, density.gpudata, state.gpudata)
 		return self._reduce(density) / (state.size / self._constants.cells) * self._constants.dV
 
-	def _gpu_getStatesRatio(self, a, b):
-		a_density = self.allocate(a.shape, self._precision.scalar.dtype)
-		b_density = self.allocate(b.shape, self._precision.scalar.dtype)
-		self._calculate_two_states_density(a.size, a_density.gpudata, b_density.gpudata,
-			a.gpudata, b.gpudata)
-		Na = self._reduce(a_density)
-		Nb = self._reduce(b_density)
-		return (Na - Nb) / (Na + Nb)
-
 	def _gpu_countEnergy(self, state):
 		kstate = self.allocate(state.shape, dtype=self._precision.complex.dtype)
 		res = self.allocate(state.shape, dtype=self._precision.scalar.dtype)
@@ -200,71 +188,3 @@ class ParticleStatistics(PairedCalculation):
 		Kb = self._reduce(b_interaction)
 
 		return 2 * math.sqrt(abs(Ka * Kb)) / (Na + Nb)
-
-
-class VisibilityMeter(PairedCalculation):
-
-	def __init__(self, gpu, precision, constants, mempool):
-
-		PairedCalculation.__init__(self, gpu, mempool)
-		self._precision = precision
-		self._constants = constants
-
-		self._statistics = ParticleStatistics(gpu, precision, constants, mempool)
-
-		self._prepare()
-
-	def _cpu__prepare(self):
-		pass
-
-	def _gpu__prepare(self):
-
-		kernels = """
-			<%! import math %>
-
-			// Pi/2 rotate around vector in equatorial plane, with angle alpha between it and x axis
-			__global__ void halfPiRotate(${p.complex.name} *a_res, ${p.complex.name} *b_res, ${p.complex.name} *a,
-				${p.complex.name} *b, ${p.scalar.name} alpha)
-			{
-				int index = GLOBAL_INDEX;
-
-				${p.complex.name} a0 = a[index];
-				${p.complex.name} b0 = b[index];
-
-				${p.scalar.name} cosa = cos(alpha);
-				${p.scalar.name} sina = sin(alpha);
-
-				a_res[index] = (a0 + b0 * ${p.complex.ctr}(sina, -cosa)) *
-					(${p.scalar.name})${math.sqrt(0.5)};
-				b_res[index] = (a0 * ${p.complex.ctr}(-sina, -cosa) + b0) *
-					(${p.scalar.name})${math.sqrt(0.5)};
-			}
-		"""
-
-		self._module = compileSource(kernels, self._precision, self._constants)
-		self._half_pi_rotate_func = FunctionWrapper(self._module, "halfPiRotate",
-			"PPPP" + self._precision.scalar.ctype)
-
-	def _gpu__halfPiRotate(self, a_buffer, b_buffer, a, b, alpha):
-		self._half_pi_rotate_func(a.size, a_buffer.gpudata, b_buffer.gpudata, a.gpudata, b.gpudata, alpha)
-
-	def _cpu__halfPiRotate(self, a_buffer, b_buffer, a, b, alpha):
-		coeff1 = math.sin(alpha) - 1j * math.cos(alpha)
-		coeff2 = -math.sin(alpha) - 1j * math.cos(alpha)
-		a_buffer[:,:,:] = (a + b * coeff1) * math.sqrt(0.5)
-		b_buffer[:,:,:] = (a * coeff2 + b) * math.sqrt(0.5)
-
-	def getPoints(self, a, b, num_points):
-		res = numpy.empty(num_points, dtype=self._precision.scalar.dtype)
-
-		a_buffer = self.allocate(a.shape, a.dtype)
-		b_buffer = self.allocate(b.shape, b.dtype)
-
-		for i in xrange(num_points):
-			alpha = 2 * math.pi * i / num_points
-			self._halfPiRotate(a_buffer, b_buffer, a, b, alpha)
-			res[i] = abs(self._statistics.getStatesRatio(a_buffer, b_buffer))
-		return res
-
-	def get(self, a, b):
-		return numpy.max(self.getPoints(a, b, 5))
