@@ -210,17 +210,17 @@ class VisibilityMeter(PairedCalculation):
 		a_buffer[:,:,:] = (a + b * coeff1) * math.sqrt(0.5)
 		b_buffer[:,:,:] = (a * coeff2 + b) * math.sqrt(0.5)
 
-	def get(self, a, b):
+	def getPoints(self, a, b, num_points):
+		res = numpy.empty(num_points, dtype=self._precision.scalar.dtype)
+
 		a_buffer = self.allocate(a.shape, a.dtype)
 		b_buffer = self.allocate(b.shape, b.dtype)
 
-		points = 5
-		max = 0
-		for i in range(points):
-			alpha = 2 * math.pi * i / points
+		for i in xrange(num_points):
+			alpha = 2 * math.pi * i / num_points
 			self._halfPiRotate(a_buffer, b_buffer, a, b, alpha)
-			ratio = abs(self._statistics.getStatesRatio(a_buffer, b_buffer))
+			res[i] = abs(self._statistics.getStatesRatio(a_buffer, b_buffer))
+		return res
 
-			if ratio > max:
-				max = ratio
-		return max
+	def get(self, a, b):
+		return numpy.max(self.getPoints(a, b, 5))
