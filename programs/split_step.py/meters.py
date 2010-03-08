@@ -96,7 +96,7 @@ class ParticleStatistics(PairedCalculation):
 				res[index] = squared_abs(state[index]) - noise_term;
 			}
 
-			__global__ void calculateTwoStateNoisedDensity(${p.scalar.name} *a_res,
+			__global__ void calculateTwoStatesDensity(${p.scalar.name} *a_res,
 				${p.scalar.name} *b_res, ${p.complex.name} *a_state, ${p.complex.name} *b_state)
 			{
 				int index = GLOBAL_INDEX;
@@ -140,7 +140,7 @@ class ParticleStatistics(PairedCalculation):
 		self._calculate_energy = FunctionWrapper(self._module, "calculateEnergy", "PPP")
 		self._calculate_density = FunctionWrapper(self._module, "calculateDensity", "PP")
 		self._calculate_noised_density = FunctionWrapper(self._module, "calculateNoisedDensity", "PP")
-		self._calculate_two_states_density = FunctionWrapper(self._module, "calculateTwoStateNoisedDensity", "PPPP")
+		self._calculate_two_states_density = FunctionWrapper(self._module, "calculateTwoStatesDensity", "PPPP")
 		self._calculate_two_states_interaction = FunctionWrapper(self._module, "calculateTwoStatesInteraction", "PPPP")
 
 		self._potentials_texref = self._module.get_texref("potentials")
