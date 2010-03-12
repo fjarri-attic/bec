@@ -34,7 +34,10 @@ class Reduce:
 			<%
 				log2_warp_size = log2(warp_size)
 				log2_block_size = log2(block_size)
-				smem_size = block_size + (0 if block_size > warp_size else block_size / 2)
+				if block_size > warp_size:
+					smem_size = block_size
+				else:
+					smem_size = block_size + block_size / 2
 			%>
 
 			__global__ void reduceKernel${block_size}${typename}(${typename}* output, const ${typename}* input)
@@ -118,7 +121,10 @@ class Reduce:
 
 		while length > final_length:
 
-			reduce_power = max_reduce_power if length / final_length >= max_reduce_power else length / final_length
+			if length / final_length >= max_reduce_power:
+				reduce_power = max_reduce_power
+			else:
+				reduce_power = length / final_length
 
 			data_out = gpuarray.GPUArray((data_in.size / reduce_power,), dtype=array.dtype,
 					allocator=self._mempool)

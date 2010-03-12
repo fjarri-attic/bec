@@ -15,7 +15,10 @@ class NumpyPlan:
 	def execute(self, data_in, data_out=None, inverse=False, batch=1):
 		res = numpy.empty(data_in.shape, dtype=data_in.dtype)
 
-		func = numpy.fft.ifftn if inverse else numpy.fft.fftn
+		if inverse:
+			func = numpy.fft.ifftn
+		else:
+			func = numpy.fft.fftn
 
 		for i in xrange(batch):
 			start = i * self._z

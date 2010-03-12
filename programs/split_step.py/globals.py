@@ -43,7 +43,10 @@ class PairedCalculation:
 	"""
 
 	def __init__(self, gpu, mempool):
-		prefix = "_gpu_" if gpu else "_cpu_"
+		if gpu:
+			prefix = "_gpu_"
+		else:
+			prefix = "_cpu_"
 
 		for attr in dir(self):
 			if attr.startswith(prefix):
@@ -154,7 +157,12 @@ def getExecutionParameters(func, elements, block_size=None):
 	max_grid_x = device.get_attribute(device_attribute.MAX_GRID_DIM_X)
 	max_grid_y = device.get_attribute(device_attribute.MAX_GRID_DIM_Y)
 	blocks_num_x = min(max_grid_x, elements / block_size)
-	blocks_num_y = 1 if blocks_num_x <= elements else elements / blocks_num_x
+
+	if blocks_num_x <= elements:
+		blocks_num_y = 1
+	else:
+		blocks_num_y = elements / blocks_num_x
+		blocks_num_x /= blocks_num_y
 
 	assert blocks_num_y <= max_grid_y, "Insufficient grid size to handle all the elements"
 
@@ -195,7 +203,12 @@ def fillPotentialsTexture(precision, constants, texref):
 def fillKVectorsArray(precision, constants):
 	"""Returns array with values of k-space vectors."""
 
-	kvalue = lambda i, dk, N: dk * (i - N) if 2 * i > N else dk * i
+	def kvalue(i, dk, N):
+		if 2 * i > N:
+			return dk * (i - N)
+		else:
+			return dk * i
+
 	kvectors = numpy.empty(constants.shape, dtype=precision.scalar.dtype)
 
 	for i in xrange(constants.nvx):

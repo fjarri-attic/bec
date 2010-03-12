@@ -31,7 +31,10 @@ class ParticleStatistics(PairedCalculation):
 		self._kvectors = fillKVectorsArray(self._precision, self._constants)
 
 	def _cpu__getAverageDensity(self, state, subtract_noise=True):
-		noise_term = self._constants.V / (2 * self._constants.dV) if subtract_noise else 0
+		if subtract_noise:
+			noise_term = self._constants.V / (2 * self._constants.dV)
+		else:
+			noise_term = 0
 
 		abs_values = numpy.abs(state)
 		normalized_values = abs_values * abs_values - noise_term
