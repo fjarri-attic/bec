@@ -218,9 +218,9 @@ class GPEGroundState(PairedCalculation):
 
 		plan.execute(self._gs) # FFT to x-state
 
-		print "Ground state calculation:" + \
-			" N = " + str(stats.countParticles(self._gs, subtract_noise=False)) + \
-			" E = " + str(stats.countEnergy(self._gs)) + \
-			" mu = " + str(stats.countMu(self._gs))
+		#print "Ground state calculation:" + \
+		#	" N = " + str(stats.countParticles(self._gs, subtract_noise=False)) + \
+		#	" E = " + str(stats.countEnergy(self._gs)) + \
+		#	" mu = " + str(stats.countMu(self._gs))
 
 		return self._gs
