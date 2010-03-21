@@ -71,30 +71,30 @@ void fillCalculationParameters(ModelParameters &params)
 
 	params.detuning = -41; // In Hz
 
-	params.gamma111 = 5.4e-30; // in cm^6 / s
-	params.gamma12 = 0.78e-13; // in cm^3 / s
-	params.gamma22 = 1.194e-13; // in cm^3 / s
-	//params.gamma111 = 0;
-	//params.gamma12 = 0;
-	//params.gamma22 = 0;
+	//params.gamma111 = 5.4e-30; // in cm^6 / s
+	//params.gamma12 = 0.78e-13; // in cm^3 / s
+	//params.gamma22 = 1.194e-13; // in cm^3 / s
+	params.gamma111 = 0;
+	params.gamma12 = 0;
+	params.gamma22 = 0;
 
 	// Vacuum noise, 0.0 - 1.0
-	params.Va = 0;
-	params.Vb = 0;
+	params.Va = 1;
+	params.Vb = 1;
 
 	// spatial lattice size
 	params.nvx = 16;
 	params.nvy = 16;
 	params.nvz = 128;
 
-	params.itmax = 3;
+	params.itmax = 1;
 
 	// in seconds
-	params.dt_steady = 0.00002; // time step for steady state calculation
+	params.dt_steady = 1e-5; // time step for steady state calculation
 	params.t_equilib = 0; // equilibration time
-	params.dt_evo = 0.00004; // time step for evolution
+	params.dt_evo = 4e-5; // time step for evolution
 
-	params.ne = 1;
+	params.ne = 4;
 }
 
 // auxiliary function - binary algorithm
@@ -242,6 +242,10 @@ void display(void) {
 	drawState(params, state, a_xy, b_xy, a_zy, b_zy);
 
 	int t = (int)(state.t * params.t_rho * 1000.0); // time in ms
+	if(t > 300)
+	{
+		exit(0);
+	}
 
 /*
 	if(t % 5 == 0)

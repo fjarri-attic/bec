@@ -119,9 +119,11 @@ void calculateSteadyState(value_pair *h_steady_state, CalculationParameters &par
 
 		// FFT into x-space
 		cufftSafeCall(batchfftExecute(plan, (cufftComplex*)a, (cufftComplex*)a, CUFFT_FORWARD));
+		printf("N = %f\n", calculateParticles(a, real_temp, real_temp2, params));
 
 		propagateXSpaceOneComponent<<<grid, block>>>(a);
 		cutilCheckMsg("propagateToEndpoint");
+		printf("N = %f\n", calculateParticles(a, real_temp, real_temp2, params));
 
 		// FFT into k-space
 		cufftSafeCall(batchfftExecute(plan, (cufftComplex*)a, (cufftComplex*)a, CUFFT_INVERSE));
@@ -257,8 +259,8 @@ value_type getComponentRatio(CalculationParameters &params, EvolutionState &stat
 	halfPiRotate<<<state.grid, state.block>>>(state.dens_a, state.dens_b, state.a, state.b, angle);
 	cutilCheckMsg("halfPiRotate");
 
-	value_type N1 = reduce<value_type>(state.dens_a, state.temp, params.cells * params.ne, 1);
-	value_type N2 = reduce<value_type>(state.dens_b, state.temp, params.cells * params.ne, 1);
+	value_type N1 = abs(reduce<value_type>(state.dens_a, state.temp, params.cells * params.ne, 1));
+	value_type N2 = abs(reduce<value_type>(state.dens_b, state.temp, params.cells * params.ne, 1));
 	return (N1 - N2) / (N1 + N2);
 }
 
@@ -354,7 +356,17 @@ void calculateEvolution(CalculationParameters &params, EvolutionState &state, va
  */
 //	printf("%f %f\n", state.t * params.t_rho * 1000, getVisibility(params, state));
 //	printf("%f %f\n", state.t * params.t_rho * 1000, getComponentRatio(params, state, 0));
-	printComponentRatioAxialProjection(params, state);
+//	printComponentRatioAxialProjection(params, state);
+//	calculateAverages(params, state);
+
+	// second pi/2 pulse
+	halfPiRotate<<<state.grid, state.block>>>(state.dens_a, state.dens_b, state.a, state.b, 0);
+	cutilCheckMsg("halfPiRotate");
+
+	value_type Na = reduce<value_type>(state.dens_a, state.temp, params.cells * params.ne, 1);
+	value_type Nb = reduce<value_type>(state.dens_b, state.temp, params.cells * params.ne, 1);
+
+	printf("%f %f\n", state.t * params.t_rho * 1000, (Na + Nb) * params.dx * params.dy * params.dz / params.ne);
 
 	// second pi/2 pulse
 	halfPiRotate<<<state.grid, state.block>>>(state.dens_a, state.dens_b, state.a, state.b, 0);
