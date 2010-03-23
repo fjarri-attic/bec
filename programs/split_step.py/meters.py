@@ -103,11 +103,13 @@ class ParticleStatistics(PairedCalculation):
 				b_res[index] = squared_abs(b_state[index]) - noise_term;
 			}
 
-			__kernel void calculateTwoStatesInteraction(__global ${p.scalar.name} *interaction,
+			__kernel void calculateTwoStatesInteraction(__global ${p.complex.name} *interaction1,
+				__global ${p.complex.name} *interaction2,
 				__global ${p.complex.name} *a_state, __global ${p.complex.name} *b_state)
 			{
 				DEFINE_INDEXES;
-				interaction[index] = squared_abs(complex_mul(a_state[index], b_state[index]));
+				interaction1[index] = complex_mul(a_state[index], conj(b_state[index]));
+				interaction2[index] = complex_mul(conj(a_state[index]), b_state[index]);
 			}
 
 			%for name, coeff in (('Energy', 2), ('Mu', 1)):
@@ -117,8 +119,8 @@ class ParticleStatistics(PairedCalculation):
 				{
 					DEFINE_INDEXES;
 
-					float potential = get_float_from_image(potentials, i, j, k);
-					float kvector = get_float_from_image(kvectors, i, j, k);
+					${p.scalar.name} potential = get_float_from_image(potentials, i, j, k);
+					${p.scalar.name} kvector = get_float_from_image(kvectors, i, j, k);
 
 					${p.scalar.name} n_a = squared_abs(xstate[index]);
 					${p.complex.name} differential =
@@ -167,14 +169,16 @@ class ParticleStatistics(PairedCalculation):
 		a_density = self._env.allocate(a.shape, self._env.precision.scalar.dtype)
 		b_density = self._env.allocate(b.shape, self._env.precision.scalar.dtype)
 
-		interaction = self._env.allocate(a.shape, self._env.precision.scalar.dtype)
+		interaction1 = self._env.allocate(a.shape, self._env.precision.complex.dtype)
+		interaction2 = self._env.allocate(a.shape, self._env.precision.complex.dtype)
 
 		self._calculate_two_states_density(self._env.queue, a.shape, a_density, b_density, a, b)
-		self._calculate_two_states_interaction(self._env.queue, a.shape, interaction, a, b)
+		self._calculate_two_states_interaction(self._env.queue, a.shape, interaction1, interaction2, a, b)
 
 		Na = self._reduce(a_density)
 		Nb = self._reduce(b_density)
 
-		squared_int = self._reduce(interaction)
+		Ka = self._reduce(interaction1)
+		Kb = self._reduce(interaction2)
 
-		return 2 * math.sqrt(squared_int) / (Na + Nb)
+		return 2 * math.sqrt(abs(Ka * Kb)) / (Na + Nb)
