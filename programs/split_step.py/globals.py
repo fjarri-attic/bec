@@ -94,6 +94,11 @@ class Environment:
 				return a.x * a.x + a.y * a.y;
 			}
 
+			${p.complex.name} conj(${p.complex.name} a)
+			{
+				return ${p.complex.ctr}(a.x, -a.y);
+			}
+
 			${p.complex.name} cexp(${p.complex.name} a)
 			{
 				${p.scalar.name} module = exp(a.x);
