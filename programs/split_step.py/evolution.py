@@ -8,9 +8,7 @@ from mako.template import Template
 import numpy
 
 try:
-	import pycuda.driver as cuda
-	from pycuda.compiler import SourceModule
-	from pycuda import gpuarray
+	import pyopencl as cl
 except:
 	pass
 
@@ -27,15 +25,13 @@ class TwoComponentBEC(PairedCalculation):
 	of paired GPEs.
 	"""
 
-	def __init__(self, gpu, precision, constants, mempool):
-		PairedCalculation.__init__(self, gpu, mempool)
-		self._precision = precision
-		self._constants = constants
-		self._mempool = mempool
+	def __init__(self, env):
+		PairedCalculation.__init__(self, env)
+		self._env = env
 
-		self._gs = GPEGroundState(gpu, precision, constants, mempool)
-		self._plan = createPlan(gpu, constants.nvx, constants.nvy, constants.nvz, precision)
-		self._stats = ParticleStatistics(gpu, precision, constants, mempool)
+		self._gs = GPEGroundState(env)
+		self._plan = createPlan(env, env.constants.nvx, env.constants.nvy, env.constants.nvz)
+		self._stats = ParticleStatistics(env)
 
 		# indicates whether current state is in midstep (i.e, right after propagation
 		# in x-space and FFT to k-space)
@@ -45,74 +41,75 @@ class TwoComponentBEC(PairedCalculation):
 		self.reset()
 
 	def _cpu__prepare(self):
-		potentials = fillPotentialsArray(self._precision, self._constants)
-		kvectors = fillKVectorsArray(self._precision, self._constants)
+		potentials = getPotentials(self._env)
+		kvectors = getKVectors(self._env)
 
-		self._potentials = numpy.empty(self._constants.ens_shape, dtype=self._precision.complex.dtype)
-		self._kvectors = numpy.empty(self._constants.ens_shape, dtype=self._precision.complex.dtype)
+		self._potentials = numpy.empty(self._env.constants.ens_shape, dtype=self._env.precision.complex.dtype)
+		self._kvectors = numpy.empty(self._env.constants.ens_shape, dtype=self._env.precision.complex.dtype)
 
 		# copy potentials and kvectors making these matrices have the same size
 		# as the many-ensemble state
 		# it requires additional memory, but makes other code look simpler
-		for e in range(self._constants.ensembles):
-			start = e * self._constants.nvz
-			stop = (e + 1) * self._constants.nvz
+		for e in range(self._env.constants.ensembles):
+			start = e * self._env.constants.nvz
+			stop = (e + 1) * self._env.constants.nvz
 
 			self._potentials[start:stop,:,:] = potentials
 			self._kvectors[start:stop,:,:] = kvectors
 
 	def _gpu__prepare(self):
 
+		self._potentials = getPotentials(self._env)
+		self._kvectors = getKVectors(self._env)
+
 		kernels = """
 			<%!
 				from math import sqrt
 			%>
 
-			texture<${p.scalar.name}, 1> potentials;
-			texture<${p.scalar.name}, 1> kvectors;
-
 			// Initialize ensembles with steady state + noise for evolution calculation
-			__global__ void initializeEnsembles(${p.complex.name} *a, ${p.complex.name} *b,
-				${p.complex.name} *steady_state, ${p.complex.name} *a_randoms,
-				${p.complex.name} *b_randoms)
+			__kernel void initializeEnsembles(__global ${p.complex.name} *a, __global ${p.complex.name} *b,
+				__global ${p.complex.name} *steady_state, __global ${p.complex.name} *a_randoms,
+				__global ${p.complex.name} *b_randoms)
 			{
-				int index = GLOBAL_INDEX;
+				DEFINE_INDEXES;
 
 				${p.complex.name} steady_val = steady_state[index % ${c.cells}];
 
 				${p.scalar.name} coeff = (${p.scalar.name})${1.0 / sqrt(c.dV)};
 
 				//Initialises a-ensemble amplitudes with vacuum noise
-				a[index] = steady_val + a_randoms[index] * (${c.V1} * coeff);
+				a[index] = steady_val + complex_mul_scalar(a_randoms[index], ${c.V1} * coeff);
 
 				//Initialises b-ensemble amplitudes with vacuum noise
-				b[index] = b_randoms[index] * (${c.V2} * coeff);
+				b[index] = complex_mul_scalar(b_randoms[index], ${c.V2} * coeff);
 			}
 
 			// Propagates state vector in k-space for evolution calculation (i.e., in real time)
-			__global__ void propagateKSpaceRealTime(${p.complex.name} *a, ${p.complex.name} *b, ${p.scalar.name} dt)
+			__kernel void propagateKSpaceRealTime(__global ${p.complex.name} *a, __global ${p.complex.name} *b,
+				__global ${p.scalar.name} dt, read_only image3d_t kvectors)
 			{
-				int index = GLOBAL_INDEX;
-				<% total_pow = c.nvx_pow + c.nvy_pow + c.nvz_pow %>
-				int index_in_ensemble = index - ((index >> ${total_pow}) << ${total_pow});
+				DEFINE_INDEXES;
 
-				${p.scalar.name} prop_angle = tex1Dfetch(kvectors, index_in_ensemble) * dt / 2;
-				${p.complex.name} prop_coeff = ${p.complex.ctr}(cos(prop_angle), sin(prop_angle));
+				${p.scalar.name} kvector = get_float_from_image(kvectors, i, j, k % ${c.nvz});
+				${p.scalar.name} prop_angle = kvector * dt / 2;
+				${p.complex.name} prop_coeff = ${p.complex.ctr}(native_cos(prop_angle), native_sin(prop_angle));
 
 				${p.complex.name} a0 = a[index];
 				${p.complex.name} b0 = b[index];
 
-				a[index] = a0 * prop_coeff;
-				b[index] = b0 * prop_coeff;
+				a[index] = complex_mul(a0, prop_coeff);
+				b[index] = complex_mul(b0, prop_coeff);
 			}
 
 			// Propagates state vector in x-space for evolution calculation
-			__global__ void propagateXSpaceTwoComponent(${p.complex.name} *aa, ${p.complex.name} *bb, ${p.scalar.name} dt)
+			__kernel void propagateXSpaceTwoComponent(__global ${p.complex.name} *aa,
+				__global ${p.complex.name} *bb, ${p.scalar.name} dt,
+				read_only image3d_t potentials)
 			{
-				int index = GLOBAL_INDEX;
+				DEFINE_INDEXES;
 
-				<% total_pow = c.nvx_pow + c.nvy_pow + c.nvz_pow %>
-				${p.scalar.name} V = tex1Dfetch(potentials, index - ((index >> ${total_pow}) << ${total_pow}));
+				${p.scalar.name} V = get_float_from_image(potentials, i, j, k % ${c.nvz});
 
 				${p.complex.name} a = aa[index];
 				${p.complex.name} b = bb[index];
@@ -139,85 +136,84 @@ class TwoComponentBEC(PairedCalculation):
 						-(-V - ${c.g22} * n_b - ${c.g12} * n_a + ${c.detuning}));
 
 					// calculate midpoint log derivative and exponentiate
-					da = cexp(pa * (dt / 2));
-					db = cexp(pb * (dt / 2));
+					da = cexp(complex_mul_scalar(pa, (dt / 2)));
+					db = cexp(complex_mul_scalar(pb, (dt / 2)));
 
 					//propagate to midpoint using log derivative
-					a = a0 * da;
-					b = b0 * db;
+					a = complex_mul(a0, da);
+					b = complex_mul(b0, db);
 				%endfor
 
 				//propagate to endpoint using log derivative
-				aa[index] = a * da;
-				bb[index] = b * db;
+				aa[index] = complex_mul(a, da);
+				bb[index] = complex_mul(b, db);
 			}
 
 			// Apply pi/2 pulse (instantaneus approximation)
-			__global__ void applyHalfPiPulse(${p.complex.name} *a, ${p.complex.name} *b)
+			__kernel void applyHalfPiPulse(__global ${p.complex.name} *a, __global ${p.complex.name} *b)
 			{
-				int index = GLOBAL_INDEX;
+				DEFINE_INDEXES;
 
 				${p.complex.name} a0 = a[index];
 				${p.complex.name} b0 = b[index];
 
-				a[index] = (a0 + b0 * ${p.complex.ctr}(0, -1)) * sqrt(0.5);
-				b[index] = (a0 * ${p.complex.ctr}(0, -1) + b0) * sqrt(0.5);
+				${p.complex.name} minus_i = ${p.complex.ctr}(0, -1);
+				a[index] = complex_mul_scalar(a0 + complex_mul(b0, minus_i), (${p.scalar.name})${sqrt(0.5)});
+				b[index] = complex_mul_scalar(complex_mul(a0, minus_i) + b0, (${p.scalar.name})${sqrt(0.5)});
 			}
 
 			// Apply pi pulse (instantaneus approximation)
-			__global__ void applyPiPulse(${p.complex.name} *a, ${p.complex.name} *b)
+			__kernel void applyPiPulse(__global ${p.complex.name} *a, __global ${p.complex.name} *b)
 			{
-				int index = GLOBAL_INDEX;
+				DEFINE_INDEXES;
 
 				${p.complex.name} a0 = a[index];
 				${p.complex.name} b0 = b[index];
 
-				a[index] = b0 * ${p.complex.ctr}(0, -1);
-				b[index] = a0 * ${p.complex.ctr}(0, -1);
+				${p.complex.name} minus_i = ${p.complex.ctr}(0, -1);
+
+				a[index] = complex_mul(b0, minus_i);
+				b[index] = complex_mul(a0, minus_i);
 			}
 		"""
 
-		self._module = compileSource(kernels, self._precision, self._constants)
-		self._init_ensembles_func = FunctionWrapper(self._module, "initializeEnsembles", "PPPPP")
-		self._kpropagate_func = FunctionWrapper(self._module, "propagateKSpaceRealTime", "PP" + self._precision.scalar.ctype)
-		self._xpropagate_func = FunctionWrapper(self._module, "propagateXSpaceTwoComponent", "PP" + self._precision.scalar.ctype)
-		self._half_pi_pulse_func = FunctionWrapper(self._module, "applyHalfPiPulse", "PP")
-
-		self._potentials_texref = self._module.get_texref("potentials")
-		self._kvectors_texref = self._module.get_texref("kvectors")
-
-		self._potentials_array = fillPotentialsTexture(self._precision, self._constants, self._potentials_texref)
-		self._kvectors_array = fillKVectorsTexture(self._precision, self._constants, self._kvectors_texref)
+		self._program = self._env.compileSource(kernels)
+		self._init_ensembles_func = FunctionWrapper(self._program.initializeEnsembles)
+		self._kpropagate_func = FunctionWrapper(self._program.propagateKSpaceRealTime)
+		self._xpropagate_func = FunctionWrapper(self._program.propagateXSpaceTwoComponent)
+		self._half_pi_pulse_func = FunctionWrapper(self._program.applyHalfPiPulse)
 
 	def _toKSpace(self):
-		self._plan.execute(self._a, batch=self._constants.ensembles, inverse=True)
-		self._plan.execute(self._b, batch=self._constants.ensembles, inverse=True)
+		self._plan.execute(self._a, batch=self._env.constants.ensembles, inverse=True)
+		self._plan.execute(self._b, batch=self._env.constants.ensembles, inverse=True)
 
 	def _toXSpace(self):
-		self._plan.execute(self._a, batch=self._constants.ensembles)
-		self._plan.execute(self._b, batch=self._constants.ensembles)
+		self._plan.execute(self._a, batch=self._env.constants.ensembles)
+		self._plan.execute(self._b, batch=self._env.constants.ensembles)
 
 	def _gpu__initEnsembles(self, gs, a_randoms, b_randoms):
-		a_randoms_gpu = gpuarray.to_gpu(a_randoms, allocator=self._mempool)
-		b_randoms_gpu = gpuarray.to_gpu(b_randoms, allocator=self._mempool)
+		a_randoms_gpu = self._env.allocate(a_randoms.shape, a_randoms.dtype)
+		b_randoms_gpu = self._env.allocate(b_randoms.shape, b_randoms.dtype)
 
-		self._init_ensembles_func(self._constants.cells * self._constants.ensembles,
-			self._a.gpudata, self._b.gpudata, gs.gpudata,
-			a_randoms_gpu.gpudata, b_randoms_gpu.gpudata)
+		cl.enqueue_write_buffer(self._env.queue, a_randoms_gpu, a_randoms)
+		cl.enqueue_write_buffer(self._env.queue, b_randoms_gpu, b_randoms)
+
+		self._init_ensembles_func(self._env.queue, self._env.constants.ens_shape,
+			self._a, self._b, gs, a_randoms_gpu, b_randoms_gpu)
 
 	def _cpu__initEnsembles(self, gs, a_randoms, b_randoms):
-		coeff = 1.0 / math.sqrt(self._constants.dV)
-		size = self._constants.cells * self._constants.ensembles
+		coeff = 1.0 / math.sqrt(self._env.constants.dV)
+		size = self._env.constants.cells * self._env.constants.ensembles
 
-		for e in range(self._constants.ensembles):
-			start = e * self._constants.nvz
-			stop = (e + 1) * self._constants.nvz
+		for e in range(self._env.constants.ensembles):
+			start = e * self._env.constants.nvz
+			stop = (e + 1) * self._env.constants.nvz
 
-			self._a[start:stop,:,:] = gs + a_randoms[start:stop,:,:] * coeff * self._constants.V1
-			self._b[start:stop,:,:] = b_randoms[start:stop,:,:] * coeff * self._constants.V2
+			self._a[start:stop,:,:] = gs + a_randoms[start:stop,:,:] * coeff * self._env.constants.V1
+			self._b[start:stop,:,:] = b_randoms[start:stop,:,:] * coeff * self._env.constants.V2
 
 	def _gpu__halfPiPulse(self):
-		self._half_pi_pulse_func(self._constants.cells * self._constants.ensembles, self._a.gpudata, self._b.gpudata)
+		self._half_pi_pulse_func(self._env.queue, self._env.constants.ens_shape, self._a, self._b)
 
 	def _cpu__halfPiPulse(self):
 		a0 = self._a.copy()
@@ -226,8 +222,8 @@ class TwoComponentBEC(PairedCalculation):
 		self._b = (b0 - 1j * a0) * math.sqrt(0.5)
 
 	def _gpu__kpropagate(self, dt):
-		self._kpropagate_func(self._constants.cells * self._constants.ensembles,
-			self._a.gpudata, self._b.gpudata, dt)
+		self._kpropagate_func(self._env.queue, self._env.constants.ens_shape,
+			self._a, self._b, self._env.precision.scalar.dtype(dt), self._kvectors)
 
 	def _cpu__kpropagate(self, dt):
 		kcoeff = numpy.exp(self._kvectors * (1j * dt / 2))
@@ -235,25 +231,25 @@ class TwoComponentBEC(PairedCalculation):
 		self._b *= kcoeff
 
 	def _gpu__xpropagate(self, dt):
-		self._xpropagate_func(self._constants.cells * self._constants.ensembles,
-			self._a.gpudata, self._b.gpudata, dt)
+		self._xpropagate_func(self._env.queue, self._env.constants.ens_shape,
+			self._a, self._b, self._env.precision.scalar.dtype(dt), self._potentials)
 
 	def _cpu__xpropagate(self, dt):
 		a0 = self._a.copy()
 		b0 = self._b.copy()
 
-		for iter in xrange(self._constants.itmax):
+		for iter in xrange(self._env.constants.itmax):
 			n_a = numpy.abs(self._a)
 			n_b = numpy.abs(self._b)
 
 			n_a = n_a * n_a
 			n_b = n_b * n_b
 
-			pa = n_a * n_a * (-self._constants.l111 / 2) + n_b * (-self._constants.l12 / 2) + \
-				1j * (self._potentials + n_a * self._constants.g11 + n_b * self._constants.g12)
+			pa = n_a * n_a * (-self._env.constants.l111 / 2) + n_b * (-self._env.constants.l12 / 2) + \
+				1j * (self._potentials + n_a * self._env.constants.g11 + n_b * self._env.constants.g12)
 
-			pb = n_b * (-self._constants.l22 / 2) + n_a * (-self._constants.l12 / 2) + \
-				1j * (self._potentials + n_b * self._constants.g22 + n_a * self._constants.g12 - self._constants.detuning)
+			pb = n_b * (-self._env.constants.l22 / 2) + n_a * (-self._env.constants.l12 / 2) + \
+				1j * (self._potentials + n_b * self._env.constants.g22 + n_a * self._env.constants.g12 - self._env.constants.detuning)
 
 			da = numpy.exp(pa * (dt / 2))
 			db = numpy.exp(pb * (dt / 2))
@@ -271,13 +267,13 @@ class TwoComponentBEC(PairedCalculation):
 
 	def reset(self):
 
-		self._a = self.allocate(self._constants.ens_shape, self._precision.complex.dtype)
-		self._b = self.allocate(self._constants.ens_shape, self._precision.complex.dtype)
+		self._a = self._env.allocate(self._env.constants.ens_shape, self._env.precision.complex.dtype)
+		self._b = self._env.allocate(self._env.constants.ens_shape, self._env.precision.complex.dtype)
 
-		a_randoms = (numpy.random.normal(scale=0.5, size=self._constants.ens_shape) +
-			1j * numpy.random.normal(scale=0.5, size=self._constants.ens_shape)).astype(self._precision.complex.dtype)
-		b_randoms = (numpy.random.normal(scale=0.5, size=self._constants.ens_shape) +
-			1j * numpy.random.normal(scale=0.5, size=self._constants.ens_shape)).astype(self._precision.complex.dtype)
+		a_randoms = (numpy.random.normal(scale=0.5, size=self._env.constants.ens_shape) +
+			1j * numpy.random.normal(scale=0.5, size=self._env.constants.ens_shape)).astype(self._env.precision.complex.dtype)
+		b_randoms = (numpy.random.normal(scale=0.5, size=self._env.constants.ens_shape) +
+			1j * numpy.random.normal(scale=0.5, size=self._env.constants.ens_shape)).astype(self._env.precision.complex.dtype)
 
 		gs = self._gs.create()
 
@@ -285,9 +281,9 @@ class TwoComponentBEC(PairedCalculation):
 
 		# equilibration
 		self._toKSpace()
-		if self._constants.t_equilib > 0:
-			for t in xrange(0, self._constants.t_equilib, self._constants.dt_evo):
-				self.propagate(self._constants.dt_evo)
+		if self._env.constants.t_equilib > 0:
+			for t in xrange(0, self._env.constants.t_equilib, self._env.constants.dt_evo):
+				self.propagate(self._env.constants.dt_evo)
 
 		self._t = 0
 
@@ -307,16 +303,17 @@ class TwoComponentBEC(PairedCalculation):
 
 		self._toXSpace()
 		self._xpropagate(dt)
+
 		self._midstep = True
 		self._toKSpace()
 
 		self._t += dt
 
 	def _runCallbacks(self, callbacks):
-		self._finishStep(self._constants.dt_evo)
+		self._finishStep(self._env.constants.dt_evo)
 		self._toXSpace()
 		for callback in callbacks:
-			callback(self._t * self._constants.t_rho, self._a, self._b)
+			callback(self._t * self._env.constants.t_rho, self._a, self._b)
 		self._toKSpace()
 
 	def runEvolution(self, tstop, callbacks, callback_dt=0):
@@ -325,9 +322,9 @@ class TwoComponentBEC(PairedCalculation):
 
 		self._runCallbacks(callbacks)
 
-		while self._t * self._constants.t_rho < tstop:
-			self.propagate(self._constants.dt_evo)
-			callback_t += self._constants.dt_evo * self._constants.t_rho
+		while self._t * self._env.constants.t_rho < tstop:
+			self.propagate(self._env.constants.dt_evo)
+			callback_t += self._env.constants.dt_evo * self._env.constants.t_rho
 
 			if callback_t > callback_dt:
 				self._runCallbacks(callbacks)
