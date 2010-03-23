@@ -1,5 +1,5 @@
 try:
-	import pycudafft
+	import pyfft.cl
 except:
 	pass
 
@@ -13,7 +13,8 @@ class NumpyPlan:
 		self._z = z
 
 	def execute(self, data_in, data_out=None, inverse=False, batch=1):
-		res = numpy.empty(data_in.shape, dtype=data_in.dtype)
+		if data_out is None:
+			data_out = data_in
 
 		if inverse:
 			func = numpy.fft.ifftn
@@ -23,15 +24,10 @@ class NumpyPlan:
 		for i in xrange(batch):
 			start = i * self._z
 			stop = (i + 1) * self._z
-			res[start:stop,:,:] = func(data_in[start:stop,:,:])
+			data_out[start:stop,:,:] = func(data_in[start:stop,:,:])
 
-		if data_out is None:
-			data_in[:,:,:] = res
-		else:
-			data_out[:,:,:] = res
-
-def createPlan(gpu, x, y, z, precision):
-	if gpu:
-		return pycudafft.FFTPlan((x, y, z), dtype=precision.complex.dtype, normalize=True)
+def createPlan(env, x, y, z):
+	if env.gpu:
+		return pyfft.cl.Plan((z, y, x), dtype=env.precision.complex.dtype, normalize=True, queue=env.queue)
 	else:
 		return NumpyPlan(x, y, z)

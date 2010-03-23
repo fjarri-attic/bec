@@ -1,9 +1,8 @@
+import numpy
 from mako.template import Template
 
 try:
-	from pycuda.autoinit import device
-	from pycuda.compiler import SourceModule
-	from pycuda.driver import device_attribute
+	import pyopencl as cl
 except:
 	pass
 
@@ -19,7 +18,8 @@ _kernel_template = Template("""
  * @param height Height of each matrix, must be a multiple of HALF_WARP_SIZE
  * @param num Matrices in the batch
  */
-__global__ void transposeKernel(${typename}* odata, const ${typename}* idata, int width, int height, int num)
+__kernel void transposeKernel(__global ${typename}* odata, const __global ${typename}* idata,
+	unsigned int width, unsigned int height, unsigned int num)
 {
 	// To prevent shared memory bank confilcts:
 	// - Load each component into a different array. Since the array size is a
@@ -31,23 +31,28 @@ __global__ void transposeKernel(${typename}* odata, const ${typename}* idata, in
 	//   array starts in a different bank - so reading from shared memory
 	//   doesn't cause bank conflicts when writing the transpose out to global
 	//   memory.
-	__shared__ ${typename} block[(${half_warp_size} + 1) * ${half_warp_size}];
+	__local ${typename} block[(${half_warp_size} + 1) * ${half_warp_size}];
 
-	unsigned int xBlock = __umul24(${half_warp_size}, blockIdx.x);
-	unsigned int yBlock = __umul24(${half_warp_size}, blockIdx.y);
-	unsigned int xIndex = xBlock + threadIdx.x;
-	unsigned int yIndex = yBlock + threadIdx.y;
-	unsigned int size = __umul24(width, height);
-	unsigned int index_block = __umul24(threadIdx.y, ${half_warp_size} + 1) + threadIdx.x;
-	unsigned int index_transpose = __umul24(threadIdx.x, ${half_warp_size} + 1) + threadIdx.y;
-	unsigned int index_in = __umul24(width, yIndex) + xIndex;
-	unsigned int index_out = __umul24(height, xBlock + threadIdx.y) + yBlock + threadIdx.x;
+	unsigned int lid_x = get_local_id(0);
+	unsigned int lid_y = get_local_id(1);
+
+	const unsigned int half_warp_size = ${half_warp_size};
+
+	unsigned int xBlock = mul24(half_warp_size, get_group_id(0));
+	unsigned int yBlock = mul24(half_warp_size, get_group_id(1));
+	unsigned int xIndex = xBlock + lid_x;
+	unsigned int yIndex = yBlock + lid_y;
+	unsigned int size = mul24(width, height);
+	unsigned int index_block = mul24(lid_y, half_warp_size + 1) + lid_x;
+	unsigned int index_transpose = mul24(lid_x, half_warp_size + 1) + lid_y;
+	unsigned int index_in = mul24(width, yIndex) + xIndex;
+	unsigned int index_out = mul24(height, xBlock + lid_y) + yBlock + lid_x;
 
 	for(int n = 0; n < num; ++n)
 	{
 		block[index_block] = idata[index_in];
 
-		__syncthreads();
+		barrier(CLK_LOCAL_MEM_FENCE);
 
 		odata[index_out] = block[index_transpose];
 
@@ -59,21 +64,18 @@ __global__ void transposeKernel(${typename}* odata, const ${typename}* idata, in
 
 class Transpose:
 
-	def __init__(self, type):
+	def __init__(self, env, type):
 
-		self._half_warp_size = device.get_attribute(device_attribute.WARP_SIZE) / 2
+		self._half_warp_size = 16
+		self._queue = env.queue
 
 		# render function from template
 		source = _kernel_template.render(typename=type.name, half_warp_size=self._half_warp_size)
 
 		# get function from module
-		_kernel_module = SourceModule(source)
-		self._func = _kernel_module.get_function("transposeKernel")
-
-		# prepare function call
-		block = (self._half_warp_size, self._half_warp_size, 1)
-		shared_mem = type.nbytes * self._half_warp_size * (self._half_warp_size + 1)
-		self._func.prepare("PPiii", block=block, shared=shared_mem)
+		_kernel_module = cl.Program(env.context, source).build()
+		self._func = _kernel_module.transposeKernel
+		self._local_size = (self._half_warp_size, self._half_warp_size)
 
 	def __call__(self, odata, idata, width, height, num):
 		"""
@@ -87,5 +89,6 @@ class Transpose:
 		assert width % self._half_warp_size == 0
 		assert height % self._half_warp_size == 0
 
-		grid = (width / self._half_warp_size, height / self._half_warp_size)
-		self._func.prepared_call(grid, odata, idata, width, height, num)
+		global_size = (height, width)
+		self._func(self._queue, global_size, odata, idata, numpy.int32(width),
+			numpy.int32(height), numpy.int32(num), local_size=self._local_size)

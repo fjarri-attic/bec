@@ -6,7 +6,7 @@ class _Type:
 		self.dtype = dtype
 		self.nbytes = dtype().nbytes
 		self.ctype = ctype
-		self.ctr = 'make_' + name
+		self.ctr = '(' + name + ')'
 
 class _Precision:
 	def __init__(self, scalar, complex):

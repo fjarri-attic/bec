@@ -6,13 +6,6 @@ import math
 import copy
 import numpy
 
-try:
-	import pycuda.driver as cuda
-	from pycuda.compiler import SourceModule
-	from pycuda import gpuarray
-except:
-	pass
-
 from globals import *
 from fft import createPlan
 from meters import ParticleStatistics
@@ -25,37 +18,38 @@ class TFGroundState(PairedCalculation):
 	(kinetic energy == 0)
 	"""
 
-	def __init__(self, gpu, precision, constants, mempool):
-		PairedCalculation.__init__(self, gpu, mempool)
-		self._precision = precision
-		self._constants = copy.deepcopy(constants)
+	def __init__(self, env):
+		PairedCalculation.__init__(self, env)
+		self._env = env
+		self._potentials = getPotentials(self._env)
 
 		self._prepare()
 
 	def _cpu__prepare(self):
-		self._potentials = fillPotentialsArray(self._precision, self._constants)
+		pass
 
 	def _cpu_create(self):
-		res = self.allocate(self._constants.shape, self._precision.complex.dtype)
+		res = self._env.allocate(self._env.constants.shape, self._env.precision.complex.dtype)
 
-		for i in xrange(self._constants.nvx):
-			for j in xrange(self._constants.nvy):
-				for k in xrange(self._constants.nvz):
-					e = self._constants.mu - self._potentials[k, j, i]
-					res[k, j, i] = math.sqrt(max(e / self._constants.g11, 0))
+		for i in xrange(self._env.constants.nvx):
+			for j in xrange(self._env.constants.nvy):
+				for k in xrange(self._env.constants.nvz):
+					e = self._env.constants.mu - self._potentials[k, j, i]
+					res[k, j, i] = math.sqrt(max(e / self._env.constants.g11, 0))
 
 		return res
 
 	def _gpu__prepare(self):
 		kernel_template = """
-			texture<${p.scalar.name}, 1> potentials;
-
 			// fill given buffer with ground state, obtained from Thomas-Fermi approximation
-			__global__ void fillWithTFGroundState(${p.complex.name} *data)
+			__kernel void fillWithTFGroundState(__global ${p.complex.name} *data,
+				read_only image3d_t potentials)
 			{
-				int index = GLOBAL_INDEX;
+				DEFINE_INDEXES;
 
-				${p.scalar.name} e = (${p.scalar.name})${c.mu} - tex1Dfetch(potentials, index);
+				float potential = get_float_from_image(potentials, i, j, k);
+
+				${p.scalar.name} e = (${p.scalar.name})${c.mu} - potential;
 				if(e > 0)
 					data[index] = ${p.complex.ctr}(sqrt(e / (${p.scalar.name})${c.g11}), 0);
 				else
@@ -63,14 +57,12 @@ class TFGroundState(PairedCalculation):
 			}
 		"""
 
-		self._module = compileSource(kernel_template, self._precision, self._constants)
-		self._func = FunctionWrapper(self._module, "fillWithTFGroundState", "P")
-		self._texref = self._module.get_texref("potentials")
-		self._potentials_array = fillPotentialsTexture(self._precision, self._constants, self._texref)
+		self._program = self._env.compileSource(kernel_template)
+		self._func = FunctionWrapper(self._program.fillWithTFGroundState)
 
 	def _gpu_create(self):
-		res = self.allocate(self._constants.shape, self._precision.complex.dtype)
-		self._func(self._constants.cells, res.gpudata)
+		res = self._env.allocate(self._env.constants.shape, self._env.precision.complex.dtype)
+		self._func(self._env.queue, self._env.constants.shape, res, self._potentials)
 		return res
 
 
@@ -79,15 +71,16 @@ class GPEGroundState(PairedCalculation):
 	Calculates GPE ground state using split-step propagation in imaginary time.
 	"""
 
-	def __init__(self, gpu, precision, constants, mempool):
-		PairedCalculation.__init__(self, gpu, mempool)
+	def __init__(self, env):
+		PairedCalculation.__init__(self, env)
+		self._env = env
 
-		self._precision = precision
-		self._constants = copy.deepcopy(constants)
+		self._tf_gs = TFGroundState(env)
+		self._plan = createPlan(env, env.constants.nvx, env.constants.nvy, env.constants.nvz)
+		self._statistics = ParticleStatistics(env)
 
-		self._tf_gs = TFGroundState(gpu, precision, constants, mempool)
-		self._plan = createPlan(gpu, constants.nvx, constants.nvy, constants.nvz, precision)
-		self._statistics = ParticleStatistics(gpu, precision, constants, mempool)
+		self._potentials = getPotentials(self._env)
+		self._kvectors = getKVectors(self._env)
 
 		self._prepare()
 
@@ -96,34 +89,44 @@ class GPEGroundState(PairedCalculation):
 		self._precision = 1e-6
 
 	def _cpu__prepare(self):
-		self._potentials = fillPotentialsArray(self._precision, self._constants)
-		self._kvectors = fillKVectorsArray(self._precision, self._constants)
+		self._k_coeff = numpy.exp(self._kvectors * (-self._env.constants.dt_steady / 2))
 
 	def _gpu__prepare(self):
 		kernel_template = """
-			texture<${p.scalar.name}, 1> potentials;
-			texture<${p.scalar.name}, 1> kvectors;
-
-			__global__ void multiply(${p.complex.name} *data, ${p.scalar.name} coeff)
+			float get_potential(int i, int j, int k)
 			{
-				int index = GLOBAL_INDEX;
-				data[index] = data[index] * coeff;
+				float x = -${c.xmax} + i * ${c.dx};
+				float y = -${c.ymax} + j * ${c.dy};
+				float z = -${c.zmax} + k * ${c.dz};
+
+				return (x * x + y * y + z * z /
+					(${c.lambda_ * c.lambda_})) / 2;
+			}
+			__kernel void multiply(__global ${p.complex.name} *data, __global ${p.scalar.name} coeff)
+			{
+				DEFINE_INDEXES;
+				data[index] = complex_mul_scalar(data[index], coeff);
 			}
 
 			// Propagates state vector in k-space for steady state calculation (i.e., in imaginary time)
-			__global__ void propagateKSpaceImaginaryTime(${p.complex.name} *data)
+			__kernel void propagateKSpaceImaginaryTime(__global ${p.complex.name} *data,
+				read_only image3d_t kvectors)
 			{
-				int index = GLOBAL_INDEX;
-				${p.scalar.name} prop_coeff = exp(tex1Dfetch(kvectors, index) *
-					${p.scalar.name}(${-c.dt_steady / 2}));
+				DEFINE_INDEXES;
+
+				float kvector = get_float_from_image(kvectors, i, j, k);
+
+				${p.scalar.name} prop_coeff = native_exp(kvector *
+					(${p.scalar.name})${-c.dt_steady / 2});
 				${p.complex.name} temp = data[index];
-				data[index] = temp * prop_coeff;
+				data[index] = complex_mul_scalar(temp, prop_coeff);
 			}
 
 			// Propagates state in x-space for steady state calculation
-			__global__ void propagateXSpaceOneComponent(${p.complex.name} *data)
+			__kernel void propagateXSpaceOneComponent(__global ${p.complex.name} *data,
+				read_only image3d_t potentials)
 			{
-				int index = GLOBAL_INDEX;
+				DEFINE_INDEXES;
 
 				${p.complex.name} a = data[index];
 
@@ -131,57 +134,52 @@ class GPEGroundState(PairedCalculation):
 				${p.complex.name} a0 = a;
 
 				${p.scalar.name} da;
-				${p.scalar.name} V = tex1Dfetch(potentials, index);
+				${p.scalar.name} V = get_float_from_image(potentials, i, j, k);
 
 				//iterate to midpoint solution
 				%for iter in range(c.itmax):
 					//calculate midpoint log derivative and exponentiate
-					da = exp(${p.scalar.name}(${c.dt_steady / 2}) *
-						(-V - ${p.scalar.name}(${c.g11}) * squared_abs(a)));
+					da = exp((${p.scalar.name})${c.dt_steady / 2} *
+						(-V - (${p.scalar.name})${c.g11} * squared_abs(a)));
 
 					//propagate to midpoint using log derivative
-					a = a0 * da;
+					a = complex_mul_scalar(a0, da);
 				%endfor
 
 				//propagate to endpoint using log derivative
-				data[index] = a * da;
+				data[index] = complex_mul_scalar(a, da);
 			}
 		"""
 
-		self._module = compileSource(kernel_template, self._precision, self._constants)
+		self._program = self._env.compileSource(kernel_template)
 
-		self._kpropagate_func = FunctionWrapper(self._module, "propagateKSpaceImaginaryTime", "P")
-		self._xpropagate_func = FunctionWrapper(self._module, "propagateXSpaceOneComponent", "P")
-		self._multiply_func = FunctionWrapper(self._module, "multiply", "P" + self._precision.scalar.ctype)
-		self._potentials_texref = self._module.get_texref("potentials")
-		self._kvectors_texref = self._module.get_texref("kvectors")
-
-		self._potentials_array = fillPotentialsTexture(self._precision, self._constants, self._potentials_texref)
-		self._kvectors_array = fillKVectorsTexture(self._precision, self._constants, self._kvectors_texref)
+		self._kpropagate_func = FunctionWrapper(self._program.propagateKSpaceImaginaryTime)
+		self._xpropagate_func = FunctionWrapper(self._program.propagateXSpaceOneComponent)
+		self._multiply_func = FunctionWrapper(self._program.multiply)
 
 	def _cpu__kpropagate(self):
-		self._gs *= numpy.exp(self._kvectors * (-self._constants.dt_steady / 2)) # k-space propagation
+		self._gs *= self._k_coeff # k-space propagation
 
 	def _gpu__kpropagate(self):
-		self._kpropagate_func(self._constants.cells, self._gs.gpudata)
+		self._kpropagate_func(self._env.queue, self._gs.shape, self._gs, self._kvectors)
 
 	def _cpu__xpropagate(self):
 		gs0 = self._gs.copy()
-		for iter in xrange(self._constants.itmax):
+		for iter in xrange(self._env.constants.itmax):
 			abs_gs = numpy.abs(self._gs)
-			d_gs = numpy.exp((self._potentials + abs_gs * abs_gs * self._constants.g11) *
-				(-self._constants.dt_steady / 2))
+			d_gs = numpy.exp((self._potentials + abs_gs * abs_gs * self._env.constants.g11) *
+				(-self._env.constants.dt_steady / 2))
 			self._gs = gs0 * d_gs
 		self._gs *= d_gs
 
 	def _gpu__xpropagate(self):
-		self._xpropagate_func(self._constants.cells, self._gs.gpudata)
+		self._xpropagate_func(self._env.queue, self._gs.shape, self._gs, self._potentials)
 
 	def _cpu__renormalize(self, coeff):
 		self._gs *= coeff
 
 	def _gpu__renormalize(self, coeff):
-		self._multiply_func(self._constants.cells, self._gs.gpudata, coeff)
+		self._multiply_func(self._env.queue, self._gs.shape, self._gs, numpy.float32(coeff))
 
 	def create(self):
 
@@ -210,7 +208,7 @@ class GPEGroundState(PairedCalculation):
 
 			# renormalize
 			N = stats.countParticles(self._gs, subtract_noise=False)
-			self._renormalize(math.sqrt(self._constants.N / N))
+			self._renormalize(math.sqrt(self._env.constants.N / N))
 
 			E = new_E
 			new_E = stats.countEnergy(self._gs)
@@ -218,9 +216,9 @@ class GPEGroundState(PairedCalculation):
 
 		plan.execute(self._gs) # FFT to x-state
 
-		#print "Ground state calculation:" + \
-		#	" N = " + str(stats.countParticles(self._gs, subtract_noise=False)) + \
-		#	" E = " + str(stats.countEnergy(self._gs)) + \
-		#	" mu = " + str(stats.countMu(self._gs))
+		print "Ground state calculation:" + \
+			" N = " + str(stats.countParticles(self._gs, subtract_noise=False)) + \
+			" E = " + str(stats.countEnergy(self._gs)) + \
+			" mu = " + str(stats.countMu(self._gs))
 
 		return self._gs

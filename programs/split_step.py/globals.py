@@ -3,36 +3,108 @@ Auxiliary functions and classes.
 """
 
 try:
-	from pycuda.autoinit import device
-	from pycuda.driver import device_attribute
-	import pycuda.driver as cuda
-	from pycuda.tools import DeviceMemoryPool
-	from pycuda.compiler import SourceModule
-	import pycuda.gpuarray as gpuarray
-	pycuda_available = True
+	import pyopencl as cl
 except:
-	pycuda_available = False
+	pass
 
 from mako.template import Template
 import numpy
 
 
-class GPUPool:
-	"""Auxiliary allocator class"""
+class Buffer(cl.Buffer):
 
-	def __init__(self, stub=False):
-		if not pycuda_available:
-			self.allocate = None
-			return
+	def __init__(self, context, shape, dtype):
+		self.size = 1
+		for dim in shape:
+			self.size *= dim
 
-		if stub:
-			self.allocate = cuda.mem_alloc
+		self.itemsize = dtype().nbytes
+
+		self.nbytes = self.itemsize * self.size
+
+		cl.Buffer.__init__(self, context, cl.mem_flags.READ_WRITE, size=self.nbytes)
+		self.shape = shape
+		self.dtype = dtype
+
+
+class Environment:
+
+	def __init__(self, gpu, precision, constants):
+
+		self.gpu = gpu
+		self.precision = precision
+		self.constants = constants
+
+		if gpu:
+			devices = []
+			for platform in cl.get_platforms():
+				devices.extend(platform.get_devices(device_type=cl.device_type.GPU))
+
+			self.device = devices[0]
+			self.context = cl.Context(devices=[self.device])
+			self.queue = cl.CommandQueue(self.context)
+
+		if gpu:
+			self.allocate = self.__gpu_allocate
 		else:
-			self._pool = DeviceMemoryPool()
-			#self.allocate = self._pool.allocate
+			self.allocate = self.__cpu_allocate
 
-	def __call__(self, size):
-		return self._pool.allocate(size)
+	def __cpu_allocate(self, shape, dtype):
+		return numpy.empty(shape, dtype=dtype)
+
+	def __gpu_allocate(self, shape, dtype):
+		return Buffer(self.context, shape, dtype)
+		#size = dtype().itemsize * shape[0] * shape[1] * shape[2]
+		#return cl.Buffer(self.context, cl.mem_flags.READ_WRITE, size=size)
+
+	def compileSource(self, source, **kwds):
+		"""
+		Adds helper functions and defines to given source, renders it,
+		compiles and returns Cuda module.
+		"""
+
+		kernel_defines = Template("""
+			//#define complex_mul_scalar(a, b) ${p.complex.ctr}((a).x * (b), (a).y * (b))
+			//#define complex_mul(a, b) ${p.complex.ctr}(mad(-(a).y, (b).y, (a).x * (b).x), mad((a).y, (b).x, (a).x * (b).y))
+			//#define squared_abs(a) ((a).x * (a).x + (a).y * (a).y)
+
+			${p.complex.name} complex_mul_scalar(${p.complex.name} a, ${p.scalar.name} b)
+			{
+				return ${p.complex.ctr}(a.x * b, a.y * b);
+			}
+
+			${p.complex.name} complex_mul(${p.complex.name} a, ${p.complex.name} b)
+			{
+				return ${p.complex.ctr}(mad(-a.y, b.y, a.x * b.x), mad(a.y, b.x, a.x * b.y));
+			}
+
+			${p.scalar.name} squared_abs(${p.complex.name} a)
+			{
+				return a.x * a.x + a.y * a.y;
+			}
+
+			${p.complex.name} cexp(${p.complex.name} a)
+			{
+				${p.scalar.name} module = exp(a.x);
+				${p.scalar.name} angle = a.y;
+				return ${p.complex.ctr}(module * native_cos(angle), module * native_sin(angle));
+			}
+
+			float get_float_from_image(read_only image3d_t image, int i, int j, int k)
+			{
+				uint4 image_data = read_imageui(image,
+					CLK_FILTER_NEAREST | CLK_ADDRESS_CLAMP | CLK_NORMALIZED_COORDS_FALSE,
+					(int4)(i, j, k, 0));
+
+				return *((float*)&image_data);
+			}
+
+			#define DEFINE_INDEXES int i = get_global_id(0), j = get_global_id(1), k = get_global_id(2), index = (k << ${c.nvx_pow + c.nvy_pow}) + (j << ${c.nvx_pow}) + i
+		""")
+
+		defines = kernel_defines.render(p=self.precision, c=self.constants)
+		kernel_src = Template(source).render(p=self.precision, c=self.constants, **kwds)
+		return cl.Program(self.context, defines + kernel_src).build()
 
 
 class PairedCalculation:
@@ -42,8 +114,8 @@ class PairedCalculation:
 	or _cpu_ methods.
 	"""
 
-	def __init__(self, gpu, mempool):
-		if gpu:
+	def __init__(self, env):
+		if env.gpu:
 			prefix = "_gpu_"
 		else:
 			prefix = "_cpu_"
@@ -53,77 +125,42 @@ class PairedCalculation:
 				name = attr[len(prefix):]
 				self.__dict__[name] = getattr(self, attr)
 
-		self.__mempool = mempool
-		if gpu:
-			self.allocate = self.__gpu_allocate
-		else:
-			self.allocate = self.__cpu_allocate
-
-	def __gpu_allocate(self, shape, dtype):
-		return gpuarray.GPUArray(shape, dtype=dtype, allocator=self.__mempool)
-
-	def __cpu_allocate(self, shape, dtype):
-		return numpy.empty(shape, dtype=dtype)
-
 
 class FunctionWrapper:
 	"""
-	Wrapper for elementwise Cuda kernel. Caches prepared functions for
+	Wrapper for elementwise CL kernel. Caches prepared functions for
 	calls with same element number.
 	"""
 
-	def __init__(self, module, name, arg_list, block_size=None):
-		self._module = module
-		self._name = name
-		self._arg_list = arg_list
-		self._prepared_refs = {}
-		self._block_size = block_size
+	def __init__(self, kernel):
+		self._kernel = kernel
+		self._prepared = {}
 
-	def _prepare(self, elements):
-		func_ref = self._module.get_function(self._name)
-		block, grid = getExecutionParameters(func_ref, elements, block_size=self._block_size)
-		func_ref.prepare(self._arg_list, block)
-		self._prepared_refs[elements] = (func_ref, grid)
+		self._device = kernel.program.devices[0]
+		self._kernel_max_wg_size = self._kernel.get_work_group_info(
+			cl.kernel_work_group_info.WORK_GROUP_SIZE, self._device)
+		self._device_max_wg_sizes = self._device.get_info(
+			cl.device_info.MAX_WORK_ITEM_SIZES)
 
-	def __call__(self, elements, *args):
-		if elements not in self._prepared_refs:
-			self._prepare(elements)
+	def _prepare(self, shape):
+		reversed_shape = tuple(reversed(shape))
+		local_size = []
+		wg_size = 1
+		for i, e in enumerate(reversed_shape):
+			local_dim = min(self._device_max_wg_sizes[i], self._kernel_max_wg_size / wg_size, e)
+			local_size.append(local_dim)
+			wg_size *= local_dim
 
-		func_ref, grid = self._prepared_refs[elements]
-		func_ref.prepared_call(grid, *args)
+		self._prepared[shape] = tuple(local_size)
 
+	def __call__(self, queue, shape, *args):
+		#if shape not in self._prepared:
+		#	self._prepare(shape)
 
-def compileSource(source, precision, constants, **kwds):
-	"""
-	Adds helper functions and defines to given source, renders it,
-	compiles and returns Cuda module.
-	"""
+		#local_size = self._prepared[shape]
+		shape = tuple(reversed(shape))
+		self._kernel(queue, shape, *args)
 
-	kernel_defines = Template("""
-		inline ${p.complex.name} operator+(${p.complex.name} a, ${p.complex.name} b)
-		{ return ${p.complex.ctr}(a.x + b.x, a.y + b.y); }
-		inline ${p.complex.name} operator-(${p.complex.name} a, ${p.complex.name} b)
-		{ return ${p.complex.ctr}(a.x - b.x, a.y - b.y); }
-		inline ${p.complex.name} operator*(${p.complex.name} a, ${p.scalar.name}  b)
-		{ return ${p.complex.ctr}(b * a.x, b * a.y); }
-		inline ${p.complex.name} operator*(${p.complex.name} a, ${p.complex.name} b)
-		{ return ${p.complex.ctr}(a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x); }
-		inline __device__ ${p.scalar.name} squared_abs(${p.complex.name} a)
-		{ return a.x * a.x + a.y * a.y; }
-		inline void operator+=(${p.complex.name}& a, const ${p.complex.name}& b)
-		{ a.x += b.x; a.y += b.y; }
-		inline __device__ ${p.complex.name} cexp(${p.complex.name} a)
-		{
-			${p.scalar.name} module = exp(a.x);
-			return ${p.complex.ctr}(module * cos(a.y), module * sin(a.y));
-		}
-
-		#define GLOBAL_INDEX (threadIdx.x + blockDim.x * (blockIdx.x + blockIdx.y * gridDim.x))
-	""")
-
-	defines = kernel_defines.render(p=precision)
-	kernel_src = Template(source).render(p=precision, c=constants, **kwds)
-	return SourceModule(defines + "extern \"C\" {\n" + kernel_src + "\n}", no_extern_c=True)
 
 def log2(x):
 	"""Calculates binary logarithm for integer"""
@@ -138,69 +175,29 @@ def log2(x):
 			res += pow
 	return res
 
-def getExecutionParameters(func, elements, block_size=None):
-	"""
-	Returns grid and block for given function.
-	If block size is set, checks that it is available.
-	"""
-
-	max_block_size = device.get_attribute(device_attribute.MAX_BLOCK_DIM_X)
-	max_registers = device.get_attribute(device_attribute.MAX_REGISTERS_PER_BLOCK)
-
-	if block_size is None:
-		block_size = min(max_block_size, 2 ** log2(max_registers / func.num_regs))
-		assert block_size > 0, "Too much registers used by kernel"
-	else:
-		assert block_size <= max_block_size, "Fixed block size is too big"
-		assert block_size * func.num_regs <= max_registers, "Not enough registers for fixed block size"
-
-	max_grid_x = device.get_attribute(device_attribute.MAX_GRID_DIM_X)
-	max_grid_y = device.get_attribute(device_attribute.MAX_GRID_DIM_Y)
-	blocks_num_x = min(max_grid_x, elements / block_size)
-
-	if blocks_num_x <= elements:
-		blocks_num_y = 1
-	else:
-		blocks_num_y = elements / blocks_num_x
-		blocks_num_x /= blocks_num_y
-
-	assert blocks_num_y <= max_grid_y, "Insufficient grid size to handle all the elements"
-
-	return (block_size, 1, 1), (blocks_num_x, blocks_num_y)
-
-def fillPotentialsArray(precision, constants):
+def getPotentials(env):
 	"""Returns array with values of external potential energy."""
 
-	potentials = numpy.empty(constants.shape, dtype=precision.scalar.dtype)
+	potentials = numpy.empty(env.constants.shape, dtype=env.precision.scalar.dtype)
 
-	for i in xrange(constants.nvx):
-		for j in xrange(constants.nvy):
-			for k in xrange(constants.nvz):
-				x = -constants.xmax + i * constants.dx
-				y = -constants.ymax + j * constants.dy
-				z = -constants.zmax + k * constants.dz
+	for i in xrange(env.constants.nvx):
+		for j in xrange(env.constants.nvy):
+			for k in xrange(env.constants.nvz):
+				x = -env.constants.xmax + i * env.constants.dx
+				y = -env.constants.ymax + j * env.constants.dy
+				z = -env.constants.zmax + k * env.constants.dz
 
-				potentials[k, j, i] = (x * x + y * y + z * z / (constants.lambda_ * constants.lambda_)) / 2
+				potentials[k, j, i] = (x * x + y * y + z * z /
+					(env.constants.lambda_ * env.constants.lambda_)) / 2
 
-	return potentials
+	if not env.gpu:
+		return potentials
 
-def fillPotentialsTexture(precision, constants, texref):
-	"""Fill texture with values of external potential energy"""
+	return cl.Image(env.context, cl.mem_flags.READ_ONLY | cl.mem_flags.USE_HOST_PTR,
+		cl.ImageFormat(cl.channel_order.R, cl.channel_type.UNSIGNED_INT32),
+		shape=tuple(reversed(env.constants.shape)), hostbuf=potentials)
 
-	potentials = fillPotentialsArray(precision, constants)
-	array = gpuarray.to_gpu(potentials)
-	texref.set_address(array.gpudata, array.size * potentials.itemsize, allow_offset=False)
-
-	texref.set_format(cuda.array_format.FLOAT, 1)
-	texref.set_filter_mode(cuda.filter_mode.POINT)
-	texref.set_address_mode(0, cuda.address_mode.CLAMP)
-
-	# returning the array so that caller can assure that it won't be destroyed
-	# as long as texture is needed (set_address() does not keep the reference to
-	# array object)
-	return array
-
-def fillKVectorsArray(precision, constants):
+def getKVectors(env):
 	"""Returns array with values of k-space vectors."""
 
 	def kvalue(i, dk, N):
@@ -209,32 +206,21 @@ def fillKVectorsArray(precision, constants):
 		else:
 			return dk * i
 
-	kvectors = numpy.empty(constants.shape, dtype=precision.scalar.dtype)
+	kvectors = numpy.empty(env.constants.shape, dtype=env.precision.scalar.dtype)
 
-	for i in xrange(constants.nvx):
-		for j in xrange(constants.nvy):
-			for k in xrange(constants.nvz):
+	for i in xrange(env.constants.nvx):
+		for j in xrange(env.constants.nvy):
+			for k in xrange(env.constants.nvz):
 
-				kx = kvalue(i, constants.dkx, constants.nvx)
-				ky = kvalue(j, constants.dky, constants.nvy)
-				kz = kvalue(k, constants.dkz, constants.nvz)
+				kx = kvalue(i, env.constants.dkx, env.constants.nvx)
+				ky = kvalue(j, env.constants.dky, env.constants.nvy)
+				kz = kvalue(k, env.constants.dkz, env.constants.nvz)
 
 				kvectors[k, j, i] = (kx * kx + ky * ky + kz * kz) / 2
 
-	return kvectors
+	if not env.gpu:
+		return kvectors
 
-def fillKVectorsTexture(precision, constants, texref):
-	"""Fills texture with values of k-space vectors."""
-
-	kvectors = fillKVectorsArray(precision, constants)
-	array = gpuarray.to_gpu(kvectors)
-	texref.set_address(array.gpudata, array.size * kvectors.itemsize, allow_offset=False)
-
-	texref.set_format(cuda.array_format.FLOAT, 1)
-	texref.set_filter_mode(cuda.filter_mode.POINT)
-	texref.set_address_mode(0, cuda.address_mode.CLAMP)
-
-	# returning the array so that caller can assure that it won't be destroyed
-	# as long as texture is needed (set_address() does not keep the reference to
-	# array object)
-	return array
+	return cl.Image(env.context, cl.mem_flags.READ_ONLY | cl.mem_flags.USE_HOST_PTR,
+		cl.ImageFormat(cl.channel_order.R, cl.channel_type.UNSIGNED_INT32),
+		shape=tuple(reversed(env.constants.shape)), hostbuf=kvectors)

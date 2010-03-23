@@ -4,8 +4,7 @@ import numpy
 import time
 
 try:
-	import pycuda.autoinit
-	import pycuda.driver as cuda
+	import pyopencl as cl
 except:
 	pass
 
@@ -13,7 +12,7 @@ from globals import *
 from model import Model
 from constants import Constants
 from ground_state import GPEGroundState
-from evolution import TwoComponentBEC
+#from evolution import TwoComponentBEC
 from meters import ParticleStatistics
 import typenames
 
@@ -39,26 +38,37 @@ class VisibilityPlotter(PairedCalculation):
 	def __init__(self, gpu, precision, constants, mempool):
 		PairedCalculation.__init__(self, gpu, mempool)
 		self.stats = ParticleStatistics(gpu, precision, constants, mempool)
-		self.data = []
 
 	def __call__(self, t, a, b):
-		v = self.stats.getVisibility(a, b)
-		self.data.append((t, v))
+		self.v = self.stats.getVisibility(a, b)
 
 	def getData(self):
-		return self.data
+		return self.v
 
+for gpu in (True, False):
+	print "GPU=" + str(gpu)
+	env = Environment(gpu, typenames.single_precision, Constants(Model))
 
-precision = typenames.single_precision
-mempool = GPUPool()
-gpu = True
+	t1 = time.time()
+	tf = GPEGroundState(env)
+	state = tf.create()
+
+	if env.gpu:
+		env.queue.finish()
+
+	t2 = time.time()
+	print str(t2 - t1) + " sec"
+
+exit()
 
 tests = (
-	(1, 16, 4e-5),
-	(4, 16, 4e-5),
-#	(4, 16, 1e-5),
-#	(4, 16, 8e-6),
-#	(4, 16, 4e-6),
+	(8, 16, 2e-5),
+	(8, 16, 3e-5),
+	(8, 16, 4e-5),
+	(8, 16, 5e-5),
+	(8, 16, 6e-5),
+	(8, 16, 7e-5),
+	(8, 16, 8e-5),
 )
 
 results = []
@@ -85,18 +95,38 @@ for ensembles, points, dt_evo in tests:
 	vplotter = VisibilityPlotter(gpu, precision, constants, mempool)
 
 	t1 = time.time()
-	bec.runEvolution(0.6, [vplotter], callback_dt=0.01)
+	bec.runEvolution(0.05, [vplotter], callback_dt=1)
 	t2 = time.time()
 	print "Time spent: " + str(t2 - t1) + " s"
 
+	print vplotter.getData()
 	results.append(vplotter.getData())
 
+def findConvergence(l):
+	pos = 0
+	res = 999999
+	for i, x in enumerate(l):
+		if i == 0:
+			diff = abs(x - l[1])
+		elif i == len(l) - 1:
+			diff = abs(x - l[-2])
+		else:
+			diff = (abs(x - l[i-1]) + abs(x - l[i+1])) / 2
+		if diff < res:
+			res = diff
+			pos = i
 
-for i in range(len(results[0])):
-	t = results[0][i][0]
+	print pos
 
-	points = []
-	for r in range(len(results)):
-		points.append(results[r][i][1])
+print results, findConvergence(results)
 
-	print t, " ".join([str(x) for x in points])
+
+#print results
+#for i in range(len(results[0])):
+#	t = results[0][i][0]
+#
+#	points = []
+#	for r in range(len(results)):
+#		points.append(results[r][i][1])
+#
+#	print t, " ".join([str(x) for x in points])

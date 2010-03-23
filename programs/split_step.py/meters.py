@@ -15,51 +15,51 @@ class ParticleStatistics(PairedCalculation):
 	chemical potential per particle for given state.
 	"""
 
-	def __init__(self, gpu, precision, constants, mempool):
-		PairedCalculation.__init__(self, gpu, mempool)
-		self._precision = precision
-		self._constants = constants
-		self._mempool = mempool
+	def __init__(self, env):
+		PairedCalculation.__init__(self, env)
+		self._env = env
 
-		self._plan = createPlan(gpu, constants.nvx, constants.nvy, constants.nvz, precision)
-		self._reduce = getReduce(gpu, precision, mempool)
+		self._plan = createPlan(env, env.constants.nvx, env.constants.nvy, env.constants.nvz)
+		self._reduce = getReduce(env)
+
+		self._potentials = getPotentials(self._env)
+		self._kvectors = getKVectors(self._env)
 
 		self._prepare()
 
 	def _cpu__prepare(self):
-		self._potentials = fillPotentialsArray(self._precision, self._constants)
-		self._kvectors = fillKVectorsArray(self._precision, self._constants)
+		pass
 
 	def _cpu__getAverageDensity(self, state, subtract_noise=True):
 		if subtract_noise:
-			noise_term = self._constants.V / (2 * self._constants.dV)
+			noise_term = self._env.constants.V / (2 * self._env.constants.dV)
 		else:
 			noise_term = 0
 
 		abs_values = numpy.abs(state)
 		normalized_values = abs_values * abs_values - noise_term
-		return self._reduce.sparse(normalized_values, self._constants.cells) / \
-			(state.size / self._constants.cells) * self._constants.dV
+		return self._reduce.sparse(normalized_values, self._env.constants.cells) / \
+			(state.size / self._env.constants.cells) * self._env.constants.dV
 
 	def _cpu_countParticles(self, state, subtract_noise=True):
 		return self._reduce(self._getAverageDensity(state, subtract_noise=subtract_noise))
 
 	def _cpu__countState(self, state, coeff):
-		kstate = self.allocate(state.shape, dtype=self._precision.complex.dtype)
-		self._plan.execute(state, kstate, inverse=True, batch=state.size / self._constants.cells)
+		kstate = self._env.allocate(state.shape, dtype=self._env.precision.complex.dtype)
+		self._plan.execute(state, kstate, inverse=True, batch=state.size / self._env.constants.cells)
 
-		res = self.allocate(state.shape, dtype=self._precision.scalar.dtype)
+		res = self._env.allocate(state.shape, dtype=self._env.precision.scalar.dtype)
 
 		n = numpy.abs(state) ** 2
 		xk = state * kstate
-		for e in xrange(state.size / self._constants.cells):
-			start = e * self._constants.cells
-			stop = (e + 1) * self._constants.cells
+		for e in xrange(state.size / self._env.constants.cells):
+			start = e * self._env.constants.cells
+			stop = (e + 1) * self._env.constants.cells
 			res[start:stop,:,:] = numpy.abs(n[start:stop,:,:] * (self._potentials +
-				n[start:stop,:,:] * (self._constants.g11 / coeff)) +
+				n[start:stop,:,:] * (self._env.constants.g11 / coeff)) +
 				xk[start:stop,:,:] * self._kvectors)
 
-		return self._reduce(res) / (state.size / self._constants.cells) * self._constants.dV / self._constants.N
+		return self._reduce(res) / (state.size / self._env.constants.cells) * self._env.constants.dV / self._env.constants.N
 
 	def _cpu_countEnergy(self, state):
 		return self._countState(state, 2)
@@ -71,7 +71,7 @@ class ParticleStatistics(PairedCalculation):
 		Na = self._reduce(self._getAverageDensity(a))
 		Nb = self._reduce(self._getAverageDensity(b))
 
-		coeff = self._constants.dV / (a.size / self._constants.cells)
+		coeff = self._env.constants.dV / (a.size / self._env.constants.cells)
 
 		Ka = self._reduce(a * numpy.conj(b)) * coeff
 		Kb = self._reduce(b * numpy.conj(a)) * coeff
@@ -80,52 +80,50 @@ class ParticleStatistics(PairedCalculation):
 
 	def _gpu__prepare(self):
 		kernel_template = """
-			texture<${p.scalar.name}, 1> potentials;
-			texture<${p.scalar.name}, 1> kvectors;
-
-			__global__ void calculateDensity(${p.scalar.name} *res, ${p.complex.name} *state)
+			__kernel void calculateDensity(__global ${p.scalar.name} *res, __global ${p.complex.name} *state)
 			{
-				int index = GLOBAL_INDEX;
+				DEFINE_INDEXES;
 				res[index] = squared_abs(state[index]);
 			}
 
-			__global__ void calculateNoisedDensity(${p.scalar.name} *res, ${p.complex.name} *state)
+			__kernel void calculateNoisedDensity(__global ${p.scalar.name} *res, __global ${p.complex.name} *state)
 			{
-				int index = GLOBAL_INDEX;
+				DEFINE_INDEXES;
 				${p.scalar.name} noise_term = (${p.scalar.name})${0.5 * c.V / c.dV};
 				res[index] = squared_abs(state[index]) - noise_term;
 			}
 
-			__global__ void calculateTwoStatesDensity(${p.scalar.name} *a_res,
-				${p.scalar.name} *b_res, ${p.complex.name} *a_state, ${p.complex.name} *b_state)
+			__kernel void calculateTwoStatesDensity(__global ${p.scalar.name} *a_res,
+				__global ${p.scalar.name} *b_res, __global ${p.complex.name} *a_state,
+				__global ${p.complex.name} *b_state)
 			{
-				int index = GLOBAL_INDEX;
+				DEFINE_INDEXES;
 				${p.scalar.name} noise_term = (${p.scalar.name})${0.5 * c.V / c.dV};
 				a_res[index] = squared_abs(a_state[index]) - noise_term;
 				b_res[index] = squared_abs(b_state[index]) - noise_term;
 			}
 
-			__global__ void calculateTwoStatesInteraction(${p.complex.name} *a_res,
-				${p.complex.name} *b_res, ${p.complex.name} *a, ${p.complex.name} *b)
+			__kernel void calculateTwoStatesInteraction(__global ${p.scalar.name} *interaction,
+				__global ${p.complex.name} *a_state, __global ${p.complex.name} *b_state)
 			{
-				int index = GLOBAL_INDEX;
-				${p.scalar.name} noise_term = (${p.scalar.name})${0.5 * c.V / c.dV};
-
-				${p.complex.name} a0 = a[index];
-				${p.complex.name} b0 = b[index];
-
-				a_res[index] = a0 * ${p.complex.ctr}(b0.x, -b0.y);
-				b_res[index] = b0 * ${p.complex.ctr}(a0.x, -a0.y);
+				DEFINE_INDEXES;
+				interaction[index] = squared_abs(complex_mul(a_state[index], b_state[index]));
 			}
 
 			%for name, coeff in (('Energy', 2), ('Mu', 1)):
-				__global__ void calculate${name}(${p.scalar.name} *res,
-					${p.complex.name} *xstate, ${p.complex.name} *kstate)
+				__kernel void calculate${name}(__global ${p.scalar.name} *res,
+					__global ${p.complex.name} *xstate, __global ${p.complex.name} *kstate,
+					read_only image3d_t potentials, read_only image3d_t kvectors)
 				{
-					int index = GLOBAL_INDEX;
+					DEFINE_INDEXES;
+
+					float potential = get_float_from_image(potentials, i, j, k);
+					float kvector = get_float_from_image(kvectors, i, j, k);
+
 					${p.scalar.name} n_a = squared_abs(xstate[index]);
-					${p.complex.name} differential = xstate[index] * kstate[index] * tex1Dfetch(kvectors, index);
-					${p.scalar.name} nonlinear = n_a * (tex1Dfetch(potentials, index) +
+					${p.complex.name} differential =
+						complex_mul(complex_mul(xstate[index], kstate[index]), kvector);
+					${p.scalar.name} nonlinear = n_a * (potential +
 						(${p.scalar.name})${c.g11} * n_a / ${coeff});
 
 					// differential.y will be equal to 0, because \psi * D \psi is a real number
@@ -134,60 +132,49 @@ class ParticleStatistics(PairedCalculation):
 			%endfor
 		"""
 
-		self._module = compileSource(kernel_template, self._precision, self._constants)
+		self._program = self._env.compileSource(kernel_template)
 
-		self._calculate_mu = FunctionWrapper(self._module, "calculateMu", "PPP")
-		self._calculate_energy = FunctionWrapper(self._module, "calculateEnergy", "PPP")
-		self._calculate_density = FunctionWrapper(self._module, "calculateDensity", "PP")
-		self._calculate_noised_density = FunctionWrapper(self._module, "calculateNoisedDensity", "PP")
-		self._calculate_two_states_density = FunctionWrapper(self._module, "calculateTwoStatesDensity", "PPPP")
-		self._calculate_two_states_interaction = FunctionWrapper(self._module, "calculateTwoStatesInteraction", "PPPP")
-
-		self._potentials_texref = self._module.get_texref("potentials")
-		self._kvectors_texref = self._module.get_texref("kvectors")
-
-		self._potentials_array = fillPotentialsTexture(self._precision, self._constants, self._potentials_texref)
-		self._kvectors_array = fillKVectorsTexture(self._precision, self._constants, self._kvectors_texref)
+		self._calculate_mu = FunctionWrapper(self._program.calculateMu)
+		self._calculate_energy = FunctionWrapper(self._program.calculateEnergy)
+		self._calculate_density = FunctionWrapper(self._program.calculateDensity)
+		self._calculate_noised_density = FunctionWrapper(self._program.calculateNoisedDensity)
+		self._calculate_two_states_density = FunctionWrapper(self._program.calculateTwoStatesDensity)
+		self._calculate_two_states_interaction = FunctionWrapper(self._program.calculateTwoStatesInteraction)
 
 	def _gpu_countParticles(self, state, subtract_noise=True):
-		density = self.allocate(state.shape, self._precision.scalar.dtype)
+		density = self._env.allocate(state.shape, self._env.precision.scalar.dtype)
 		if subtract_noise:
-			self._calculate_noised_density(state.size, density.gpudata, state.gpudata)
+			self._calculate_noised_density(self._env.queue, state.shape, density, state)
 		else:
-			self._calculate_density(state.size, density.gpudata, state.gpudata)
-		return self._reduce(density) / (state.size / self._constants.cells) * self._constants.dV
+			self._calculate_density(self._env.queue, state.shape, density, state)
+		return self._reduce(density) / (state.size / self._env.constants.cells) * self._env.constants.dV
 
 	def _gpu_countEnergy(self, state):
-		kstate = self.allocate(state.shape, dtype=self._precision.complex.dtype)
-		res = self.allocate(state.shape, dtype=self._precision.scalar.dtype)
-		self._plan.execute(state, kstate, inverse=True, batch=state.size / self._constants.cells)
-		self._calculate_energy(state.size, res.gpudata, state.gpudata, kstate.gpudata)
-		return self._reduce(res) / (state.size / self._constants.cells) * self._constants.dV / self._constants.N
+		kstate = self._env.allocate(state.shape, dtype=self._env.precision.complex.dtype)
+		res = self._env.allocate(state.shape, dtype=self._env.precision.scalar.dtype)
+		self._plan.execute(state, kstate, inverse=True, batch=state.size / self._env.constants.cells)
+		self._calculate_energy(self._env.queue, state.shape, res, state, kstate, self._potentials, self._kvectors)
+		return self._reduce(res) / (state.size / self._env.constants.cells) * self._env.constants.dV / self._env.constants.N
 
 	def _gpu_countMu(self, state):
-		kstate = self.allocate(state.shape, dtype=self._precision.complex.dtype)
-		res = self.allocate(state.shape, dtype=self._precision.scalar.dtype)
-		self._plan.execute(state, kstate, inverse=True, batch=state.size / self._constants.cells)
-		self._calculate_mu(state.size, res.gpudata, state.gpudata, kstate.gpudata)
-		return self._reduce(res) / (state.size / self._constants.cells) * self._constants.dV / self._constants.N
+		kstate = self._env.allocate(state.shape, dtype=self._env.precision.complex.dtype)
+		res = self._env.allocate(state.shape, dtype=self._env.precision.scalar.dtype)
+		self._plan.execute(state, kstate, inverse=True, batch=state.size / self._env.constants.cells)
+		self._calculate_mu(self._env.queue, state.shape, res, state, kstate, self._potentials, self._kvectors)
+		return self._reduce(res) / (state.size / self._env.constants.cells) * self._env.constants.dV / self._env.constants.N
 
 	def _gpu_getVisibility(self, a, b):
-		a_density = self.allocate(a.shape, self._precision.scalar.dtype)
-		b_density = self.allocate(b.shape, self._precision.scalar.dtype)
+		a_density = self._env.allocate(a.shape, self._env.precision.scalar.dtype)
+		b_density = self._env.allocate(b.shape, self._env.precision.scalar.dtype)
 
-		a_interaction = self.allocate(a.shape, self._precision.complex.dtype)
-		b_interaction = self.allocate(a.shape, self._precision.complex.dtype)
+		interaction = self._env.allocate(a.shape, self._env.precision.scalar.dtype)
 
-		self._calculate_two_states_density(a.size, a_density.gpudata, b_density.gpudata,
-			a.gpudata, b.gpudata)
-
-		self._calculate_two_states_interaction(a.size, a_interaction.gpudata, b_interaction.gpudata,
-			a.gpudata, b.gpudata)
+		self._calculate_two_states_density(self._env.queue, a.shape, a_density, b_density, a, b)
+		self._calculate_two_states_interaction(self._env.queue, a.shape, interaction, a, b)
 
 		Na = self._reduce(a_density)
 		Nb = self._reduce(b_density)
 
-		Ka = self._reduce(a_interaction)
-		Kb = self._reduce(b_interaction)
+		squared_int = self._reduce(interaction)
 
-		return 2 * math.sqrt(abs(Ka * Kb)) / (Na + Nb)
+		return 2 * math.sqrt(squared_int) / (Na + Nb)
