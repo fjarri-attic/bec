@@ -150,30 +150,8 @@ class FunctionWrapper:
 
 	def __init__(self, kernel):
 		self._kernel = kernel
-		self._prepared = {}
-
-		self._device = kernel.program.devices[0]
-		self._kernel_max_wg_size = self._kernel.get_work_group_info(
-			cl.kernel_work_group_info.WORK_GROUP_SIZE, self._device)
-		self._device_max_wg_sizes = self._device.get_info(
-			cl.device_info.MAX_WORK_ITEM_SIZES)
-
-	def _prepare(self, shape):
-		reversed_shape = tuple(reversed(shape))
-		local_size = []
-		wg_size = 1
-		for i, e in enumerate(reversed_shape):
-			local_dim = min(self._device_max_wg_sizes[i], self._kernel_max_wg_size / wg_size, e)
-			local_size.append(local_dim)
-			wg_size *= local_dim
-
-		self._prepared[shape] = tuple(local_size)
 
 	def __call__(self, queue, shape, *args):
-		#if shape not in self._prepared:
-		#	self._prepare(shape)
-
-		#local_size = self._prepared[shape]
 		shape = tuple(reversed(shape))
 		self._kernel(queue, shape, *args)
 
