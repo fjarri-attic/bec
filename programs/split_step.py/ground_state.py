@@ -114,7 +114,7 @@ class GPEGroundState(PairedCalculation):
 			{
 				DEFINE_INDEXES;
 
-				float kvector = get_float_from_image(kvectors, i, j, k);
+				${p.scalar.name} kvector = get_float_from_image(kvectors, i, j, k);
 
 				${p.scalar.name} prop_coeff = native_exp(kvector *
 					(${p.scalar.name})${-c.dt_steady / 2});
@@ -179,7 +179,7 @@ class GPEGroundState(PairedCalculation):
 		self._gs *= coeff
 
 	def _gpu__renormalize(self, coeff):
-		self._multiply_func(self._env.queue, self._gs.shape, self._gs, numpy.float32(coeff))
+		self._multiply_func(self._env.queue, self._gs.shape, self._gs, self._env.precision.scalar.dtype(coeff))
 
 	def create(self):
 
