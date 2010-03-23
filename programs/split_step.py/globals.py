@@ -57,8 +57,16 @@ class Environment:
 
 	def __gpu_allocate(self, shape, dtype):
 		return Buffer(self.context, shape, dtype)
-		#size = dtype().itemsize * shape[0] * shape[1] * shape[2]
-		#return cl.Buffer(self.context, cl.mem_flags.READ_WRITE, size=size)
+
+	def synchronize(self):
+		if self.gpu:
+			self.queue.finish()
+
+	def __str__(self):
+		if self.gpu:
+			return "gpu"
+		else:
+			return "cpu"
 
 	def compileSource(self, source, **kwds):
 		"""
