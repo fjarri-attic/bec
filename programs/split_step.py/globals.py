@@ -18,7 +18,10 @@ class Buffer(cl.Buffer):
 		for dim in shape:
 			self.size *= dim
 
-		self.itemsize = dtype().nbytes
+		if isinstance(dtype, numpy.dtype):
+			self.itemsize = dtype.itemsize
+		else:
+			self.itemsize = dtype().nbytes
 
 		self.nbytes = self.itemsize * self.size
 
