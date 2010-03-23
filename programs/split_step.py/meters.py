@@ -73,10 +73,9 @@ class ParticleStatistics(PairedCalculation):
 
 		coeff = self._env.constants.dV / (a.size / self._env.constants.cells)
 
-		Ka = self._reduce(a * numpy.conj(b)) * coeff
-		Kb = self._reduce(b * numpy.conj(a)) * coeff
+		interaction = abs(self._reduce(a * numpy.conj(b))) * coeff
 
-		return 2 * math.sqrt(abs(Ka * Kb)) / (Na + Nb)
+		return 2 * interaction / (Na + Nb)
 
 	def _gpu__prepare(self):
 		kernel_template = """
@@ -103,13 +102,11 @@ class ParticleStatistics(PairedCalculation):
 				b_res[index] = squared_abs(b_state[index]) - noise_term;
 			}
 
-			__kernel void calculateTwoStatesInteraction(__global ${p.complex.name} *interaction1,
-				__global ${p.complex.name} *interaction2,
+			__kernel void calculateTwoStatesInteraction(__global ${p.complex.name} *interaction,
 				__global ${p.complex.name} *a_state, __global ${p.complex.name} *b_state)
 			{
 				DEFINE_INDEXES;
-				interaction1[index] = complex_mul(a_state[index], conj(b_state[index]));
-				interaction2[index] = complex_mul(conj(a_state[index]), b_state[index]);
+				interaction[index] = complex_mul(a_state[index], conj(b_state[index]));
 			}
 
 			%for name, coeff in (('Energy', 2), ('Mu', 1)):
@@ -169,16 +166,14 @@ class ParticleStatistics(PairedCalculation):
 		a_density = self._env.allocate(a.shape, self._env.precision.scalar.dtype)
 		b_density = self._env.allocate(b.shape, self._env.precision.scalar.dtype)
 
-		interaction1 = self._env.allocate(a.shape, self._env.precision.complex.dtype)
-		interaction2 = self._env.allocate(a.shape, self._env.precision.complex.dtype)
+		interaction = self._env.allocate(a.shape, self._env.precision.complex.dtype)
 
 		self._calculate_two_states_density(self._env.queue, a.shape, a_density, b_density, a, b)
-		self._calculate_two_states_interaction(self._env.queue, a.shape, interaction1, interaction2, a, b)
+		self._calculate_two_states_interaction(self._env.queue, a.shape, interaction, a, b)
 
 		Na = self._reduce(a_density)
 		Nb = self._reduce(b_density)
 
-		Ka = self._reduce(interaction1)
-		Kb = self._reduce(interaction2)
+		interaction = self._reduce(interaction)
 
-		return 2 * math.sqrt(abs(Ka * Kb)) / (Na + Nb)
+		return 2 * abs(interaction) / (Na + Nb)
