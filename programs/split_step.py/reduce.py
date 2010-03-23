@@ -83,7 +83,7 @@ class Reduce:
 			self._scalar_kernels[local_size] = getattr(program, name)
 
 		self._complex_kernels = {}
-		for block_size in [2 ** x for x in xrange(log2(self._max_block_size) + 1)]:
+		for local_size in [2 ** x for x in xrange(log2(self._max_block_size) + 1)]:
 			name = "reduceKernel" + str(local_size) + self._env.precision.complex.name
 			self._complex_kernels[local_size] = getattr(program, name)
 
