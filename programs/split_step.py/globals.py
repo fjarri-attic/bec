@@ -108,8 +108,10 @@ class Environment:
 
 			float get_float_from_image(read_only image3d_t image, int i, int j, int k)
 			{
-				uint4 image_data = read_imageui(image,
-					CLK_FILTER_NEAREST | CLK_ADDRESS_CLAMP | CLK_NORMALIZED_COORDS_FALSE,
+				sampler_t sampler = CLK_FILTER_NEAREST | CLK_ADDRESS_CLAMP |
+					CLK_NORMALIZED_COORDS_FALSE;
+
+				uint4 image_data = read_imageui(image, sampler,
 					(int4)(i, j, k, 0));
 
 				return *((float*)&image_data);
