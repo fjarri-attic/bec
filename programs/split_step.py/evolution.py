@@ -87,7 +87,7 @@ class TwoComponentBEC(PairedCalculation):
 
 			// Propagates state vector in k-space for evolution calculation (i.e., in real time)
 			__kernel void propagateKSpaceRealTime(__global ${p.complex.name} *a, __global ${p.complex.name} *b,
-				__global ${p.scalar.name} dt, read_only image3d_t kvectors)
+				${p.scalar.name} dt, read_only image3d_t kvectors)
 			{
 				DEFINE_INDEXES;
 
