@@ -36,10 +36,13 @@ __kernel void transposeKernel(__global ${typename}* odata, const __global ${type
 	unsigned int lid_x = get_local_id(0);
 	unsigned int lid_y = get_local_id(1);
 
+	unsigned int gid_x = get_group_id(0);
+	unsigned int gid_y = get_group_id(1);
+
 	const unsigned int half_warp_size = ${half_warp_size};
 
-	unsigned int xBlock = mul24(half_warp_size, get_group_id(0));
-	unsigned int yBlock = mul24(half_warp_size, get_group_id(1));
+	unsigned int xBlock = mul24(half_warp_size, gid_x);
+	unsigned int yBlock = mul24(half_warp_size, gid_y);
 	unsigned int xIndex = xBlock + lid_x;
 	unsigned int yIndex = yBlock + lid_y;
 	unsigned int size = mul24(width, height);
