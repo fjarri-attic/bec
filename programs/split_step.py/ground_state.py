@@ -102,7 +102,7 @@ class GPEGroundState(PairedCalculation):
 				return (x * x + y * y + z * z /
 					(${c.lambda_ * c.lambda_})) / 2;
 			}
-			__kernel void multiply(__global ${p.complex.name} *data, __global ${p.scalar.name} coeff)
+			__kernel void multiply(__global ${p.complex.name} *data, ${p.scalar.name} coeff)
 			{
 				DEFINE_INDEXES;
 				data[index] = complex_mul_scalar(data[index], coeff);
