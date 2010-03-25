@@ -93,15 +93,25 @@ class GPEGroundState(PairedCalculation):
 
 	def _gpu__prepare(self):
 		kernel_template = """
-			float get_potential(int i, int j, int k)
+			${p.scalar.name} get_potential(int i, int j, int k)
 			{
-				float x = -${c.xmax} + i * ${c.dx};
-				float y = -${c.ymax} + j * ${c.dy};
-				float z = -${c.zmax} + k * ${c.dz};
+				${p.scalar.name} x = -${c.xmax} + i * ${c.dx};
+				${p.scalar.name} y = -${c.ymax} + j * ${c.dy};
+				${p.scalar.name} z = -${c.zmax} + k * ${c.dz};
 
 				return (x * x + y * y + z * z /
 					(${c.lambda_ * c.lambda_})) / 2;
 			}
+
+			${p.scalar.name} get_kvector(int i, int j, int k)
+			{
+				${p.scalar.name} kx = (2 * i > ${c.nvx}) ? ((${p.scalar.name})${c.dkx} * (i - ${c.nvx})) : ((${p.scalar.name})${c.dkx} * i);
+				${p.scalar.name} ky = (2 * j > ${c.nvy}) ? ((${p.scalar.name})${c.dky} * (j - ${c.nvy})) : ((${p.scalar.name})${c.dky} * j);
+				${p.scalar.name} kz = (2 * k > ${c.nvz}) ? ((${p.scalar.name})${c.dkz} * (k - ${c.nvz})) : ((${p.scalar.name})${c.dkz} * k);
+
+				return (kx * kx + ky * ky + kz * kz) / 2;
+			}
+
 			__kernel void multiply(__global ${p.complex.name} *data, ${p.scalar.name} coeff)
 			{
 				DEFINE_INDEXES;
