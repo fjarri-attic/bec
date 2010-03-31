@@ -1,54 +1,19 @@
-import math
-import matplotlib
+import matplotlib.pyplot as plt
 import numpy
 import time
 
-try:
-	import pyopencl as cl
-except:
-	pass
-
-from globals import *
+from globals import Environment
 from model import Model
 from constants import Constants
-from ground_state import GPEGroundState
 from evolution import TwoComponentBEC
-from meters import ParticleStatistics
 import typenames
+from colormap import blue_white_red
 
-class ParticleNumberPlotter(PairedCalculation):
-
-	def __init__(self, env):
-		PairedCalculation.__init__(self, env)
-		self.stats = ParticleStatistics(env)
-		self.initialN = constants.N
-		self.N = constants.N
-
-	def __call__(self, t, a, b):
-		Na = self.stats.countParticles(a)
-		Nb = self.stats.countParticles(b)
-		print t, Na, Nb
-		self.N = Na + Nb
-
-	def showLoss(self):
-		print "Particle loss: " + str((self.initialN - self.N) / self.initialN * 100) + "%"
-
-class VisibilityPlotter(PairedCalculation):
-
-	def __init__(self, env):
-		PairedCalculation.__init__(self, env)
-		self.stats = ParticleStatistics(env)
-
-	def __call__(self, t, a, b):
-		self.v = self.stats.getVisibility(a, b)
-
-	def getData(self):
-		return self.v
+from collectors import *
 
 
-for gpu in (True, False):
+for gpu in (False,):
 	m = Model()
-
 	constants = Constants(m)
 	env = Environment(gpu, typenames.single_precision, constants)
 
@@ -56,12 +21,31 @@ for gpu in (True, False):
 
 	bec = TwoComponentBEC(env)
 
-	vplotter = VisibilityPlotter(env)
+	vis = VisibilityCollector(env)
+	s = SurfaceProjectionCollector(env)
+	a = AxialProjectionCollector(env)
 
 	t1 = time.time()
-	bec.runEvolution(0.05, [vplotter], callback_dt=1)
+	bec.runEvolution(0.01, [vis, s, a], callback_dt=1)
 	env.synchronize()
 	t2 = time.time()
 	print "Time spent: " + str(t2 - t1) + " s"
 
-	print vplotter.getData()
+	times, visibility = vis.getData()
+	times, a_xy, a_yz, b_xy, b_yz = s.getData()
+	times, picture = a.getData()
+
+	for i, e in enumerate([a_xy[0], a_yz[0], b_xy[0], b_yz[0]]):
+		z = numpy.array(e)
+		z = z.transpose()
+
+		plt.figure()
+	#	im = plt.imshow(z, interpolation='bilinear', origin='lower',
+	#		aspect='auto', extent=(0, times[-1], -constants.zmax, constants.zmax), cmap=blue_white_red)
+		im = plt.imshow(z, interpolation='nearest', origin='lower',
+			aspect='auto', extent=(-constants.ymax, constants.ymax, -constants.zmax, constants.zmax), cmap=blue_white_red)
+
+		CBI = plt.colorbar(im, orientation='horizontal', shrink=0.8)
+		plt.xlabel('Time, ms')
+		plt.ylabel('z, $\mu$m')
+		plt.savefig('pr' + str(i) + '.pdf')
