@@ -170,7 +170,8 @@ class CPUReduce:
 			return self(array)
 
 		reduce_power = array.size / final_length
-		return self(numpy.transpose(array.reshape(final_length, reduce_power)), final_length=final_length)
+		return self(numpy.transpose(array.reshape(reduce_power, final_length)), final_length=final_length)
+
 
 def getReduce(env):
 	if env.gpu:
