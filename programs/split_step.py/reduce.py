@@ -65,16 +65,34 @@ class Reduce:
 				if (tid == 0) output[bid] = shared_mem[0];
 			}
 		%endfor
+
+		%for reduce_power in [2 ** x for x in xrange(1, log2(warp_size / 2))]:
+		__kernel void smallSparseReduce${reduce_power}${typename}(__global ${typename}* output, const __global ${typename}* input)
+		{
+			int id = get_global_id(0);
+			int curr_id = id;
+			int size = get_global_size(0);
+			${typename} temp = input[curr_id];
+
+			%for i in xrange(1, reduce_power):
+				curr_id += size;
+				temp += input[curr_id];
+			%endfor
+
+			output[id] = temp;
+		}
+		%endfor
+
 		%endfor
 		""")
 
 		workgroup_sizes = self._env.device.get_info(cl.device_info.MAX_WORK_ITEM_SIZES)
 		self._max_block_size = workgroup_sizes[0]
 
-		warp_size = 32
+		self._warp_size = 32
 
 		kernel_src = kernel_template.render(p=self._env.precision,
-			warp_size=warp_size, max_block_size=self._max_block_size, log2=log2)
+			warp_size=self._warp_size, max_block_size=self._max_block_size, log2=log2)
 		program = cl.Program(self._env.context, kernel_src).build()
 
 		self._scalar_kernels = {}
@@ -86,6 +104,16 @@ class Reduce:
 		for local_size in [2 ** x for x in xrange(log2(self._max_block_size) + 1)]:
 			name = "reduceKernel" + str(local_size) + self._env.precision.complex.name
 			self._complex_kernels[local_size] = getattr(program, name)
+
+		self._small_scalar_kernels = {}
+		for reduce_power in [2 ** x for x in xrange(1, log2(self._warp_size / 2))]:
+			name = "smallSparseReduce" + str(reduce_power) + self._env.precision.scalar.name
+			self._small_scalar_kernels[reduce_power] = getattr(program, name)
+
+		self._small_complex_kernels = {}
+		for reduce_power in [2 ** x for x in xrange(1, log2(self._warp_size / 2))]:
+			name = "smallSparseReduce" + str(reduce_power) + self._env.precision.complex.name
+			self._small_complex_kernels[reduce_power] = getattr(program, name)
 
 	def __call__(self, array, final_length=1):
 
@@ -139,14 +167,29 @@ class Reduce:
 		if final_length == 1:
 			return self(array)
 
-		res = self._env.allocate(array.shape, array.dtype)
 		reduce_power = array.size / final_length
-		if array.dtype == self._precision.scalar.dtype:
-			self._tr_scalar(res, array, final_length, reduce_power)
-		else:
-			self._tr_complex(res, array, final_length, reduce_power)
 
-		return self(res, final_length=final_length)
+		if reduce_power == 1:
+			res = self._env.allocate((final_length,), array.dtype)
+			cl.enqueue_copy_buffer(self._env.queue, array, res)
+			return res
+		if reduce_power < self._warp_size / 2:
+			res = self._env.allocate((final_length,), array.dtype)
+			if array.dtype == self._env.precision.scalar.dtype:
+				func = self._small_scalar_kernels[reduce_power]
+			else:
+				func = self._small_complex_kernels[reduce_power]
+			func(self._env.queue, (final_length,), res, array)
+			return res
+		else:
+			res = self._env.allocate(array.shape, array.dtype)
+			if array.dtype == self._env.precision.scalar.dtype:
+				self._tr_scalar(res, array, final_length, reduce_power)
+			else:
+				self._tr_complex(res, array, final_length, reduce_power)
+
+			return self(res, final_length=final_length)
+
 
 class CPUReduce:
 
