@@ -16,7 +16,6 @@ from globals import *
 from fft import createPlan
 from reduce import getReduce
 from ground_state import GPEGroundState
-from meters import ParticleStatistics
 
 
 class TwoComponentBEC(PairedCalculation):
