@@ -181,3 +181,27 @@ class ParticleStatistics(PairedCalculation):
 	def countParticles(self, state, subtract_noise=True):
 		return self._reduce(self.getAverageDensity(state, subtract_noise=subtract_noise)) * self._env.constants.dV
 
+
+class Projection:
+
+	def __init__(self, env):
+		self._env = env
+		self._reduce = getReduce(env)
+		self._stats = ParticleStatistics(env)
+
+	def getXY(self, state):
+		density = self._stats.getAverageDensity(state)
+		x = self._env.constants.nvx
+		y = self._env.constants.nvy
+		return self._env.toCPU(self._reduce.sparse(density, final_length=x * y), shape=(y, x))
+
+	def getYZ(self, state):
+		density = self._stats.getAverageDensity(state)
+		y = self._env.constants.nvy
+		z = self._env.constants.nvz
+		return self._env.toCPU(self._reduce(density, final_length=y * z), shape=(z, y))
+
+	def getZ(self, state):
+		density = self._stats.getAverageDensity(state)
+		z = self._env.constants.nvz
+		return self._env.toCPU(self._reduce(density, final_length=z))
