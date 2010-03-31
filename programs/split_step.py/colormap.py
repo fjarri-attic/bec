@@ -259,4 +259,4 @@ _blue_white_red_list = [
 	[0.81412634765625003, 0.13360306640625, 0.16357652343750001]
 ]
 
-bluw_white_red = ListedColormap(_blue_white_red_list, name="BlueWhiteRed")
+blue_white_red = ListedColormap(_blue_white_red_list, name="BlueWhiteRed")
