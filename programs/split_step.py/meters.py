@@ -30,7 +30,7 @@ class ParticleStatistics(PairedCalculation):
 	def _cpu__prepare(self):
 		pass
 
-	def _cpu__getAverageDensity(self, state, subtract_noise=True):
+	def _cpu_getAverageDensity(self, state, subtract_noise=True):
 		if subtract_noise:
 			noise_term = self._env.constants.V / (2 * self._env.constants.dV)
 		else:
@@ -39,10 +39,7 @@ class ParticleStatistics(PairedCalculation):
 		abs_values = numpy.abs(state)
 		normalized_values = abs_values * abs_values - noise_term
 		return self._reduce.sparse(normalized_values, self._env.constants.cells) / \
-			(state.size / self._env.constants.cells) * self._env.constants.dV
-
-	def _cpu_countParticles(self, state, subtract_noise=True):
-		return self._reduce(self._getAverageDensity(state, subtract_noise=subtract_noise))
+			(state.size / self._env.constants.cells)
 
 	def _cpu__countState(self, state, coeff):
 		kstate = self._env.allocate(state.shape, dtype=self._env.precision.complex.dtype)
@@ -68,8 +65,8 @@ class ParticleStatistics(PairedCalculation):
 		return self._countState(state, 1)
 
 	def _cpu_getVisibility(self, a, b):
-		Na = self._reduce(self._getAverageDensity(a))
-		Nb = self._reduce(self._getAverageDensity(b))
+		Na = self._reduce(self.getAverageDensity(a)) * self._env.constants.dV
+		Nb = self._reduce(self.getAverageDensity(b)) * self._env.constants.dV
 
 		coeff = self._env.constants.dV / (a.size / self._env.constants.cells)
 
@@ -79,17 +76,19 @@ class ParticleStatistics(PairedCalculation):
 
 	def _gpu__prepare(self):
 		kernel_template = """
-			__kernel void calculateDensity(__global ${p.scalar.name} *res, __global ${p.complex.name} *state)
+			__kernel void calculateDensity(__global ${p.scalar.name} *res,
+				__global ${p.complex.name} *state, int ensembles)
 			{
 				DEFINE_INDEXES;
-				res[index] = squared_abs(state[index]);
+				res[index] = squared_abs(state[index]) / ensembles;
 			}
 
-			__kernel void calculateNoisedDensity(__global ${p.scalar.name} *res, __global ${p.complex.name} *state)
+			__kernel void calculateNoisedDensity(__global ${p.scalar.name} *res,
+				__global ${p.complex.name} *state, int ensembles)
 			{
 				DEFINE_INDEXES;
 				${p.scalar.name} noise_term = (${p.scalar.name})${0.5 * c.V / c.dV};
-				res[index] = squared_abs(state[index]) - noise_term;
+				res[index] = (squared_abs(state[index]) - noise_term) / ensembles;
 			}
 
 			__kernel void calculateTwoStatesDensity(__global ${p.scalar.name} *a_res,
@@ -140,13 +139,14 @@ class ParticleStatistics(PairedCalculation):
 		self._calculate_two_states_density = FunctionWrapper(self._program.calculateTwoStatesDensity)
 		self._calculate_two_states_interaction = FunctionWrapper(self._program.calculateTwoStatesInteraction)
 
-	def _gpu_countParticles(self, state, subtract_noise=True):
+	def _gpu_getAverageDensity(self, state, subtract_noise=True):
 		density = self._env.allocate(state.shape, self._env.precision.scalar.dtype)
+		ensembles = state.size / self._env.constants.cells
 		if subtract_noise:
-			self._calculate_noised_density(self._env.queue, state.shape, density, state)
+			self._calculate_noised_density(self._env.queue, state.shape, density, state, numpy.int32(ensembles))
 		else:
-			self._calculate_density(self._env.queue, state.shape, density, state)
-		return self._reduce(density) / (state.size / self._env.constants.cells) * self._env.constants.dV
+			self._calculate_density(self._env.queue, state.shape, density, state, numpy.int32(ensembles))
+		return self._reduce.sparse(density, final_length=self._env.constants.cells)
 
 	def _gpu_countEnergy(self, state):
 		kstate = self._env.allocate(state.shape, dtype=self._env.precision.complex.dtype)
@@ -177,3 +177,7 @@ class ParticleStatistics(PairedCalculation):
 		interaction = self._reduce(interaction)
 
 		return 2 * abs(interaction) / (Na + Nb)
+
+	def countParticles(self, state, subtract_noise=True):
+		return self._reduce(self.getAverageDensity(state, subtract_noise=subtract_noise)) * self._env.constants.dV
+
