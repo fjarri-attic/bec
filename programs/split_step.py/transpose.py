@@ -80,7 +80,7 @@ class Transpose:
 		self._func = _kernel_module.transposeKernel
 		self._local_size = (self._half_warp_size, self._half_warp_size)
 
-	def __call__(self, odata, idata, width, height, num):
+	def __call__(self, odata, idata, width, height, num=1):
 		"""
 		Fast matrix transpose function
 		odata: Output buffer for transposed batch of matrices, must be different than idata
