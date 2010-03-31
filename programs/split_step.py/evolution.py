@@ -18,6 +18,60 @@ from reduce import getReduce
 from ground_state import GPEGroundState
 
 
+class Pulse(PairedCalculation):
+
+	def __init__(self, env):
+		self._env = env
+		PairedCalculation.__init__(self, env)
+		self._prepare()
+
+	def _cpu__prepare(self):
+		pass
+
+	def _gpu__prepare(self):
+		kernels = """
+			// Apply pi/2 pulse (instantaneus approximation)
+			__kernel void applyHalfPiPulse(__global ${p.complex.name} *a, __global ${p.complex.name} *b)
+			{
+				DEFINE_INDEXES;
+
+				${p.complex.name} a0 = a[index];
+				${p.complex.name} b0 = b[index];
+
+				${p.complex.name} minus_i = ${p.complex.ctr}(0, -1);
+				a[index] = complex_mul_scalar(a0 + complex_mul(b0, minus_i), (${p.scalar.name})${sqrt(0.5)});
+				b[index] = complex_mul_scalar(complex_mul(a0, minus_i) + b0, (${p.scalar.name})${sqrt(0.5)});
+			}
+
+			// Apply pi pulse (instantaneus approximation)
+			__kernel void applyPiPulse(__global ${p.complex.name} *a, __global ${p.complex.name} *b)
+			{
+				DEFINE_INDEXES;
+
+				${p.complex.name} a0 = a[index];
+				${p.complex.name} b0 = b[index];
+
+				${p.complex.name} minus_i = ${p.complex.ctr}(0, -1);
+
+				a[index] = complex_mul(b0, minus_i);
+				b[index] = complex_mul(a0, minus_i);
+			}
+		"""
+
+		self._program = self._env.compileSource(kernels, sqrt=math.sqrt)
+		self._half_pi_pulse_func = FunctionWrapper(self._program.applyHalfPiPulse)
+		self._pi_pulse_func = FunctionWrapper(self._program.applyPiPulse)
+
+	def _gpu_halfPi(self, a, b):
+		self._half_pi_pulse_func(self._env.queue, self._env.constants.ens_shape, a, b)
+
+	def _cpu_halfPi(self, a, b):
+		a0 = a.copy()
+		b0 = b.copy()
+		a[:,:,:] = (a0 - 1j * b0) * math.sqrt(0.5)
+		b[:,:,:] = (b0 - 1j * a0) * math.sqrt(0.5)
+
+
 class TwoComponentBEC(PairedCalculation):
 	"""
 	Calculates evolution of two-component BEC, using split-step propagation
@@ -30,7 +84,7 @@ class TwoComponentBEC(PairedCalculation):
 
 		self._gs = GPEGroundState(env)
 		self._plan = createPlan(env, env.constants.nvx, env.constants.nvy, env.constants.nvz)
-		self._stats = ParticleStatistics(env)
+		self._pulse = Pulse(env)
 
 		# indicates whether current state is in midstep (i.e, right after propagation
 		# in x-space and FFT to k-space)
@@ -147,40 +201,12 @@ class TwoComponentBEC(PairedCalculation):
 				aa[index] = complex_mul(a, da);
 				bb[index] = complex_mul(b, db);
 			}
-
-			// Apply pi/2 pulse (instantaneus approximation)
-			__kernel void applyHalfPiPulse(__global ${p.complex.name} *a, __global ${p.complex.name} *b)
-			{
-				DEFINE_INDEXES;
-
-				${p.complex.name} a0 = a[index];
-				${p.complex.name} b0 = b[index];
-
-				${p.complex.name} minus_i = ${p.complex.ctr}(0, -1);
-				a[index] = complex_mul_scalar(a0 + complex_mul(b0, minus_i), (${p.scalar.name})${sqrt(0.5)});
-				b[index] = complex_mul_scalar(complex_mul(a0, minus_i) + b0, (${p.scalar.name})${sqrt(0.5)});
-			}
-
-			// Apply pi pulse (instantaneus approximation)
-			__kernel void applyPiPulse(__global ${p.complex.name} *a, __global ${p.complex.name} *b)
-			{
-				DEFINE_INDEXES;
-
-				${p.complex.name} a0 = a[index];
-				${p.complex.name} b0 = b[index];
-
-				${p.complex.name} minus_i = ${p.complex.ctr}(0, -1);
-
-				a[index] = complex_mul(b0, minus_i);
-				b[index] = complex_mul(a0, minus_i);
-			}
 		"""
 
 		self._program = self._env.compileSource(kernels)
 		self._init_ensembles_func = FunctionWrapper(self._program.initializeEnsembles)
 		self._kpropagate_func = FunctionWrapper(self._program.propagateKSpaceRealTime)
 		self._xpropagate_func = FunctionWrapper(self._program.propagateXSpaceTwoComponent)
-		self._half_pi_pulse_func = FunctionWrapper(self._program.applyHalfPiPulse)
 
 	def _toKSpace(self):
 		self._plan.execute(self._a, batch=self._env.constants.ensembles, inverse=True)
@@ -210,15 +236,6 @@ class TwoComponentBEC(PairedCalculation):
 
 			self._a[start:stop,:,:] = gs + a_randoms[start:stop,:,:] * coeff * self._env.constants.V1
 			self._b[start:stop,:,:] = b_randoms[start:stop,:,:] * coeff * self._env.constants.V2
-
-	def _gpu__halfPiPulse(self):
-		self._half_pi_pulse_func(self._env.queue, self._env.constants.ens_shape, self._a, self._b)
-
-	def _cpu__halfPiPulse(self):
-		a0 = self._a.copy()
-		b0 = self._b.copy()
-		self._a = (a0 - 1j * b0) * math.sqrt(0.5)
-		self._b = (b0 - 1j * a0) * math.sqrt(0.5)
 
 	def _gpu__kpropagate(self, dt):
 		self._kpropagate_func(self._env.queue, self._env.constants.ens_shape,
@@ -289,7 +306,7 @@ class TwoComponentBEC(PairedCalculation):
 		# first pi/2 pulse
 		# can be done both in x-space and in k-space, because
 		# it is a linear transformation
-		self._halfPiPulse()
+		self._pulse.halfPi(self._a, self._b)
 
 	def propagate(self, dt):
 
