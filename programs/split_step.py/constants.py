@@ -12,6 +12,7 @@ class Constants:
 	def __init__(self, model):
 		w_rho = 2.0 * math.pi * model.fx # radial oscillator frequency
 		l_rho = math.sqrt(model.hbar / (model.m * w_rho)) # natural length
+		self.l_rho = l_rho
 		self.lambda_ = model.fx / model.fz
 
 		self.t_rho = 1.0 / w_rho # natural time unit

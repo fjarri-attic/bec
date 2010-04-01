@@ -76,6 +76,7 @@ class SurfaceProjectionCollector:
 		self.b_yz = []
 
 	def __call__(self, t, a, b):
+		"""Returns numbers in units (particles per square micrometer)"""
 
 		a = self._env.copyBuffer(a)
 		b = self._env.copyBuffer(b)
@@ -83,10 +84,14 @@ class SurfaceProjectionCollector:
 
 		self.times.append(t)
 
-		self.a_xy.append(self._projection.getXY(a))
-		self.a_yz.append(self._projection.getYZ(a))
-		self.b_xy.append(self._projection.getXY(b))
-		self.b_yz.append(self._projection.getYZ(b))
+		# cast density to SI
+		coeff_xy = self._env.constants.dz / (self._env.constants.l_rho ** 2) / 1e12
+		coeff_yz = self._env.constants.dx / (self._env.constants.l_rho ** 2) / 1e12
+
+		self.a_xy.append(self._projection.getXY(a) * coeff_xy)
+		self.a_yz.append(self._projection.getYZ(a) * coeff_yz)
+		self.b_xy.append(self._projection.getXY(b) * coeff_xy)
+		self.b_yz.append(self._projection.getYZ(b) * coeff_yz)
 
 	def getData(self):
 		return self.times, self.a_xy, self.a_yz, self.b_xy, self.b_yz
