@@ -288,6 +288,9 @@ class Data:
 
 		to_dump = {}
 		for name in dir(self):
+			if name.startswith('_'):
+				continue
+
 			val = getattr(self, name)
 			if type(val) in datatypes:
 				if type(val) in _DUMPERS:
