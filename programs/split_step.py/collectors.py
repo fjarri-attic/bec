@@ -84,7 +84,7 @@ class SurfaceProjectionCollector:
 
 		self.times.append(t)
 
-		# cast density to SI
+		# cast density to SI ($mu$m^2 instead of m^2, for better readability)
 		coeff_xy = self._env.constants.dz / (self._env.constants.l_rho ** 2) / 1e12
 		coeff_yz = self._env.constants.dx / (self._env.constants.l_rho ** 2) / 1e12
 
