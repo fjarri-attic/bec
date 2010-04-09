@@ -279,6 +279,9 @@ class Data:
 			if name not in fields:
 				raise Exception("Unknown keyword: " + name)
 
+		for name in fields:
+			self.__dict__[name] = None
+
 		self.__dict__.update(kwds)
 		self.format = format
 
