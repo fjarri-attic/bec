@@ -11,41 +11,36 @@ from colormap import blue_white_red
 
 from collectors import *
 
+from datahelpers import XYData, HeightmapData
+
 
 for gpu in (False,):
 	m = Model()
 	constants = Constants(m)
-	env = Environment(gpu, typenames.single_precision, constants)
-
-	print str(env)
+	env = Environment(gpu, typenames.double_precision, constants)
 
 	bec = TwoComponentBEC(env)
 
-	vis = VisibilityCollector(env)
-	s = SurfaceProjectionCollector(env)
-	a = AxialProjectionCollector(env)
+	vis = VisibilityCollector(env, verbose=True)
+	#s = SurfaceProjectionCollector(env)
+	#a = AxialProjectionCollector(env)
+	#p = ParticleNumberCollector(env, verbose=True)
 
 	t1 = time.time()
-	bec.runEvolution(0.01, [vis, s, a], callback_dt=1)
+	bec.runEvolution(0.6, [vis], callback_dt=0.01)
 	env.synchronize()
 	t2 = time.time()
 	print "Time spent: " + str(t2 - t1) + " s"
 
 	times, visibility = vis.getData()
-	times, a_xy, a_yz, b_xy, b_yz = s.getData()
-	times, picture = a.getData()
+	xy = XYData("30k atoms, 8x8x64, 8 ensembles", times, visibility, ymin=0, ymax=1, xname="Time, s",
+		yname="Visibility", source="8x8x64, 8 ensembles, CPU, double precision")
+	xy.save("test1.yaml")
 
-	for i, e in enumerate([a_xy[0], a_yz[0], b_xy[0], b_yz[0]]):
-		z = numpy.array(e)
-		z = z.transpose()
+	#times, Na, Nb, N = p.getData()
+	#xy = XYData("30k atoms, no noise", times, N, ymin=0, ymax=30000, xname="Time, s",
+	#	yname="N", source="16x16x128, GPU, double precision")
+	#xy.save("test1.yaml")
 
-		plt.figure()
-	#	im = plt.imshow(z, interpolation='bilinear', origin='lower',
-	#		aspect='auto', extent=(0, times[-1], -constants.zmax, constants.zmax), cmap=blue_white_red)
-		im = plt.imshow(z, interpolation='nearest', origin='lower',
-			aspect='auto', extent=(-constants.ymax, constants.ymax, -constants.zmax, constants.zmax), cmap=blue_white_red)
-
-		CBI = plt.colorbar(im, orientation='horizontal', shrink=0.8)
-		plt.xlabel('Time, ms')
-		plt.ylabel('z, $\mu$m')
-		plt.savefig('pr' + str(i) + '.pdf')
+	#times, a_xy, a_yz, b_xy, b_yz = s.getData()
+	#times, picture = a.getData()
