@@ -284,7 +284,7 @@ class Data:
 
 	def dump(self):
 
-		datatypes = [int, float, str] + _DUMPERS.keys()
+		datatypes = [int, float, str, bool] + _DUMPERS.keys()
 
 		to_dump = {}
 		for name in dir(self):
