@@ -429,6 +429,7 @@ class XYPlot:
 
 		self.subplot.grid(True)
 
-	def save(self, filename, xmin=None, xmax=None):
+	def save(self, filename, xmin=None, xmax=None, ymin=None, ymax=None):
 		self.subplot.set_xlim(xmin=xmin, xmax=xmax)
+		self.subplot.set_ylim(ymin=ymin, ymax=ymax)
 		self.fig.savefig(filename)
