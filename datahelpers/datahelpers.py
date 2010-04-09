@@ -326,7 +326,8 @@ class XYData(Data):
 		self.xarray = xarray
 		self.yarray = yarray
 
-		fields = ['ymin', 'ymax', 'xname', 'yname', 'description', 'source']
+		fields = ['ymin', 'ymax', 'xname', 'yname', 'description',
+			'source', 'experimental']
 		Data.__init__(self, 'xy', fields, **kwds)
 
 	@classmethod
@@ -417,7 +418,9 @@ class XYPlot:
 			ylabel=self.data_list[0].yname)
 
 		for data in self.data_list:
-			self.subplot.plot(data.xarray, data.yarray, label=data.name)
+			self.subplot.plot(data.xarray, data.yarray,
+				('o' if data.experimental else '-'),
+				label=data.name)
 
 		self.subplot.set_xlim(xmin=xmin, xmax=xmax)
 		self.subplot.set_ylim(ymin=ymin, ymax=ymax)
