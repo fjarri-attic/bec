@@ -141,7 +141,7 @@ class Environment:
 
 		defines = kernel_defines.render(p=self.precision, c=self.constants)
 		kernel_src = Template(source).render(p=self.precision, c=self.constants, **kwds)
-		return cl.Program(self.context, defines + kernel_src).build()
+		return cl.Program(self.context, defines + kernel_src).build(options='-cl-mad-enable')
 
 
 class PairedCalculation:
