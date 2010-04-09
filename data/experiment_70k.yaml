@@ -10,3 +10,4 @@ description: null
 format: xy
 name: 70k atoms, experiment
 source: Michael Egorov, 04.04.2010
+experimental: true
