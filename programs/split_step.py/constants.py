@@ -27,7 +27,7 @@ class Constants:
 		self.V2 = model.V2
 		self.V = (self.V1 + self.V2) / 2.0
 
-		self.detuning = model.detuning / w_rho
+		self.detuning = 2 * math.pi * model.detuning / w_rho
 
 		self.l111 = model.gamma111 / (pow(l_rho, 6) * w_rho)
 		self.l12 = model.gamma12 / (pow(l_rho, 3) * w_rho)
