@@ -1,7 +1,8 @@
 import numpy
+import math
 
 from globals import *
-from meters import ParticleStatistics, Projection
+from meters import ParticleStatistics, Projection, BlochSphereProjection
 from reduce import getReduce
 from evolution import Pulse
 
@@ -121,4 +122,27 @@ class AxialProjectionCollector:
 		self.snapshots.append((a_proj - b_proj) / (a_proj + b_proj))
 
 	def getData(self):
-		return numpy.array(self.times), numpy.concatenate(self.snapshots).reshape(len(self.times), self.snapshots[0].size)
+		return numpy.array(self.times), numpy.concatenate(self.snapshots).reshape(len(self.times), self.snapshots[0].size).transpose()
+
+
+class BlochSphereCollector:
+
+	def __init__(self, env, amp_points=64, phase_points=128, amp_range=math.pi, phase_range=math.pi * 2):
+		self._env = env
+		self._bs = BlochSphereProjection(env)
+		self._amp_points = amp_points
+		self._phase_points = phase_points
+		self._amp_range = amp_range
+		self._phase_range = phase_range
+
+		self.times = []
+		self.snapshots = []
+
+	def __call__(self, t, a, b):
+		res = self._bs.getProjection(a, b, self._amp_points, self._phase_points, self._amp_range, self._phase_range)
+
+		self.times.append(t)
+		self.snapshots.append(res)
+
+	def getData(self):
+		return self.times, self.snapshots
