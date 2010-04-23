@@ -182,6 +182,46 @@ class ParticleStatistics(PairedCalculation):
 		return self._reduce(self.getAverageDensity(state, subtract_noise=subtract_noise)) * self._env.constants.dV
 
 
+class BlochSphereProjection(PairedCalculation):
+
+	def __init__(self, env):
+		PairedCalculation.__init__(self, env)
+		self._env = env
+
+	def _cpu_getProjection(self, a, b, amp_points, phase_points, amp_range, phase_range):
+		res = numpy.zeros((amp_points, phase_points), dtype=self._env.precision.scalar.dtype)
+
+		a = a.ravel()
+		b = b.ravel()
+
+		amp_a = numpy.abs(a) ** 2
+		amp_b = numpy.abs(b) ** 2
+		phase_a = numpy.angle(a)
+		phase_b = numpy.angle(b)
+
+		d_amp = amp_range / (amp_points - 1)
+		d_phase = phase_range / (phase_points - 1)
+
+		phase_diff = phase_a - phase_b
+		for i in xrange(a.size):
+			if phase_diff[i] < 0:
+				phase_diff[i] += 2 * math.pi
+
+		amp_diff = ((numpy.arcsin((amp_a - amp_b) / (amp_a + amp_b)) + amp_range / 2) / d_amp).astype(numpy.int32)
+		phase_diff = ((phase_diff - math.pi / 2 + phase_range / 2) / d_phase).astype(numpy.int32)
+
+		for i in xrange(a.size):
+			amp_coord = amp_diff[i]
+			phase_coord = phase_diff[i]
+
+			if amp_coord < 0 or amp_coord >= amp_points or phase_coord < 0 or phase_coord >= phase_points:
+				continue
+
+			res[amp_coord, phase_coord] += 1
+
+		return res
+
+
 class Projection:
 
 	def __init__(self, env):
