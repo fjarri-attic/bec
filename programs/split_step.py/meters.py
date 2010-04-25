@@ -189,28 +189,39 @@ class BlochSphereProjection(PairedCalculation):
 		self._env = env
 
 	def _cpu_getProjection(self, a, b, amp_points, phase_points, amp_range, phase_range):
+
+		amp_min, amp_max = amp_range
+		phase_min, phase_max = phase_range
+
 		res = numpy.zeros((amp_points, phase_points), dtype=self._env.precision.scalar.dtype)
 
 		a = a.ravel()
 		b = b.ravel()
 
-		amp_a = numpy.abs(a) ** 2
-		amp_b = numpy.abs(b) ** 2
+		amp_a = numpy.abs(a)
+		amp_b = numpy.abs(b)
 		phase_a = numpy.angle(a)
 		phase_b = numpy.angle(b)
 
-		d_amp = amp_range / (amp_points - 1)
-		d_phase = phase_range / (phase_points - 1)
+		max_a = numpy.max(amp_a)
+		max_b = numpy.max(amp_b)
 
-		phase_diff = phase_a - phase_b
+		d_amp = (amp_max - amp_min) / (amp_points - 1)
+		d_phase = (phase_max - phase_min) / (phase_points - 1)
+
+		phase_diff = phase_b - phase_a
 		for i in xrange(a.size):
 			if phase_diff[i] < 0:
 				phase_diff[i] += 2 * math.pi
 
-		amp_diff = ((numpy.arcsin((amp_a - amp_b) / (amp_a + amp_b)) + amp_range / 2) / d_amp).astype(numpy.int32)
-		phase_diff = ((phase_diff - math.pi / 2 + phase_range / 2) / d_phase).astype(numpy.int32)
+		amp_diff = ((2 * numpy.arctan(amp_b / amp_a) - amp_min) / d_amp).astype(numpy.int32)
+		phase_diff = ((phase_diff - phase_min) / d_phase).astype(numpy.int32)
 
 		for i in xrange(a.size):
+			# removing noise
+			if amp_a[i] < max_a * 1e-6 and amp_b[i] < max_b * 1e-6:
+				continue
+
 			amp_coord = amp_diff[i]
 			phase_coord = phase_diff[i]
 

@@ -127,7 +127,8 @@ class AxialProjectionCollector:
 
 class BlochSphereCollector:
 
-	def __init__(self, env, amp_points=64, phase_points=128, amp_range=math.pi, phase_range=math.pi * 2):
+	def __init__(self, env, amp_points=64, phase_points=128, amp_range=(0, math.pi),
+			phase_range=(0, math.pi * 2)):
 		self._env = env
 		self._bs = BlochSphereProjection(env)
 		self._amp_points = amp_points
