@@ -203,8 +203,8 @@ class BlochSphereProjection(PairedCalculation):
 		phase_a = numpy.angle(a)
 		phase_b = numpy.angle(b)
 
-		max_a = numpy.max(amp_a)
-		max_b = numpy.max(amp_b)
+		density = amp_a * amp_a + amp_b * amp_b
+		density = density / numpy.sum(density)
 
 		d_amp = (amp_max - amp_min) / (amp_points - 1)
 		d_phase = (phase_max - phase_min) / (phase_points - 1)
@@ -218,17 +218,13 @@ class BlochSphereProjection(PairedCalculation):
 		phase_diff = ((phase_diff - phase_min) / d_phase).astype(numpy.int32)
 
 		for i in xrange(a.size):
-			# removing noise
-			if amp_a[i] < max_a * 1e-6 and amp_b[i] < max_b * 1e-6:
-				continue
-
 			amp_coord = amp_diff[i]
 			phase_coord = phase_diff[i]
 
 			if amp_coord < 0 or amp_coord >= amp_points or phase_coord < 0 or phase_coord >= phase_points:
 				continue
 
-			res[amp_coord, phase_coord] += 1
+			res[amp_coord, phase_coord] += density[i]
 
 		return res
 
