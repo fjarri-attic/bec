@@ -228,6 +228,29 @@ class BlochSphereProjection(PairedCalculation):
 
 		return res
 
+	def getAverages(self, a, b):
+
+		amp_a = numpy.abs(a)
+		amp_b = numpy.abs(b)
+		density = amp_a * amp_a + amp_b * amp_b
+		density_total = numpy.sum(density)
+
+		phase_a = numpy.angle(a)
+		phase_b = numpy.angle(b)
+
+		max_a = numpy.max(amp_a)
+		max_b = numpy.max(amp_b)
+
+		avg_phase = numpy.sum((phase_b - phase_a) * density) / density_total
+		avg_amp = numpy.sum(2 * numpy.arctan(amp_b / amp_a) * density) / density_total
+
+		if avg_phase < 0:
+			avg_phase -= (int(avg_phase / (math.pi * 2.0)) - 1) * math.pi * 2.0
+		elif avg_phase > 2.0 * math.pi:
+			avg_phase -= int(avg_phase / (math.pi * 2.0)) * math.pi * 2.0
+
+		return avg_amp, avg_phase
+
 
 class Projection:
 

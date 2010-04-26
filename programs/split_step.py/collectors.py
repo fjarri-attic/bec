@@ -147,3 +147,51 @@ class BlochSphereCollector:
 
 	def getData(self):
 		return self.times, self.snapshots
+
+
+class BlochSphereAveragesCollector:
+
+	def __init__(self, env):
+		self._env = env
+		self._bs = BlochSphereProjection(env)
+
+		self.times = []
+		self.avg_amps = []
+		self.avg_phases = []
+
+	def __call__(self, t, a, b):
+		avg_amp, avg_phase = self._bs.getAverages(a, b)
+
+		self.times.append(t)
+		self.avg_amps.append(avg_amp)
+		self.avg_phases.append(avg_phase)
+
+	def getData(self):
+		return self.times, self.avg_amps, self.avg_phases
+
+	@staticmethod
+	def getSnapshots(collectors):
+		snapshots_num = len(collectors[0].avg_amps)
+		points_num = len(collectors)
+
+		amp_min, amp_max = 0.0, math.pi
+		phase_min, phase_max = 0.0, 2.0 * math.pi
+		amp_points = 64
+		phase_points = 128
+
+		d_amp = (amp_max - amp_min) / (amp_points - 1)
+		d_phase = (phase_max - phase_min) / (phase_points - 1)
+
+		res = []
+		for i in xrange(snapshots_num):
+			snapshot = numpy.zeros((amp_points, phase_points))
+
+			for j in xrange(points_num):
+				amp = collectors[j].avg_amps[i]
+				phase = collectors[j].avg_phases[i]
+
+				snapshot[int(amp / d_amp), int(phase / d_phase)] += 1
+
+			res.append(snapshot)
+
+		return res

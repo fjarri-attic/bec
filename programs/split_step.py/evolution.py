@@ -71,6 +71,18 @@ class Pulse(PairedCalculation):
 		a[:,:,:] = (a0 - 1j * b0) * math.sqrt(0.5)
 		b[:,:,:] = (b0 - 1j * a0) * math.sqrt(0.5)
 
+	def _cpu_halfPiNonIdeal(self, a, b, d_theta, d_phi):
+		a0 = a.copy()
+		b0 = b.copy()
+
+		half_theta = (math.pi / 2.0 + d_theta) / 2.0
+		k1 = numpy.cast[self._env.precision.scalar](math.cos(half_theta))
+		k2 = numpy.cast[self._env.precision.complex](-1j * numpy.exp(-1j * d_phi) * math.sin(half_theta))
+		k3 = numpy.cast[self._env.precision.complex](-1j * numpy.exp(1j * d_phi) * math.sin(half_theta))
+
+		a[:,:,:] = a0 * k1 + b0 * k2
+		b[:,:,:] = a0 * k3 + b0 * k1
+
 
 class TwoComponentBEC(PairedCalculation):
 	"""
@@ -78,11 +90,12 @@ class TwoComponentBEC(PairedCalculation):
 	of paired GPEs.
 	"""
 
-	def __init__(self, env):
+	def __init__(self, env, d_theta=0, d_phi=0):
 		PairedCalculation.__init__(self, env)
 		self._env = env
 
-		self._gs = GPEGroundState(env)
+		self._gs = GPEGroundState(env).create()
+
 		self._plan = createPlan(env, env.constants.nvx, env.constants.nvy, env.constants.nvz)
 		self._pulse = Pulse(env)
 
@@ -91,7 +104,7 @@ class TwoComponentBEC(PairedCalculation):
 		self._midstep = False
 
 		self._prepare()
-		self.reset()
+		self.reset(d_theta, d_phi)
 
 	def _cpu__prepare(self):
 		potentials = getPotentials(self._env)
@@ -281,7 +294,7 @@ class TwoComponentBEC(PairedCalculation):
 			self._kpropagate(dt)
 			self._midstep = False
 
-	def reset(self):
+	def reset(self, d_theta, d_phi):
 
 		self._a = self._env.allocate(self._env.constants.ens_shape, self._env.precision.complex.dtype)
 		self._b = self._env.allocate(self._env.constants.ens_shape, self._env.precision.complex.dtype)
@@ -291,9 +304,7 @@ class TwoComponentBEC(PairedCalculation):
 		b_randoms = (numpy.random.normal(scale=0.5, size=self._env.constants.ens_shape) +
 			1j * numpy.random.normal(scale=0.5, size=self._env.constants.ens_shape)).astype(self._env.precision.complex.dtype)
 
-		gs = self._gs.create()
-
-		self._initEnsembles(gs, a_randoms, b_randoms)
+		self._initEnsembles(self._gs, a_randoms, b_randoms)
 
 		# equilibration
 		self._toKSpace()
@@ -306,7 +317,7 @@ class TwoComponentBEC(PairedCalculation):
 		# first pi/2 pulse
 		# can be done both in x-space and in k-space, because
 		# it is a linear transformation
-		self._pulse.halfPi(self._a, self._b)
+		self._pulse.halfPiNonIdeal(self._a, self._b, d_theta, d_phi)
 
 	def propagate(self, dt):
 
