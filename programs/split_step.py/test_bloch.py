@@ -22,7 +22,8 @@ bas = [BlochSphereAveragesCollector(env) for i in xrange(experiments_num)]
 
 for i in xrange(experiments_num):
 	t1 = time.time()
-	bec.reset(numpy.random.normal(scale=0.1), numpy.random.normal(scale=0.1))
+	bec.reset(numpy.random.normal(scale=1.0/math.sqrt(env.constants.N)),
+		numpy.random.normal(scale=1.0/math.sqrt(env.constants.N)))
 	#bec.reset(0, 0)
 	bec.runEvolution(0.01, [bas[i]], callback_dt=0.005)
 	env.synchronize()
