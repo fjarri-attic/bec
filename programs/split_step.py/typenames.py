@@ -6,6 +6,7 @@ class _Type:
 		self.dtype = dtype
 		self.nbytes = dtype().nbytes
 		self.ctr = '(' + name + ')'
+		self.cast = numpy.cast[dtype]
 
 class _Precision:
 	def __init__(self, scalar, complex):
