@@ -42,8 +42,8 @@ class Model:
 	#gamma22 = 0
 
 	# Vacuum noise, 0.0 or 1.0
-	V1 = 1
-	V2 = 1
+	V1 = 0
+	V2 = 0
 
 	# spatial lattice size
 	nvx = 16
