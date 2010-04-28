@@ -38,7 +38,10 @@ class Constants:
 		self.g22 = 4 * math.pi * model.a22 * model.a0 / l_rho
 
 		self.N = model.N
+
+		# TF-approximated chemical potentials
 		self.mu = (15.0 * self.N * self.g11 / (16.0 * math.pi * self.lambda_ * math.sqrt(2.0))) ** 0.4
+		self.mu2 = (15.0 * self.N * self.g22 / (16.0 * math.pi * self.lambda_ * math.sqrt(2.0))) ** 0.4
 
 		self.xmax = model.border * math.sqrt(2.0 * self.mu)
 		self.ymax = self.xmax
