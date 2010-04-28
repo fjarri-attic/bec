@@ -104,7 +104,7 @@ class TwoComponentBEC(PairedCalculation):
 		self._midstep = False
 
 		self._prepare()
-		self.reset(d_theta, d_phi)
+		self.reset(d_theta=d_theta, d_phi=d_phi)
 
 	def _cpu__prepare(self):
 		potentials = getPotentials(self._env)
@@ -294,7 +294,7 @@ class TwoComponentBEC(PairedCalculation):
 			self._kpropagate(dt)
 			self._midstep = False
 
-	def reset(self, d_theta, d_phi):
+	def reset(self, d_theta=0, d_phi=0):
 
 		self._a = self._env.allocate(self._env.constants.ens_shape, self._env.precision.complex.dtype)
 		self._b = self._env.allocate(self._env.constants.ens_shape, self._env.precision.complex.dtype)
@@ -309,15 +309,21 @@ class TwoComponentBEC(PairedCalculation):
 		# equilibration
 		self._toKSpace()
 		if self._env.constants.t_equilib > 0:
-			for t in xrange(0, self._env.constants.t_equilib, self._env.constants.dt_evo):
+			t = 0.0
+			self._t = 0.0
+			while t <= self._env.constants.t_equilib:
 				self.propagate(self._env.constants.dt_evo)
+				t += self._env.constants.dt_evo
 
 		self._t = 0
 
 		# first pi/2 pulse
 		# can be done both in x-space and in k-space, because
 		# it is a linear transformation
-		self._pulse.halfPiNonIdeal(self._a, self._b, d_theta, d_phi)
+		if d_theta == 0 and d_phi == 0:
+			self._pulse.halfPi(self._a, self._b)
+		else:
+			self._pulse.halfPiNonIdeal(self._a, self._b, d_theta, d_phi)
 
 	def propagate(self, dt):
 
