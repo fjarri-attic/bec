@@ -18,6 +18,10 @@ from reduce import getReduce
 from ground_state import GPEGroundState
 
 
+class TerminateEvolution(Exception):
+	pass
+
+
 class Pulse(PairedCalculation):
 
 	def __init__(self, env):
@@ -353,15 +357,19 @@ class TwoComponentBEC(PairedCalculation):
 		self._t = 0
 		callback_t = 0
 
-		self._runCallbacks(callbacks)
-
-		while self._t * self._env.constants.t_rho < tstop:
-			self.propagate(self._env.constants.dt_evo)
-			callback_t += self._env.constants.dt_evo * self._env.constants.t_rho
-
-			if callback_t > callback_dt:
-				self._runCallbacks(callbacks)
-				callback_t = 0
-
-		if callback_dt > tstop:
+		try:
 			self._runCallbacks(callbacks)
+
+			while self._t * self._env.constants.t_rho < tstop:
+				self.propagate(self._env.constants.dt_evo)
+				callback_t += self._env.constants.dt_evo * self._env.constants.t_rho
+
+				if callback_t > callback_dt:
+					self._runCallbacks(callbacks)
+					callback_t = 0
+
+			if callback_dt > tstop:
+				self._runCallbacks(callbacks)
+
+		except TerminateEvolution:
+			return self._t * self._env.constants.t_rho
