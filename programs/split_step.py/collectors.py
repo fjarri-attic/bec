@@ -2,7 +2,7 @@ import numpy
 import math
 
 from globals import *
-from meters import ParticleStatistics, Projection, BlochSphereProjection
+from meters import ParticleStatistics, Projection, BlochSphereProjection, Slice
 from reduce import getReduce
 from evolution import Pulse
 
@@ -93,6 +93,41 @@ class SurfaceProjectionCollector:
 		self.a_yz.append(self._projection.getYZ(a) * coeff_yz)
 		self.b_xy.append(self._projection.getXY(b) * coeff_xy)
 		self.b_yz.append(self._projection.getYZ(b) * coeff_yz)
+
+	def getData(self):
+		return self.times, self.a_xy, self.a_yz, self.b_xy, self.b_yz
+
+
+class SliceCollector:
+
+	def __init__(self, env):
+		self._env = env
+		self._slice = Slice(env)
+		self._pulse = Pulse(env)
+
+		self.times = []
+		self.a_xy = []
+		self.a_yz = []
+		self.b_xy = []
+		self.b_yz = []
+
+	def __call__(self, t, a, b):
+		"""Returns numbers in units (particles per square micrometer)"""
+
+		a = self._env.copyBuffer(a)
+		b = self._env.copyBuffer(b)
+		self._pulse.halfPi(a, b)
+
+		self.times.append(t)
+
+		# cast density to SI ($mu$m^2 instead of m^2, for better readability)
+		coeff_xy = 1.0 / (self._env.constants.l_rho ** 2) / 1e12
+		coeff_yz = 1.0 / (self._env.constants.l_rho ** 2) / 1e12
+
+		self.a_xy.append(self._slice.getXY(a) * coeff_xy)
+		self.a_yz.append(self._slice.getYZ(a) * coeff_yz)
+		self.b_xy.append(self._slice.getXY(b) * coeff_xy)
+		self.b_yz.append(self._slice.getYZ(b) * coeff_yz)
 
 	def getData(self):
 		return self.times, self.a_xy, self.a_yz, self.b_xy, self.b_yz
