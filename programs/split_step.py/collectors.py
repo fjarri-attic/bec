@@ -4,7 +4,7 @@ import math
 from globals import *
 from meters import ParticleStatistics, Projection, BlochSphereProjection, Slice
 from reduce import getReduce
-from evolution import Pulse
+from evolution import Pulse, TerminateEvolution
 
 
 class ParticleNumberCollector:
@@ -40,6 +40,37 @@ class ParticleNumberCollector:
 		Nb = numpy.array(self.Nb)
 		return numpy.array(self.times), Na, Nb, Na + Nb
 
+
+class EqualParticleNumberCondition:
+
+	def __init__(self, env, verbose=False):
+		self._env = env
+		self.stats = ParticleStatistics(env)
+		self.verbose = verbose
+		self._pulse = Pulse(env)
+
+		self.previous_Na = None
+		self.previous_half = None
+
+	def __call__(self, t, a, b):
+		a = self._env.copyBuffer(a)
+		b = self._env.copyBuffer(b)
+
+		self._pulse.halfPi(a, b)
+
+		Na = self.stats.countParticles(a)
+		Nb = self.stats.countParticles(b)
+		half = (Na + Nb) / 2
+
+		if self.previous_Na is None:
+			self.previous_Na = Na
+
+		if self.previous_half is None:
+			self.previous_half = half
+
+		if (Na > half and self.previous_Na < self.previous_half) or \
+				(Na < half and self.previous_Na > self.previous_half):
+			raise TerminateEvolution()
 
 class VisibilityCollector:
 
