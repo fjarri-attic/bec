@@ -370,7 +370,7 @@ class HeightmapPlot:
 		self.fig = plt.figure()
 
 		subplot = self.fig.add_subplot(111, xlabel=self.data.xname, ylabel=self.data.yname)
-		im = subplot.imshow(self.data.heightmap, interpolation='bilinear', origin='lower',
+		im = subplot.imshow(self.data.heightmap, interpolation='bicubic', origin='lower',
 			aspect='auto', extent=(self.data.xmin, self.data.xmax,
 			self.data.ymin, self.data.ymax), cmap=_CMAP_BWR,
 			vmin=self.data.zmin, vmax=self.data.zmax)
