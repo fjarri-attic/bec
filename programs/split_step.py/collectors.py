@@ -9,12 +9,13 @@ from evolution import Pulse, TerminateEvolution
 
 class ParticleNumberCollector:
 
-	def __init__(self, env, verbose=False):
+	def __init__(self, env, verbose=False, do_pulse=True):
 		self._env = env
 		self.stats = ParticleStatistics(env)
 		self.initialN = env.constants.N
 		self.verbose = verbose
 		self._pulse = Pulse(env)
+		self._do_pulse = do_pulse
 
 		self.times = []
 		self.Na = []
@@ -24,7 +25,8 @@ class ParticleNumberCollector:
 		a = self._env.copyBuffer(a)
 		b = self._env.copyBuffer(b)
 
-		self._pulse.halfPi(a, b)
+		if self._do_pulse:
+			self._pulse.halfPi(a, b)
 
 		Na = self.stats.countParticles(a)
 		Nb = self.stats.countParticles(b)
@@ -166,10 +168,11 @@ class SliceCollector:
 
 class AxialProjectionCollector:
 
-	def __init__(self, env):
+	def __init__(self, env, do_pulse=True):
 		self._env = env
 		self._projection = Projection(env)
 		self._pulse = Pulse(env)
+		self._do_pulse = do_pulse
 
 		self.times = []
 		self.snapshots = []
@@ -178,7 +181,9 @@ class AxialProjectionCollector:
 
 		a = self._env.copyBuffer(a)
 		b = self._env.copyBuffer(b)
-		self._pulse.halfPi(a, b)
+
+		if self._do_pulse:
+			self._pulse.halfPi(a, b)
 
 		self.times.append(t)
 
