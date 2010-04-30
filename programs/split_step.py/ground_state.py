@@ -28,14 +28,21 @@ class TFGroundState(PairedCalculation):
 	def _cpu__prepare(self):
 		pass
 
-	def _cpu_create(self):
+	def _cpu_create(self, component=1):
 		res = self._env.allocate(self._env.constants.shape, self._env.precision.complex.dtype)
+
+		if component == 1:
+			g = self._env.constants.g11
+			mu = self._env.constants.mu
+		else:
+			g = self._env.constants.g22
+			mu = self._env.constants.mu2
 
 		for i in xrange(self._env.constants.nvx):
 			for j in xrange(self._env.constants.nvy):
 				for k in xrange(self._env.constants.nvz):
-					e = self._env.constants.mu - self._potentials[k, j, i]
-					res[k, j, i] = math.sqrt(max(e / self._env.constants.g11, 0))
+					e = mu - self._potentials[k, j, i]
+					res[k, j, i] = math.sqrt(max(e / g, 0))
 
 		return res
 
@@ -43,15 +50,16 @@ class TFGroundState(PairedCalculation):
 		kernel_template = """
 			// fill given buffer with ground state, obtained from Thomas-Fermi approximation
 			__kernel void fillWithTFGroundState(__global ${p.complex.name} *data,
-				read_only image3d_t potentials)
+				read_only image3d_t potentials, ${p.scalar.name} mu,
+				${p.scalar.name} g)
 			{
 				DEFINE_INDEXES;
 
 				float potential = get_float_from_image(potentials, i, j, k);
 
-				${p.scalar.name} e = (${p.scalar.name})${c.mu} - potential;
+				${p.scalar.name} e = mu - potential;
 				if(e > 0)
-					data[index] = ${p.complex.ctr}(sqrt(e / (${p.scalar.name})${c.g11}), 0);
+					data[index] = ${p.complex.ctr}(sqrt(e / g), 0);
 				else
 					data[index] = ${p.complex.ctr}(0, 0);
 			}
@@ -60,9 +68,17 @@ class TFGroundState(PairedCalculation):
 		self._program = self._env.compileSource(kernel_template)
 		self._func = FunctionWrapper(self._program.fillWithTFGroundState)
 
-	def _gpu_create(self):
+	def _gpu_create(self, component=1):
+		if component == 1:
+			g = self._env.constants.g11
+			mu = self._env.constants.mu
+		else:
+			g = self._env.constants.g22
+			mu = self._env.constants.mu2
+
 		res = self._env.allocate(self._env.constants.shape, self._env.precision.complex.dtype)
-		self._func(self._env.queue, self._env.constants.shape, res, self._potentials)
+		self._func(self._env.queue, self._env.constants.shape, res, self._potentials,
+			self._env.precision.scalar.cast(mu), self._env.precision.scalar.cast(g))
 		return res
 
 
