@@ -73,6 +73,17 @@ class Environment:
 		cl.enqueue_read_buffer(self.queue, buf, cpu_buf).wait()
 		return cpu_buf
 
+	def toGPU(self, buf, shape=None):
+		if shape is None:
+			shape = buf.shape
+
+		if not self.gpu:
+			return buf.reshape(shape)
+
+		gpu_buf = Buffer(self.context, shape, buf.dtype)
+		cl.enqueue_write_buffer(self.queue, gpu_buf, buf).wait()
+		return gpu_buf
+
 	def copyBuffer(self, buf):
 		if self.gpu:
 			buf_copy = self.allocate(buf.shape, buf.dtype)
