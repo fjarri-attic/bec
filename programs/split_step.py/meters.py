@@ -58,11 +58,52 @@ class ParticleStatistics(PairedCalculation):
 
 		return self._reduce(res) / (state.size / self._env.constants.cells) * self._env.constants.dV / self._env.constants.N
 
+	def _cpu__countStateTwoComponent(self, state1, state2, component, coeff):
+
+		n1 = numpy.abs(state1) ** 2
+		n2 = numpy.abs(state2) ** 2
+
+		if component == 1:
+			state = state1
+			n = n1
+			g1 = self._env.constants.g11
+			g2 = self._env.constants.g12
+		else:
+			state = state2
+			n = n2
+			g1 = self._env.constants.g12
+			g2 = self._env.constants.g22
+
+		kstate = self._env.allocate(state.shape, dtype=self._env.precision.complex.dtype)
+		self._plan.execute(state, kstate, inverse=True, batch=state.size / self._env.constants.cells)
+
+		res = self._env.allocate(state.shape, dtype=self._env.precision.scalar.dtype)
+
+		xk = state.conj() * kstate
+		for e in xrange(state.size / self._env.constants.cells):
+			start = e * self._env.constants.cells
+			stop = (e + 1) * self._env.constants.cells
+			res[start:stop,:,:] = numpy.abs(n[start:stop,:,:] * (self._potentials +
+				n1[start:stop,:,:] * (g1 / coeff) +
+				n2[start:stop,:,:] * (g2 / coeff)) +
+				xk[start:stop,:,:] * self._kvectors)
+
+		return self._reduce(res) / (state.size / self._env.constants.cells) * \
+			self._env.constants.dV / self._env.constants.N
+
 	def _cpu_countEnergy(self, state):
 		return self._countState(state, 2)
 
 	def _cpu_countMu(self, state):
 		return self._countState(state, 1)
+
+	def _cpu_countEnergyTwoComponent(self, state1, state2):
+		return self._countStateTwoComponent(state1, state2, 1, 2) + \
+			self._countStateTwoComponent(state1, state2, 2, 2)
+
+	def _cpu_countMuTwoComponent(self, state1, state2):
+		return self._countStateTwoComponent(state1, state2, 1, 1) + \
+			self._countStateTwoComponent(state1, state2, 2, 1)
 
 	def _cpu_getVisibility(self, a, b):
 		Na = self._reduce(self.getAverageDensity(a)) * self._env.constants.dV
@@ -127,6 +168,36 @@ class ParticleStatistics(PairedCalculation):
 					// differential.y will be equal to 0, because \psi * D \psi is a real number
 					res[index] = nonlinear + differential.x;
 				}
+
+				__kernel void calculate${name}TwoComponent(__global ${p.scalar.name} *res,
+					__global ${p.complex.name} *xstate1, __global ${p.complex.name} *kstate1,
+					__global ${p.complex.name} *xstate2, __global ${p.complex.name} *kstate2,
+					read_only image3d_t potentials, read_only image3d_t kvectors)
+				{
+					DEFINE_INDEXES;
+
+					${p.scalar.name} potential = get_float_from_image(potentials, i, j, k);
+					${p.scalar.name} kvector = get_float_from_image(kvectors, i, j, k);
+
+					${p.scalar.name} n_a = squared_abs(xstate1[index]);
+					${p.scalar.name} n_b = squared_abs(xstate2[index]);
+
+					${p.complex.name} differential1 =
+						complex_mul(complex_mul(xstate1[index], kstate1[index]), kvector);
+					${p.complex.name} differential2 =
+						complex_mul(complex_mul(xstate2[index], kstate2[index]), kvector);
+
+					${p.scalar.name} nonlinear1 = n_a * (potential +
+						(${p.scalar.name})${c.g11} * n_a / ${coeff} +
+						(${p.scalar.name})${c.g12} * n_b / ${coeff});
+					${p.scalar.name} nonlinear2 = n_b * (potential +
+						(${p.scalar.name})${c.g12} * n_a / ${coeff} +
+						(${p.scalar.name})${c.g22} * n_b / ${coeff});
+
+					// differential.y will be equal to 0, because \psi * D \psi is a real number
+					res[index] = nonlinear1 + differential1.x +
+						nonlinear2 + differential2.x;
+				}
 			%endfor
 		"""
 
@@ -138,6 +209,9 @@ class ParticleStatistics(PairedCalculation):
 		self._calculate_noised_density = FunctionWrapper(self._program.calculateNoisedDensity)
 		self._calculate_two_states_density = FunctionWrapper(self._program.calculateTwoStatesDensity)
 		self._calculate_two_states_interaction = FunctionWrapper(self._program.calculateTwoStatesInteraction)
+
+		self._calculate_mu_2comp = FunctionWrapper(self._program.calculateMuTwoComponent)
+		self._calculate_energy_2comp = FunctionWrapper(self._program.calculateEnergyTwoComponent)
 
 	def _gpu_getAverageDensity(self, state, subtract_noise=True):
 		density = self._env.allocate(state.shape, self._env.precision.scalar.dtype)
@@ -161,6 +235,30 @@ class ParticleStatistics(PairedCalculation):
 		self._plan.execute(state, kstate, inverse=True, batch=state.size / self._env.constants.cells)
 		self._calculate_mu(self._env.queue, state.shape, res, state, kstate, self._potentials, self._kvectors)
 		return self._reduce(res) / (state.size / self._env.constants.cells) * self._env.constants.dV / self._env.constants.N
+
+	def _gpu_countMuTwoComponent(self, state1, state2):
+		kstate1 = self._env.allocate(state1.shape, dtype=self._env.precision.complex.dtype)
+		kstate2 = self._env.allocate(state2.shape, dtype=self._env.precision.complex.dtype)
+		res = self._env.allocate(state1.shape, dtype=self._env.precision.scalar.dtype)
+
+		self._plan.execute(state1, kstate1, inverse=True, batch=state1.size / self._env.constants.cells)
+		self._plan.execute(state2, kstate2, inverse=True, batch=state2.size / self._env.constants.cells)
+
+		self._calculate_mu_2comp(self._env.queue, state1.shape, res, state1, kstate1,
+			state2, kstate2, self._potentials, self._kvectors)
+		return self._reduce(res) / (state1.size / self._env.constants.cells) * self._env.constants.dV / self._env.constants.N
+
+	def _gpu_countEnergyTwoComponent(self, state1, state2):
+		kstate1 = self._env.allocate(state1.shape, dtype=self._env.precision.complex.dtype)
+		kstate2 = self._env.allocate(state2.shape, dtype=self._env.precision.complex.dtype)
+		res = self._env.allocate(state1.shape, dtype=self._env.precision.scalar.dtype)
+
+		self._plan.execute(state1, kstate1, inverse=True, batch=state1.size / self._env.constants.cells)
+		self._plan.execute(state2, kstate2, inverse=True, batch=state2.size / self._env.constants.cells)
+
+		self._calculate_energy_2comp(self._env.queue, state1.shape, res, state1, kstate1,
+			state2, kstate2, self._potentials, self._kvectors)
+		return self._reduce(res) / (state1.size / self._env.constants.cells) * self._env.constants.dV / self._env.constants.N
 
 	def _gpu_getVisibility(self, a, b):
 		a_density = self._env.allocate(a.shape, self._env.precision.scalar.dtype)
