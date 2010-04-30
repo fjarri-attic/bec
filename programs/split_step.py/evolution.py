@@ -318,7 +318,8 @@ class TwoComponentBEC(PairedCalculation):
 			while t <= self._env.constants.t_equilib:
 				self.propagate(self._env.constants.dt_evo)
 				t += self._env.constants.dt_evo
-
+		self._finishStep(self._env.constants.dt_evo)
+		self._toXSpace()
 		self._t = 0
 
 		# first pi/2 pulse
@@ -356,6 +357,7 @@ class TwoComponentBEC(PairedCalculation):
 	def runEvolution(self, tstop, callbacks, callback_dt=0):
 		self._t = 0
 		callback_t = 0
+		self._toKSpace()
 
 		try:
 			self._runCallbacks(callbacks)
@@ -370,6 +372,8 @@ class TwoComponentBEC(PairedCalculation):
 
 			if callback_dt > tstop:
 				self._runCallbacks(callbacks)
+
+			self._toXSpace()
 
 		except TerminateEvolution:
 			return self._t * self._env.constants.t_rho
