@@ -134,6 +134,14 @@ class GPEGroundState(PairedCalculation):
 				data[index] = complex_mul_scalar(data[index], coeff);
 			}
 
+			__kernel void multiply2(__global ${p.complex.name} *data1, __global ${p.complex.name} *data2,
+				${p.scalar.name} c1, ${p.scalar.name} c2)
+			{
+				DEFINE_INDEXES;
+				data1[index] = complex_mul_scalar(data1[index], c1);
+				data2[index] = complex_mul_scalar(data2[index], c2);
+			}
+
 			// Propagates state vector in k-space for steady state calculation (i.e., in imaginary time)
 			__kernel void propagateKSpaceImaginaryTime(__global ${p.complex.name} *data,
 				read_only image3d_t kvectors)
@@ -146,6 +154,23 @@ class GPEGroundState(PairedCalculation):
 					(${p.scalar.name})${-c.dt_steady / 2});
 				${p.complex.name} temp = data[index];
 				data[index] = complex_mul_scalar(temp, prop_coeff);
+			}
+
+			// Propagates state vector in k-space for steady state calculation (i.e., in imaginary time)
+			// Version for processing two components at once
+			__kernel void propagateKSpaceImaginaryTime2(
+				__global ${p.complex.name} *data1, __global ${p.complex.name} *data2,
+				read_only image3d_t kvectors)
+			{
+				DEFINE_INDEXES;
+
+				${p.scalar.name} kvector = get_float_from_image(kvectors, i, j, k);
+
+				${p.scalar.name} prop_coeff = native_exp(kvector *
+					(${p.scalar.name})${-c.dt_steady / 2});
+
+				data1[index] = complex_mul_scalar(data1[index], prop_coeff);
+				data2[index] = complex_mul_scalar(data2[index], prop_coeff);
 			}
 
 			// Propagates state in x-space for steady state calculation
@@ -175,76 +200,204 @@ class GPEGroundState(PairedCalculation):
 				//propagate to endpoint using log derivative
 				data[index] = complex_mul_scalar(a, da);
 			}
+
+			// Propagates state in x-space for steady state calculation
+			__kernel void propagateXSpaceTwoComponent(__global ${p.complex.name} *a,
+				__global ${p.complex.name} *b, read_only image3d_t potentials)
+			{
+				DEFINE_INDEXES;
+
+				${p.complex.name} a_res = a[index];
+				${p.complex.name} b_res = b[index];
+
+				//store initial x-space field
+				${p.complex.name} a0 = a_res;
+				${p.complex.name} b0 = b_res;
+
+				${p.scalar.name} da, db, a_density, b_density;
+				${p.scalar.name} V = get_float_from_image(potentials, i, j, k);
+
+				//iterate to midpoint solution
+				%for iter in range(c.itmax):
+					//calculate midpoint log derivative and exponentiate
+					a_density = squared_abs(a_res);
+					b_density = squared_abs(b_res);
+
+					da = exp((${p.scalar.name})${c.dt_steady / 2} *
+						(-V - (${p.scalar.name})${c.g11} * a_density -
+						(${p.scalar.name})${c.g12} * b_density));
+					db = exp((${p.scalar.name})${c.dt_steady / 2} *
+						(-V - (${p.scalar.name})${c.g12} * a_density -
+						(${p.scalar.name})${c.g22} * b_density));
+
+					//propagate to midpoint using log derivative
+					a_res = complex_mul_scalar(a0, da);
+					b_res = complex_mul_scalar(b0, db);
+				%endfor
+
+				//propagate to endpoint using log derivative
+				a[index] = complex_mul_scalar(a_res, da);
+				b[index] = complex_mul_scalar(b_res, db);
+			}
 		"""
 
 		self._program = self._env.compileSource(kernel_template)
 
 		self._kpropagate_func = FunctionWrapper(self._program.propagateKSpaceImaginaryTime)
+		self._kpropagate2_func = FunctionWrapper(self._program.propagateKSpaceImaginaryTime2)
 		self._xpropagate_func = FunctionWrapper(self._program.propagateXSpaceOneComponent)
+		self._xpropagate2_func = FunctionWrapper(self._program.propagateXSpaceTwoComponent)
 		self._multiply_func = FunctionWrapper(self._program.multiply)
+		self._multiply2_func = FunctionWrapper(self._program.multiply2)
 
-	def _cpu__kpropagate(self):
-		self._gs *= self._k_coeff # k-space propagation
+	def _cpu__kpropagate(self, two_component):
+		if two_component:
+			self._gs_a *= self._k_coeff
+			self._gs_b *= self._k_coeff
+		else:
+			self._gs *= self._k_coeff
 
-	def _gpu__kpropagate(self):
-		self._kpropagate_func(self._env.queue, self._gs.shape, self._gs, self._kvectors)
+	def _gpu__kpropagate(self, two_component):
+		if two_component:
+			self._kpropagate2_func(self._env.queue, self._gs_a.shape, self._gs_a, self._gs_b, self._kvectors)
+		else:
+			self._kpropagate_func(self._env.queue, self._gs.shape, self._gs, self._kvectors)
 
-	def _cpu__xpropagate(self):
-		gs0 = self._gs.copy()
-		for iter in xrange(self._env.constants.itmax):
-			abs_gs = numpy.abs(self._gs)
-			d_gs = numpy.exp((self._potentials + abs_gs * abs_gs * self._env.constants.g11) *
-				(-self._env.constants.dt_steady / 2))
-			self._gs = gs0 * d_gs
-		self._gs *= d_gs
+	def _cpu__xpropagate(self, two_component):
+		if two_component:
+			a0 = self._gs_a.copy()
+			b0 = self._gs_b.copy()
 
-	def _gpu__xpropagate(self):
-		self._xpropagate_func(self._env.queue, self._gs.shape, self._gs, self._potentials)
+			for iter in xrange(self._env.constants.itmax):
+				n_a = numpy.abs(self._gs_a) ** 2
+				n_b = numpy.abs(self._gs_b) ** 2
 
-	def _cpu__renormalize(self, coeff):
-		self._gs *= coeff
+				pa = self._potentials + n_a * self._env.constants.g11 + n_b * self._env.constants.g12
+				pb = self._potentials + n_b * self._env.constants.g22 + n_a * self._env.constants.g12
 
-	def _gpu__renormalize(self, coeff):
-		self._multiply_func(self._env.queue, self._gs.shape, self._gs, self._env.precision.scalar.dtype(coeff))
+				da = numpy.exp(pa * (-self._env.constants.dt_steady / 2))
+				db = numpy.exp(pb * (-self._env.constants.dt_steady / 2))
 
-	def create(self):
+				self._gs_a = a0 * da
+				self._gs_b = b0 * db
 
-		self._gs = self._tf_gs.create()
-		plan = self._plan
+			self._gs_a *= da
+			self._gs_b *= db
+		else:
+			gs0 = self._gs.copy()
+			for iter in xrange(self._env.constants.itmax):
+				abs_gs = numpy.abs(self._gs)
+				d_gs = numpy.exp((self._potentials + abs_gs * abs_gs * self._env.constants.g11) *
+					(-self._env.constants.dt_steady / 2))
+				self._gs = gs0 * d_gs
+			self._gs *= d_gs
+
+	def _gpu__xpropagate(self, two_component):
+		if two_component:
+			self._xpropagate2_func(self._env.queue, self._gs_a.shape, self._gs_a, self._gs_b, self._potentials)
+		else:
+			self._xpropagate_func(self._env.queue, self._gs.shape, self._gs, self._potentials)
+
+	def _cpu__renormalize(self, coeff, two_component):
+		if two_component:
+			c1, c2 = coeff
+			self._gs_a *= c1
+			self._gs_b *= c2
+		else:
+			self._gs *= coeff
+
+	def _gpu__renormalize(self, coeff, two_component):
+		if two_component:
+			c1, c2 = coeff
+			self._multiply2_func(self._env.queue, self._gs_a.shape, self._gs_a, self._gs_b,
+				self._env.precision.scalar.dtype(c1), self._env.precision.scalar.dtype(c2))
+		else:
+			self._multiply_func(self._env.queue, self._gs.shape, self._gs, self._env.precision.scalar.dtype(coeff))
+
+	def _toXSpace(self, two_component):
+		if two_component:
+			self._plan.execute(self._gs_a)
+			self._plan.execute(self._gs_b)
+		else:
+			self._plan.execute(self._gs)
+
+	def _toKSpace(self, two_component):
+		if two_component:
+			self._plan.execute(self._gs_a, inverse=True)
+			self._plan.execute(self._gs_b, inverse=True)
+		else:
+			self._plan.execute(self._gs, inverse=True)
+
+	def create(self, two_component=False):
+
+		if two_component:
+			#self._gs_a = self._tf_gs.create(1)
+			#self._gs_b = self._tf_gs.create(2)
+			self._gs_a = self._env.toGPU(numpy.ones(self._env.constants.shape, self._env.precision.complex.dtype))
+			self._gs_b = self._env.toGPU(numpy.ones(self._env.constants.shape, self._env.precision.complex.dtype))
+			print self._gs_a.shape, self._gs_b.shape
+		else:
+			self._gs = self._tf_gs.create()
+
 		stats = self._statistics
 
 		E = 0
-		new_E = stats.countEnergy(self._gs)
 
-		plan.execute(self._gs, inverse=True) # FFT to k-space
+		if two_component:
+			new_E = stats.countEnergyTwoComponent(self._gs_a, self._gs_b)
+		else:
+			new_E = stats.countEnergy(self._gs)
 
-		while abs(E - new_E) / E > self._precision:
+		self._toKSpace(two_component)
+
+		while abs(E - new_E) / new_E > self._precision:
 
 			# propagation
 
-			self._kpropagate()
-			plan.execute(self._gs) # FFT to x-space
-			self._xpropagate()
-			plan.execute(self._gs, inverse=True) # FFT to k-space
-			self._kpropagate()
+			self._kpropagate(two_component)
+			self._toXSpace(two_component)
+			self._xpropagate(two_component)
+			self._toKSpace(two_component)
+			self._kpropagate(two_component)
 
 			# normalization
 
-			plan.execute(self._gs) # FFT to x-space
+			self._toXSpace(two_component)
 
 			# renormalize
-			N = stats.countParticles(self._gs, subtract_noise=False)
-			self._renormalize(math.sqrt(self._env.constants.N / N))
+			if two_component:
+				N1 = stats.countParticles(self._gs_a, subtract_noise=False)
+				N2 = stats.countParticles(self._gs_b, subtract_noise=False)
+				c1 = math.sqrt(self._env.constants.N / (2 * N1))
+				c2 = math.sqrt(self._env.constants.N / (2 * N2))
+				self._renormalize((c1, c2), two_component)
+			else:
+				N = stats.countParticles(self._gs, subtract_noise=False)
+				self._renormalize(math.sqrt(self._env.constants.N / N), two_component)
 
 			E = new_E
-			new_E = stats.countEnergy(self._gs)
-			plan.execute(self._gs, inverse=True) # FFT to k-space
+			if two_component:
+				new_E = stats.countEnergyTwoComponent(self._gs_a, self._gs_b)
+				print new_E
+			else:
+				new_E = stats.countEnergy(self._gs)
 
-		plan.execute(self._gs) # FFT to x-state
+			self._toKSpace(two_component)
 
-		print "Ground state calculation:" + \
-			" N = " + str(stats.countParticles(self._gs, subtract_noise=False)) + \
-			" E = " + str(stats.countEnergy(self._gs)) + \
-			" mu = " + str(stats.countMu(self._gs))
+		self._toXSpace(two_component)
 
-		return self._gs
+		if two_component:
+			print "Ground state calculation (two components):" + \
+				" N = " + str(stats.countParticles(self._gs_a, subtract_noise=False)) + \
+					" + " + str(stats.countParticles(self._gs_b, subtract_noise=False)) + \
+				" E = " + str(stats.countEnergyTwoComponent(self._gs_a, self._gs_b)) + \
+				" mu = " + str(stats.countMuTwoComponent(self._gs_a, self._gs_b))
+
+			return self._gs_a, self._gs_b
+		else:
+			print "Ground state calculation (one component):" + \
+				" N = " + str(stats.countParticles(self._gs, subtract_noise=False)) + \
+				" E = " + str(stats.countEnergy(self._gs)) + \
+				" mu = " + str(stats.countMu(self._gs))
+
+			return self._gs
