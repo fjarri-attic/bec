@@ -275,3 +275,20 @@ class Projection:
 		density = self._stats.getAverageDensity(state)
 		z = self._env.constants.nvz
 		return self._env.toCPU(self._reduce(density, final_length=z))
+
+
+class Slice:
+
+	def __init__(self, env):
+		self._env = env
+		self._stats = ParticleStatistics(env)
+
+	def getXY(self, state):
+		density = self._stats.getAverageDensity(state)
+		temp = self._env.toCPU(density, shape=self._env.constants.shape)
+		return temp[self._env.constants.nvz / 2,:,:]
+
+	def getYZ(self, state):
+		density = self._stats.getAverageDensity(state)
+		temp = self._env.toCPU(density, shape=self._env.constants.shape).transpose((2, 0, 1))
+		return temp[self._env.constants.nvx / 2,:,:]
