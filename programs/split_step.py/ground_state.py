@@ -335,7 +335,6 @@ class GPEGroundState(PairedCalculation):
 			#self._gs_b = self._tf_gs.create(2)
 			self._gs_a = self._env.toGPU(numpy.ones(self._env.constants.shape, self._env.precision.complex.dtype))
 			self._gs_b = self._env.toGPU(numpy.ones(self._env.constants.shape, self._env.precision.complex.dtype))
-			print self._gs_a.shape, self._gs_b.shape
 		else:
 			self._gs = self._tf_gs.create()
 
@@ -378,7 +377,6 @@ class GPEGroundState(PairedCalculation):
 			E = new_E
 			if two_component:
 				new_E = stats.countEnergyTwoComponent(self._gs_a, self._gs_b)
-				print new_E
 			else:
 				new_E = stats.countEnergy(self._gs)
 
