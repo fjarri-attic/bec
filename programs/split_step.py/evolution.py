@@ -60,11 +60,37 @@ class Pulse(PairedCalculation):
 				a[index] = complex_mul(b0, minus_i);
 				b[index] = complex_mul(a0, minus_i);
 			}
+
+			__kernel void applyPulse(__global ${p.complex.name} *a, __global ${p.complex.name} *b,
+				${p.scalar.name} theta, ${p.scalar.name} phi)
+			{
+				DEFINE_INDEXES;
+
+				${p.complex.name} a0 = a[index];
+				${p.complex.name} b0 = b[index];
+
+				${p.scalar.name} sin_half_theta = sin(theta / 2);
+				${p.scalar.name} cos_half_theta = cos(theta / 2);
+
+				${p.complex.name} minus_i = ${p.complex.ctr}(0, -1);
+
+				${p.complex.name} k2 = complex_mul_scalar(complex_mul(
+					minus_i, cexp(${p.complex.ctr}(0, -phi))
+				), sin_half_theta);
+
+				${p.complex.name} k3 = complex_mul_scalar(complex_mul(
+					minus_i, cexp(${p.complex.ctr}(0, phi))
+				), sin_half_theta);
+
+				a[index] = complex_mul_scalar(a0, cos_half_theta) + complex_mul(b0, k2);
+				b[index] = complex_mul_scalar(b0, cos_half_theta) + complex_mul(a0, k3);
+			}
 		"""
 
 		self._program = self._env.compileSource(kernels, sqrt=math.sqrt)
 		self._half_pi_pulse_func = FunctionWrapper(self._program.applyHalfPiPulse)
 		self._pi_pulse_func = FunctionWrapper(self._program.applyPiPulse)
+		self._pulse = FunctionWrapper(self._program.applyPulse)
 
 	def _gpu_halfPi(self, a, b):
 		self._half_pi_pulse_func(self._env.queue, self._env.constants.ens_shape, a, b)
@@ -75,17 +101,22 @@ class Pulse(PairedCalculation):
 		a[:,:,:] = (a0 - 1j * b0) * math.sqrt(0.5)
 		b[:,:,:] = (b0 - 1j * a0) * math.sqrt(0.5)
 
-	def _cpu_halfPiNonIdeal(self, a, b, d_theta, d_phi):
+	def _cpu_apply(self, a, b, theta, phi):
 		a0 = a.copy()
 		b0 = b.copy()
 
-		half_theta = (math.pi / 2.0 + d_theta) / 2.0
+		half_theta = theta / 2.0
 		k1 = numpy.cast[self._env.precision.scalar](math.cos(half_theta))
-		k2 = numpy.cast[self._env.precision.complex](-1j * numpy.exp(-1j * d_phi) * math.sin(half_theta))
-		k3 = numpy.cast[self._env.precision.complex](-1j * numpy.exp(1j * d_phi) * math.sin(half_theta))
+		k2 = numpy.cast[self._env.precision.complex](-1j * numpy.exp(-1j * phi) * math.sin(half_theta))
+		k3 = numpy.cast[self._env.precision.complex](-1j * numpy.exp(1j * phi) * math.sin(half_theta))
 
 		a[:,:,:] = a0 * k1 + b0 * k2
 		b[:,:,:] = a0 * k3 + b0 * k1
+
+	def _gpu_apply(self, a, b, theta, phi):
+		self._pulse(self._env.queue, self._env.constants.ens_shape, a, b,
+			self._env.precision.scalar.cast(theta),
+			self._env.precision.scalar.cast(phi))
 
 
 class TwoComponentBEC(PairedCalculation):
@@ -328,7 +359,7 @@ class TwoComponentBEC(PairedCalculation):
 		if d_theta == 0 and d_phi == 0:
 			self._pulse.halfPi(self._a, self._b)
 		else:
-			self._pulse.halfPiNonIdeal(self._a, self._b, d_theta, d_phi)
+			self._pulse.apply(self._a, self._b, math.pi / 2.0 + d_theta, d_phi)
 
 	def propagate(self, dt):
 
