@@ -2,6 +2,9 @@ import yaml
 import numpy
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
+from mpl_toolkits.axes_grid import AxesGrid
+from mpl_toolkits.axes_grid.anchored_artists import AnchoredText
+
 
 _CMAP_BWR_LIST = [
 	[0.17822806640625, 0.30420105468749997, 0.92985451171875],
@@ -375,6 +378,34 @@ class HeightmapPlot:
 			self.data.ymin, self.data.ymax), cmap=_CMAP_BWR,
 			vmin=self.data.zmin, vmax=self.data.zmax)
 		self.fig.colorbar(im, orientation='horizontal', shrink=0.8)
+
+	def save(self, filename):
+		self.fig.savefig(filename)
+
+
+class EvolutionPlot:
+
+	def __init__(self, heightmaps_list, shape=None):
+
+		if shape is None:
+			shape = heightmaps_list.shape
+
+		self.fig = plt.figure()
+		self.grid = AxesGrid(self.fig, 111, nrows_ncols=shape, axes_pad=0.1, label_mode="1", aspect=False)
+
+		for i, e in enumerate(heightmaps_list):
+			im = self.grid[i].imshow(e.heightmap, interpolation='bicubic', origin='lower',
+				aspect='auto', extent=(e.xmin, e.xmax, e.ymin, e.ymax),
+				cmap=_CMAP_BWR, vmin=e.zmin, vmax=e.zmax)
+
+			self.grid[i].text(0, 1, e.name, transform=self.grid[i].transAxes,
+				horizontalalignment='left', verticalalignment='top',
+				bbox=dict(facecolor='white'), fontsize=6)
+
+			for name in ['left', 'right', 'top', 'bottom']:
+				self.grid[i].axis[name].set_visible(False)
+
+		#self.fig.colorbar(im, orientation='horizontal', shrink=0.8)
 
 	def save(self, filename):
 		self.fig.savefig(filename)
