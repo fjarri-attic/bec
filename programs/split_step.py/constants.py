@@ -60,8 +60,6 @@ class Constants:
 		self.cells = self.nvx * self.nvy * self.nvz
 		self.shape = (self.nvz, self.nvy, self.nvx)
 
-		self.state_type = WIGNER if model.wigner else PSI_FUNC
-
 		self.detuning = 2 * math.pi * model.detuning / w_rho
 
 		self.l111 = model.gamma111 / (pow(l_rho, 6) * w_rho)

@@ -148,31 +148,15 @@ class TwoComponentEvolution(PairedCalculation):
 		# in x-space and FFT to k-space)
 		self._midstep = False
 
+		self._potentials = getPotentials(self._env, self._constants)
+		self._kvectors = getKVectors(self._env, self._constants)
+
 		self._prepare()
 
 	def _cpu__prepare(self):
-		potentials = getPotentials(self._env, self._constants)
-		kvectors = getKVectors(self._env, self._constants)
-
-		shape = self._constants.shape if self._constants.state_type == PSI_FUNC else self._constants.ens_shape
-
-		self._potentials = numpy.empty(shape, dtype=self._constants.complex.dtype)
-		self._kvectors = numpy.empty(shape, dtype=self._constants.complex.dtype)
-
-		# copy potentials and kvectors making these matrices have the same size
-		# as the many-ensemble state
-		# it requires additional memory, but makes other code look simpler
-		for e in range(self._constants.ensembles):
-			start = e * self._constants.nvz
-			stop = (e + 1) * self._constants.nvz
-
-			self._potentials[start:stop,:,:] = potentials
-			self._kvectors[start:stop,:,:] = kvectors
+		pass
 
 	def _gpu__prepare(self):
-
-		self._potentials = getPotentials(self._env, self._constants)
-		self._kvectors = getKVectors(self._env, self._constants)
 
 		kernels = """
 			<%!
@@ -264,8 +248,15 @@ class TwoComponentEvolution(PairedCalculation):
 
 	def _cpu__kpropagate(self, cloud, dt):
 		kcoeff = numpy.exp(self._kvectors * (1j * dt / 2))
-		cloud.a.data *= kcoeff
-		cloud.b.data *= kcoeff
+		data1 = cloud.a.data
+		data2 = cloud.b.data
+		nvz = self._constants.nvz
+
+		for e in xrange(cloud.a.size / self._constants.cells):
+			start = e * nvz
+			stop = (e + 1) * nvz
+			data1[start:stop,:,:] *= kcoeff
+			data2[start:stop,:,:] *= kcoeff
 
 	def _gpu__xpropagate(self, cloud, dt):
 		self._xpropagate_func(cloud.a.shape,

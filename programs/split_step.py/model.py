@@ -53,11 +53,9 @@ class Model:
 	t_equilib = 0 # equilibration time
 	dt_evo = 0.00004 # time step for evolution
 
-	ensembles = 1 # number of ensembles
+	ensembles = 4 # number of ensembles
 
 	border = 1.2 # defines, how big is calculation area as compared to cloud size
-
-	wigner = False
 
 	def __init__(self, **kwds):
 		for kwd in kwds:
