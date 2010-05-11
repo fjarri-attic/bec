@@ -7,7 +7,6 @@ from model import Model
 from constants import Constants
 from evolution import TwoComponentEvolution
 from ground_state import GPEGroundState
-import typenames
 
 from collectors import *
 
@@ -34,7 +33,7 @@ times, a_xy, a_yz, b_xy, b_yz = sp.getData()
 
 #times, picture = a.getData()
 #pr = HeightmapData("test", picture, xmin=0, xmax=100,
-#	ymin=-env.constants.zmax, ymax=env.constants.zmax, zmin=-1,
+#	ymin=-constants.zmax, ymax=constants.zmax, zmin=-1,
 #	zmax=1, xname="Time, ms", yname="z, $\\mu$m", zname="Spin projection")
 #pr = HeightmapPlot(pr)
 #pr.save('test.pdf')
@@ -45,8 +44,8 @@ for name, dataset in (('testa.pdf', a_yz), ('testb.pdf', b_yz)):
 	hms = []
 	for t, hm in zip(times, dataset):
 		hms.append(HeightmapData(t, hm.transpose(),
-			xmin=-env.constants.zmax, xmax=env.constants.zmax,
-			ymin=-env.constants.ymax, ymax=env.constants.ymax,
+			xmin=-constants.zmax, xmax=constants.zmax,
+			ymin=-constants.ymax, ymax=constants.ymax,
 			zmin=0, zmax=400))
 
 	EvolutionPlot(hms, shape=(6, 5)).save(name)
