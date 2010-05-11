@@ -331,7 +331,7 @@ class ParticleStatistics(PairedCalculation):
 			self._constants.g[(state.type, state.type)])
 		return self._reduce(res) / (state.size / self._constants.cells) * self._constants.dV / N
 
-	def _gpu_countStateTwoComponent(self, state1, state2, coeff, N):
+	def _gpu__countStateTwoComponent(self, state1, state2, coeff, N):
 		kstate1 = self._env.allocate(state1.shape, dtype=self._constants.complex.dtype)
 		kstate2 = self._env.allocate(state2.shape, dtype=self._constants.complex.dtype)
 		res = self._env.allocate(state1.shape, dtype=self._constants.scalar.dtype)
