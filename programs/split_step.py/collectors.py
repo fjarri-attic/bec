@@ -137,6 +137,7 @@ class SliceCollector:
 		self._slice = Slice(env, constants)
 		self._pulse = Pulse(env, constants)
 		self._do_pulse = do_pulse
+		self._constants = constants
 
 		self.times = []
 		self.a_xy = []
