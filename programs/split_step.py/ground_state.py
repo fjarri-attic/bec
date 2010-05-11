@@ -345,8 +345,8 @@ class GPEGroundState(PairedCalculation):
 
 			# renormalize
 			if two_component:
-				N1 = stats.countParticles(state1, state2)
-				N2 = stats.countParticles(state1, state2)
+				N1 = stats.countParticles(state1)
+				N2 = stats.countParticles(state2)
 				c1 = math.sqrt(self._constants.N / (2 * N1))
 				c2 = math.sqrt(self._constants.N / (2 * N2))
 				self._renormalize(state1, state2, (c1, c2))
