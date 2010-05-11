@@ -525,6 +525,7 @@ class Slice:
 
 	def __init__(self, env, constants):
 		self._env = env
+		self._constants = constants
 		self._stats = ParticleStatistics(env, constants)
 
 	def getXY(self, state):
