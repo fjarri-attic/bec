@@ -194,7 +194,7 @@ class ParticleStatistics(PairedCalculation):
 		data = state.data
 		second_data = second_state.data
 		kdata = self._env.allocate(state.shape, dtype=state.dtype)
-		res = self._env.allocate(state.shape, dtype=state.dtype)
+		res = self._env.allocate(state.shape, dtype=self._constants.scalar.dtype)
 
 		self._plan.execute(data, kdata, inverse=True, batch=batch)
 
