@@ -41,10 +41,6 @@ class Model:
 	#gamma12 = 0
 	#gamma22 = 0
 
-	# Vacuum noise, 0.0 or 1.0
-	V1 = 0
-	V2 = 0
-
 	# spatial lattice size
 	nvx = 16
 	nvy = 16
@@ -60,3 +56,9 @@ class Model:
 	ensembles = 1 # number of ensembles
 
 	border = 1.2 # defines, how big is calculation area as compared to cloud size
+
+	wigner = False
+
+	def __init__(self, **kwds):
+		for kwd in kwds:
+			self.__dict__[kwd] = kwds[kwd]

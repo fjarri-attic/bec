@@ -26,8 +26,8 @@ class NumpyPlan:
 			stop = (i + 1) * self._z
 			data_out[start:stop,:,:] = func(data_in[start:stop,:,:])
 
-def createPlan(env, x, y, z):
+def createPlan(env, constants, x, y, z):
 	if env.gpu:
-		return pyfft.cl.Plan((z, y, x), dtype=env.precision.complex.dtype, normalize=True, queue=env.queue)
+		return pyfft.cl.Plan((z, y, x), dtype=constants.complex.dtype, normalize=True, queue=env.queue)
 	else:
 		return NumpyPlan(x, y, z)

@@ -11,13 +11,14 @@ from transpose import Transpose
 
 class Reduce:
 
-	def __init__(self, env):
+	def __init__(self, env, constants):
 		self._env = env
-		self._tr_scalar = Transpose(env, env.precision.scalar)
-		self._tr_complex = Transpose(env, env.precision.complex)
+		self._constants = constants
+		self._tr_scalar = Transpose(env, constants.scalar)
+		self._tr_complex = Transpose(env, constants.complex)
 
 		kernel_template = Template("""
-		%for typename in (p.scalar.name, p.complex.name):
+		%for typename in (c.scalar.name, c.complex.name):
 		%for block_size in [2 ** x for x in xrange(log2(max_block_size) + 1)]:
 			<%
 				log2_warp_size = log2(warp_size)
@@ -91,28 +92,28 @@ class Reduce:
 
 		self._warp_size = 32
 
-		kernel_src = kernel_template.render(p=self._env.precision,
+		kernel_src = kernel_template.render(c=self._constants,
 			warp_size=self._warp_size, max_block_size=self._max_block_size, log2=log2)
 		program = cl.Program(self._env.context, kernel_src).build()
 
 		self._scalar_kernels = {}
 		for local_size in [2 ** x for x in xrange(log2(self._max_block_size) + 1)]:
-			name = "reduceKernel" + str(local_size) + self._env.precision.scalar.name
+			name = "reduceKernel" + str(local_size) + self._constants.scalar.name
 			self._scalar_kernels[local_size] = getattr(program, name)
 
 		self._complex_kernels = {}
 		for local_size in [2 ** x for x in xrange(log2(self._max_block_size) + 1)]:
-			name = "reduceKernel" + str(local_size) + self._env.precision.complex.name
+			name = "reduceKernel" + str(local_size) + self._constants.complex.name
 			self._complex_kernels[local_size] = getattr(program, name)
 
 		self._small_scalar_kernels = {}
 		for reduce_power in [2 ** x for x in xrange(1, log2(self._warp_size / 2))]:
-			name = "smallSparseReduce" + str(reduce_power) + self._env.precision.scalar.name
+			name = "smallSparseReduce" + str(reduce_power) + self._constants.scalar.name
 			self._small_scalar_kernels[reduce_power] = getattr(program, name)
 
 		self._small_complex_kernels = {}
 		for reduce_power in [2 ** x for x in xrange(1, log2(self._warp_size / 2))]:
-			name = "smallSparseReduce" + str(reduce_power) + self._env.precision.complex.name
+			name = "smallSparseReduce" + str(reduce_power) + self._constants.complex.name
 			self._small_complex_kernels[reduce_power] = getattr(program, name)
 
 	def __call__(self, array, final_length=1):
@@ -120,12 +121,12 @@ class Reduce:
 		length = array.size
 		assert length >= final_length, "Array size cannot be less than final size"
 
-		if array.dtype == self._env.precision.scalar.dtype:
+		if array.dtype == self._constants.scalar.dtype:
 			reduce_kernels = self._scalar_kernels
-			itemsize = self._env.precision.scalar.nbytes
+			itemsize = self._constants.scalar.nbytes
 		else:
 			reduce_kernels = self._complex_kernels
-			itemsize = self._env.precision.complex.nbytes
+			itemsize = self._constants.complex.nbytes
 
 		if length == final_length:
 			res = self._env.allocate((length,), array.dtype)
@@ -175,7 +176,7 @@ class Reduce:
 			return res
 		if reduce_power < self._warp_size / 2:
 			res = self._env.allocate((final_length,), array.dtype)
-			if array.dtype == self._env.precision.scalar.dtype:
+			if array.dtype == self._constants.scalar.dtype:
 				func = self._small_scalar_kernels[reduce_power]
 			else:
 				func = self._small_complex_kernels[reduce_power]
@@ -183,7 +184,7 @@ class Reduce:
 			return res
 		else:
 			res = self._env.allocate(array.shape, array.dtype)
-			if array.dtype == self._env.precision.scalar.dtype:
+			if array.dtype == self._constants.scalar.dtype:
 				self._tr_scalar(res, array, final_length, reduce_power)
 			else:
 				self._tr_complex(res, array, final_length, reduce_power)
@@ -216,8 +217,8 @@ class CPUReduce:
 		return self(numpy.transpose(array.reshape(reduce_power, final_length)), final_length=final_length)
 
 
-def getReduce(env):
+def getReduce(env, constants):
 	if env.gpu:
-		return Reduce(env)
+		return Reduce(env, constants)
 	else:
 		return CPUReduce()

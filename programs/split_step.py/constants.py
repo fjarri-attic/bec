@@ -2,14 +2,51 @@
 Module, containing class with calculation constants
 """
 
+import copy
 import math
+import numpy
 
 from globals import *
+
+PSI_FUNC = 0
+WIGNER = 1
+
+COMP_1_minus1 = 0
+COMP_2_1 = 1
+
+
+class _Type:
+	def __init__(self, name, dtype):
+		self.name = name
+		self.dtype = dtype
+		self.nbytes = dtype().nbytes
+		self.ctr = '(' + name + ')'
+		self.cast = numpy.cast[dtype]
+
+class _Precision:
+	def __init__(self, scalar, complex):
+		self.scalar = scalar
+		self.complex = complex
+
+_single_float = _Type('float', numpy.float32)
+_double_float = _Type('double', numpy.float64)
+
+_single_complex = _Type('float2', numpy.complex64)
+_double_complex = _Type('double2', numpy.complex128)
+
+_single_precision = _Precision(_single_float, _single_complex)
+_double_precision = _Precision(_double_float, _double_complex)
+
 
 class Constants:
 	"""Calculation constants, in natural units"""
 
-	def __init__(self, model):
+	def __init__(self, model, double_precision=False):
+		model = copy.deepcopy(model)
+		precision = _double_precision if double_precision else _single_precision
+		self.scalar = precision.scalar
+		self.complex = precision.complex
+
 		w_rho = 2.0 * math.pi * model.fx # radial oscillator frequency
 		l_rho = math.sqrt(model.hbar / (model.m * w_rho)) # natural length
 		self.l_rho = l_rho
@@ -23,9 +60,7 @@ class Constants:
 		self.cells = self.nvx * self.nvy * self.nvz
 		self.shape = (self.nvz, self.nvy, self.nvx)
 
-		self.V1 = model.V1
-		self.V2 = model.V2
-		self.V = (self.V1 + self.V2) / 2.0
+		self.state_type = WIGNER if model.wigner else PSI_FUNC
 
 		self.detuning = 2 * math.pi * model.detuning / w_rho
 
@@ -40,10 +75,13 @@ class Constants:
 		self.N = model.N
 
 		# TF-approximated chemical potentials
-		self.mu = (15.0 * self.N * self.g11 / (16.0 * math.pi * self.lambda_ * math.sqrt(2.0))) ** 0.4
-		self.mu2 = (15.0 * self.N * self.g22 / (16.0 * math.pi * self.lambda_ * math.sqrt(2.0))) ** 0.4
+		mu_func = lambda g: self.scalar.cast((15.0 * self.N * g / (16.0 * math.pi * self.lambda_ * math.sqrt(2.0))) ** 0.4)
+		self.mu = {
+			COMP_1_minus1: mu_func(self.g11),
+			COMP_2_1: mu_func(self.g22)
+		}
 
-		self.xmax = model.border * math.sqrt(2.0 * self.mu)
+		self.xmax = model.border * math.sqrt(2.0 * self.mu[COMP_1_minus1])
 		self.ymax = self.xmax
 		self.zmax = self.xmax * self.lambda_
 
@@ -68,3 +106,15 @@ class Constants:
 		self.dt_evo = model.dt_evo / self.t_rho
 		self.ensembles = model.ensembles
 		self.ens_shape = (self.ensembles * self.nvz, self.nvy, self.nvx)
+
+		for attr in dir(self):
+			val = getattr(self, attr)
+			if isinstance(val, float):
+				self.__dict__[attr] = self.scalar.cast(val)
+
+		self.g = {
+			(COMP_1_minus1, COMP_1_minus1): self.g11,
+			(COMP_1_minus1, COMP_2_1): self.g12,
+			(COMP_2_1, COMP_1_minus1): self.g12,
+			(COMP_2_1, COMP_2_1): self.g22
+		}

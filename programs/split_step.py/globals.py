@@ -11,7 +11,11 @@ from mako.template import Template
 import numpy
 
 
-class Buffer(cl.Buffer):
+class _Buffer(cl.Buffer):
+	"""
+	Wrapper class for OpenCL buffer.
+	Mimics some numpy array properties.
+	"""
 
 	def __init__(self, context, shape, dtype):
 		self.size = 1
@@ -25,18 +29,31 @@ class Buffer(cl.Buffer):
 
 		self.nbytes = self.itemsize * self.size
 
-		cl.Buffer.__init__(self, context, cl.mem_flags.READ_WRITE, size=self.nbytes)
+		try:
+			cl.Buffer.__init__(self, context, cl.mem_flags.READ_WRITE, size=self.nbytes)
+		except:
+			print context, self.nbytes
+			raise
 		self.shape = shape
 		self.dtype = dtype
 
+	def reshape(self, new_shape):
+		new_size = 1
+		for dim in new_shape:
+			new_size *= dim
+		assert new_size == self.size
+		self.shape = new_shape
+		return self
+
 
 class Environment:
+	"""
+	Abstraction layer for GPU/CPU context and memory management.
+	"""
 
-	def __init__(self, gpu, precision, constants):
+	def __init__(self, gpu):
 
 		self.gpu = gpu
-		self.precision = precision
-		self.constants = constants
 
 		if gpu:
 			devices = []
@@ -52,11 +69,15 @@ class Environment:
 		else:
 			self.allocate = self.__cpu_allocate
 
+	def getContext(self):
+		assert self.gpu, "Context can be obtained only from GPU environment"
+		return self.context
+
 	def __cpu_allocate(self, shape, dtype):
 		return numpy.empty(shape, dtype=dtype)
 
 	def __gpu_allocate(self, shape, dtype):
-		return Buffer(self.context, shape, dtype)
+		return _Buffer(self.context, shape, dtype)
 
 	def synchronize(self):
 		if self.gpu:
@@ -80,7 +101,7 @@ class Environment:
 		if not self.gpu:
 			return buf.reshape(shape)
 
-		gpu_buf = Buffer(self.context, shape, buf.dtype)
+		gpu_buf = _Buffer(self.context, shape, buf.dtype)
 		cl.enqueue_write_buffer(self.queue, gpu_buf, buf).wait()
 		return gpu_buf
 
@@ -98,61 +119,8 @@ class Environment:
 		else:
 			return "cpu"
 
-	def compileSource(self, source, **kwds):
-		"""
-		Adds helper functions and defines to given source, renders it,
-		compiles and returns Cuda module.
-		"""
-
-		kernel_defines = Template("""
-			//#define complex_mul_scalar(a, b) ${p.complex.ctr}((a).x * (b), (a).y * (b))
-			//#define complex_mul(a, b) ${p.complex.ctr}(mad(-(a).y, (b).y, (a).x * (b).x), mad((a).y, (b).x, (a).x * (b).y))
-			//#define squared_abs(a) ((a).x * (a).x + (a).y * (a).y)
-
-			${p.complex.name} complex_mul_scalar(${p.complex.name} a, ${p.scalar.name} b)
-			{
-				return ${p.complex.ctr}(a.x * b, a.y * b);
-			}
-
-			${p.complex.name} complex_mul(${p.complex.name} a, ${p.complex.name} b)
-			{
-				return ${p.complex.ctr}(mad(-a.y, b.y, a.x * b.x), mad(a.y, b.x, a.x * b.y));
-			}
-
-			${p.scalar.name} squared_abs(${p.complex.name} a)
-			{
-				return a.x * a.x + a.y * a.y;
-			}
-
-			${p.complex.name} conj(${p.complex.name} a)
-			{
-				return ${p.complex.ctr}(a.x, -a.y);
-			}
-
-			${p.complex.name} cexp(${p.complex.name} a)
-			{
-				${p.scalar.name} module = exp(a.x);
-				${p.scalar.name} angle = a.y;
-				return ${p.complex.ctr}(module * native_cos(angle), module * native_sin(angle));
-			}
-
-			float get_float_from_image(read_only image3d_t image, int i, int j, int k)
-			{
-				sampler_t sampler = CLK_FILTER_NEAREST | CLK_ADDRESS_CLAMP |
-					CLK_NORMALIZED_COORDS_FALSE;
-
-				uint4 image_data = read_imageui(image, sampler,
-					(int4)(i, j, k, 0));
-
-				return *((float*)&image_data);
-			}
-
-			#define DEFINE_INDEXES int i = get_global_id(0), j = get_global_id(1), k = get_global_id(2), index = (k << ${c.nvx_pow + c.nvy_pow}) + (j << ${c.nvx_pow}) + i
-		""")
-
-		defines = kernel_defines.render(p=self.precision, c=self.constants)
-		kernel_src = Template(source).render(p=self.precision, c=self.constants, **kwds)
-		return cl.Program(self.context, defines + kernel_src).build(options='-cl-mad-enable')
+	def compile(self, source, constants, **kwds):
+		return _ProgramWrapper(self.context, self.queue, source, constants, **kwds)
 
 
 class PairedCalculation:
@@ -174,18 +142,83 @@ class PairedCalculation:
 				self.__dict__[name] = getattr(self, attr)
 
 
-class FunctionWrapper:
+class _ProgramWrapper:
+
+	def __init__(self, context, queue, source, constants, **kwds):
+		# program and kernels are tied to queue, which is not exactly logical,
+		# but works for our purposes and makes code simpler (because program uses
+		# single queue for all calculations anyway)
+		self.queue = queue
+		self._compile(context, source, constants, **kwds)
+
+	def _compile(self, context, source, constants, **kwds):
+		"""
+		Adds helper functions and defines to given source, renders it,
+		compiles and saves OpenCL program object.
+		"""
+
+		kernel_defines = Template("""
+			${c.complex.name} complex_mul_scalar(${c.complex.name} a, ${c.scalar.name} b)
+			{
+				return ${c.complex.ctr}(a.x * b, a.y * b);
+			}
+
+			${c.complex.name} complex_mul(${c.complex.name} a, ${c.complex.name} b)
+			{
+				return ${c.complex.ctr}(mad(-a.y, b.y, a.x * b.x), mad(a.y, b.x, a.x * b.y));
+			}
+
+			${c.scalar.name} squared_abs(${c.complex.name} a)
+			{
+				return a.x * a.x + a.y * a.y;
+			}
+
+			${c.complex.name} conj(${c.complex.name} a)
+			{
+				return ${c.complex.ctr}(a.x, -a.y);
+			}
+
+			${c.complex.name} cexp(${c.complex.name} a)
+			{
+				${c.scalar.name} module = exp(a.x);
+				${c.scalar.name} angle = a.y;
+				return ${c.complex.ctr}(module * native_cos(angle), module * native_sin(angle));
+			}
+
+			float get_float_from_image(read_only image3d_t image, int i, int j, int k)
+			{
+				sampler_t sampler = CLK_FILTER_NEAREST | CLK_ADDRESS_CLAMP |
+					CLK_NORMALIZED_COORDS_FALSE;
+
+				uint4 image_data = read_imageui(image, sampler,
+					(int4)(i, j, k, 0));
+
+				return *((float*)&image_data);
+			}
+
+			#define DEFINE_INDEXES int i = get_global_id(0), j = get_global_id(1), k = get_global_id(2), index = (k << ${c.nvx_pow + c.nvy_pow}) + (j << ${c.nvx_pow}) + i
+		""")
+
+		defines = kernel_defines.render(c=constants)
+		kernel_src = Template(source).render(c=constants, **kwds)
+		self._program = cl.Program(context, defines + kernel_src).build(options='-cl-mad-enable')
+
+	def __getattr__(self, name):
+		return _FunctionWrapper(getattr(self._program, name), self.queue)
+
+
+class _FunctionWrapper:
 	"""
 	Wrapper for elementwise CL kernel. Caches prepared functions for
 	calls with same element number.
 	"""
 
-	def __init__(self, kernel):
+	def __init__(self, kernel, queue):
 		self._kernel = kernel
+		self.queue = queue
 
-	def __call__(self, queue, shape, *args):
-		shape = tuple(reversed(shape))
-		self._kernel(queue, shape, *args)
+	def __call__(self, shape, *args):
+		self._kernel(self.queue, tuple(reversed(shape)), *args)
 
 
 def log2(x):
@@ -201,29 +234,29 @@ def log2(x):
 			res += pow
 	return res
 
-def getPotentials(env):
+def getPotentials(env, constants):
 	"""Returns array with values of external potential energy."""
 
-	potentials = numpy.empty(env.constants.shape, dtype=env.precision.scalar.dtype)
+	potentials = numpy.empty(constants.shape, dtype=constants.scalar.dtype)
 
-	for i in xrange(env.constants.nvx):
-		for j in xrange(env.constants.nvy):
-			for k in xrange(env.constants.nvz):
-				x = -env.constants.xmax + i * env.constants.dx
-				y = -env.constants.ymax + j * env.constants.dy
-				z = -env.constants.zmax + k * env.constants.dz
+	for i in xrange(constants.nvx):
+		for j in xrange(constants.nvy):
+			for k in xrange(constants.nvz):
+				x = -constants.xmax + i * constants.dx
+				y = -constants.ymax + j * constants.dy
+				z = -constants.zmax + k * constants.dz
 
 				potentials[k, j, i] = (x * x + y * y + z * z /
-					(env.constants.lambda_ * env.constants.lambda_)) / 2
+					(constants.lambda_ * constants.lambda_)) / 2
 
 	if not env.gpu:
 		return potentials
 
-	return cl.Image(env.context, cl.mem_flags.READ_ONLY | cl.mem_flags.USE_HOST_PTR,
+	return cl.Image(env.getContext(), cl.mem_flags.READ_ONLY | cl.mem_flags.USE_HOST_PTR,
 		cl.ImageFormat(cl.channel_order.R, cl.channel_type.UNSIGNED_INT32),
-		shape=tuple(reversed(env.constants.shape)), hostbuf=potentials)
+		shape=tuple(reversed(constants.shape)), hostbuf=potentials)
 
-def getKVectors(env):
+def getKVectors(env, constants):
 	"""Returns array with values of k-space vectors."""
 
 	def kvalue(i, dk, N):
@@ -232,21 +265,21 @@ def getKVectors(env):
 		else:
 			return dk * i
 
-	kvectors = numpy.empty(env.constants.shape, dtype=env.precision.scalar.dtype)
+	kvectors = numpy.empty(constants.shape, dtype=constants.scalar.dtype)
 
-	for i in xrange(env.constants.nvx):
-		for j in xrange(env.constants.nvy):
-			for k in xrange(env.constants.nvz):
+	for i in xrange(constants.nvx):
+		for j in xrange(constants.nvy):
+			for k in xrange(constants.nvz):
 
-				kx = kvalue(i, env.constants.dkx, env.constants.nvx)
-				ky = kvalue(j, env.constants.dky, env.constants.nvy)
-				kz = kvalue(k, env.constants.dkz, env.constants.nvz)
+				kx = kvalue(i, constants.dkx, constants.nvx)
+				ky = kvalue(j, constants.dky, constants.nvy)
+				kz = kvalue(k, constants.dkz, constants.nvz)
 
 				kvectors[k, j, i] = (kx * kx + ky * ky + kz * kz) / 2
 
 	if not env.gpu:
 		return kvectors
 
-	return cl.Image(env.context, cl.mem_flags.READ_ONLY | cl.mem_flags.USE_HOST_PTR,
+	return cl.Image(env.getContext(), cl.mem_flags.READ_ONLY | cl.mem_flags.USE_HOST_PTR,
 		cl.ImageFormat(cl.channel_order.R, cl.channel_type.UNSIGNED_INT32),
-		shape=tuple(reversed(env.constants.shape)), hostbuf=kvectors)
+		shape=tuple(reversed(constants.shape)), hostbuf=kvectors)

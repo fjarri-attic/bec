@@ -5,21 +5,26 @@ import math
 from globals import Environment
 from model import Model
 from constants import Constants
-from evolution import TwoComponentBEC
-import typenames
+from evolution import TwoComponentEvolution, Pulse
+from ground_state import GPEGroundState
 
 from collectors import *
 
 from datahelpers import XYData, HeightmapData, XYPlot, HeightmapPlot
 
-m = Model()
-constants = Constants(m)
-env = Environment(True, typenames.single_precision, constants)
-bec = TwoComponentBEC(env)
+constants = Constants(Model(), double_precision=False)
+env = Environment(gpu=True)
+evolution = TwoComponentEvolution(env, constants)
+a = VisibilityCollector(env, constants, verbose=True)
+b = ParticleNumberCollector(env, constants, verbose=True)
 
-a = VisibilityCollector(env, verbose=True)
+gs = GPEGroundState(env, constants)
+pulse = Pulse(env, constants)
+
+cloud = gs.create()
+pulse.halfPi(cloud)
 t1 = time.time()
-bec.runEvolution(0.099, [a], callback_dt=0.01)
+evolution.run(cloud, 0.0399, callbacks=[a, b], callback_dt=0.01)
 env.synchronize()
 t2 = time.time()
 print "Time spent: " + str(t2 - t1) + " s"

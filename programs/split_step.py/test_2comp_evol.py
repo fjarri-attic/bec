@@ -5,31 +5,29 @@ import math
 from globals import Environment
 from model import Model
 from constants import Constants
-from evolution import TwoComponentBEC
+from evolution import TwoComponentEvolution
+from ground_state import GPEGroundState
 import typenames
 
 from collectors import *
 
 from datahelpers import XYData, HeightmapData, XYPlot, HeightmapPlot, EvolutionPlot
 
-m = Model()
-constants = Constants(m)
-env = Environment(True, typenames.single_precision, constants)
-bec = TwoComponentBEC(env)
+env = Environment(gpu=True)
+constants = Constants(Model(N=150000), double_precision=False)
 
-e = EqualParticleNumberCondition(env)
-t_to_equality = bec.runEvolution(0.2, [e])
-env.synchronize()
+cloud = GPEGroundState(env, constants).create()
+evolution = TwoComponentEvolution(env, constants)
+pulse = Pulse(env, constants)
 
+pulse.halfPi(cloud)
+t_to_equality = evolution.run(cloud, time=0.05, callbacks=[EqualParticleNumberCondition(env, constants)])
 print t_to_equality
+pulse.apply(cloud, theta=1.5*math.pi, phi=0)
 
-a = AxialProjectionCollector(env, do_pulse=False)
-p = ParticleNumberCollector(env, verbose=True, do_pulse=False)
-sc = SliceCollector(env)
-sp = SurfaceProjectionCollector(env)
+sp = SurfaceProjectionCollector(env, constants)
+evolution.run(cloud, time=0.299, callbacks=[sp], callback_dt=0.01)
 
-bec._pulse.apply(bec._a, bec._b, 3.0 * math.pi / 2.0, 0)
-bec.runEvolution(0.199, [sp], callback_dt=0.01)
 env.synchronize()
 
 times, a_xy, a_yz, b_xy, b_yz = sp.getData()
@@ -51,4 +49,4 @@ for name, dataset in (('testa.pdf', a_yz), ('testb.pdf', b_yz)):
 			ymin=-env.constants.ymax, ymax=env.constants.ymax,
 			zmin=0, zmax=400))
 
-	EvolutionPlot(hms, shape=(5, 4)).save(name)
+	EvolutionPlot(hms, shape=(6, 5)).save(name)
