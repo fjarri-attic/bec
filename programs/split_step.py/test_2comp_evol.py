@@ -15,7 +15,7 @@ from datahelpers import XYData, HeightmapData, XYPlot, HeightmapPlot, EvolutionP
 env = Environment(gpu=True)
 constants = Constants(Model(N=150000), double_precision=False)
 
-cloud = GPEGroundState(env, constants).create()
+cloud = GPEGroundState(env, constants).createCloud()
 evolution = TwoComponentEvolution(env, constants)
 pulse = Pulse(env, constants)
 

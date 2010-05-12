@@ -19,7 +19,7 @@ gs = GPEGroundState(env, constants)
 sp = SliceCollector(env, constants, do_pulse=False)
 
 # experiment
-cloud = gs.create(two_component=True)
+cloud = gs.createCloud(two_component=True)
 sp(0, cloud)
 
 # render

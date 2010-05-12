@@ -313,13 +313,12 @@ class GPEGroundState(PairedCalculation):
 		if state2 is not None:
 			self._plan.execute(state2.data, inverse=True)
 
-	def create(self, two_component=False):
+	def _create(self, two_component=False, comp=COMP_1_minus1):
 
-		state1 = self._tf_gs.create()
+		assert not two_component or comp == COMP_1_minus1
+		state1 = self._tf_gs.create(comp=comp)
 		state2 = self._tf_gs.create(comp=COMP_2_1) if two_component else None
-
-		cloud = TwoComponentCloud(self._env, self._constants, a=state1, b=state2)
-
+		return state1, state2
 		stats = self._statistics
 		E = 0
 
@@ -377,4 +376,12 @@ class GPEGroundState(PairedCalculation):
 				" E = " + str(stats.countEnergy(state1)) + \
 				" mu = " + str(stats.countMu(state1))
 
+		return state1, state2
+
+	def createCloud(self, two_component=False):
+		state1, state2 = self._create(two_component=two_component)
 		return TwoComponentCloud(self._env, self._constants, a=state1, b=state2)
+
+	def createState(self, comp=COMP_1_minus1):
+		state1, state2 = self._create(two_component=False, comp=comp)
+		return state1

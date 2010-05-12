@@ -21,7 +21,7 @@ pulse = Pulse(env, constants)
 a = AxialProjectionCollector(env, constants)
 
 # experiment
-cloud = gs.create()
+cloud = gs.createCloud()
 pulse.halfPi(cloud)
 t1 = time.time()
 evolution.run(cloud, time=0.3, callbacks=[a], callback_dt=0.005)
