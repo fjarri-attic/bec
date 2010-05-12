@@ -25,8 +25,8 @@ t_to_equality = evolution.run(cloud, time=0.05,
 print t_to_equality
 pulse.apply(cloud, theta=1.5*math.pi, phi=0)
 
-sp = SurfaceProjectionCollector(env, constants)
 evolution.run(cloud, time=0.299, callbacks=[sp], callback_dt=0.01)
+sp = SurfaceProjectionCollector(env, constants, do_pulse=False)
 
 env.synchronize()
 
