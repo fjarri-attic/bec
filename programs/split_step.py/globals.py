@@ -4,14 +4,15 @@ Auxiliary functions and classes.
 
 try:
 	import pyopencl as cl
+	clBuffer = cl.Buffer
 except:
-	pass
+	# when pyopencl is unavailable, buffer will not work anyway
+	clBuffer = object
 
 from mako.template import Template
 import numpy
 
-
-class _Buffer(cl.Buffer):
+class _Buffer(clBuffer):
 	"""
 	Wrapper class for OpenCL buffer.
 	Mimics some numpy array properties.
@@ -29,7 +30,7 @@ class _Buffer(cl.Buffer):
 
 		self.nbytes = self.itemsize * self.size
 
-		cl.Buffer.__init__(self, context, cl.mem_flags.READ_WRITE, size=self.nbytes)
+		clBuffer.__init__(self, context, cl.mem_flags.READ_WRITE, size=self.nbytes)
 
 		self.shape = shape
 		self.dtype = dtype
