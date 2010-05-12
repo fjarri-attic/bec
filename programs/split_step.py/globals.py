@@ -29,11 +29,8 @@ class _Buffer(cl.Buffer):
 
 		self.nbytes = self.itemsize * self.size
 
-		try:
-			cl.Buffer.__init__(self, context, cl.mem_flags.READ_WRITE, size=self.nbytes)
-		except:
-			print context, self.nbytes
-			raise
+		cl.Buffer.__init__(self, context, cl.mem_flags.READ_WRITE, size=self.nbytes)
+
 		self.shape = shape
 		self.dtype = dtype
 
