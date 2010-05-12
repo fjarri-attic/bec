@@ -40,16 +40,17 @@ class ParticleNumberCollector:
 		return numpy.array(self.times), Na, Nb, Na + Nb
 
 
-class EqualParticleNumberCondition:
+class ParticleNumberCondition:
 
-	def __init__(self, env, constants, verbose=False, do_pulse=True):
-		self.stats = ParticleStatistics(env, constants)
-		self.verbose = verbose
+	def __init__(self, env, constants, verbose=False, do_pulse=True, ratio=0.5):
+		self._stats = ParticleStatistics(env, constants)
+		self._verbose = verbose
 		self._pulse = Pulse(env, constants)
 		self._do_pulse = do_pulse
+		self._ratio = ratio
 
-		self.previous_Na = None
-		self.previous_half = None
+		self._previous_Na = None
+		self._previous_ratio = None
 
 	def __call__(self, t, cloud):
 		cloud = cloud.copy()
@@ -57,19 +58,19 @@ class EqualParticleNumberCondition:
 		if self._do_pulse:
 			self._pulse.halfPi(cloud)
 
-		Na = self.stats.countParticles(cloud.a)
-		Nb = self.stats.countParticles(cloud.b)
-		print t, Na, Nb
-		half = (Na + Nb) / 2
+		Na = self._stats.countParticles(cloud.a)
+		Nb = self._stats.countParticles(cloud.b)
 
-		if self.previous_Na is None:
-			self.previous_Na = Na
+		ratio = Na / (Na + Nb)
 
-		if self.previous_half is None:
-			self.previous_half = half
+		#if self._verbose:
+		print "Particle ratio: " + str((t, Na, Nb, ratio))
 
-		if (Na > half and self.previous_Na < self.previous_half) or \
-				(Na < half and self.previous_Na > self.previous_half):
+		if self._previous_ratio is None:
+			self._previous_ratio = ratio
+
+		if (ratio > self._ratio and self._previous_ratio < self._ratio) or \
+				(ratio < self._ratio and self._previous_ratio > self._ratio):
 			raise TerminateEvolution()
 
 class VisibilityCollector:

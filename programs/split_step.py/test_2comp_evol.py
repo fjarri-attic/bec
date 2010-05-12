@@ -20,7 +20,8 @@ evolution = TwoComponentEvolution(env, constants)
 pulse = Pulse(env, constants)
 
 pulse.halfPi(cloud)
-t_to_equality = evolution.run(cloud, time=0.05, callbacks=[EqualParticleNumberCondition(env, constants)])
+t_to_equality = evolution.run(cloud, time=0.05,
+	callbacks=[ParticleNumberCondition(env, constants, ratio=0.15, verbose=True)])
 print t_to_equality
 pulse.apply(cloud, theta=1.5*math.pi, phi=0)
 
