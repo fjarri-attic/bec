@@ -244,7 +244,7 @@ class Sum:
 
 	def replaceRhoWithW(self):
 		assert self.isFlat()
-		return Sum([term.replaceRhoWithW() for term in self.terms]).flatten()
+		return Sum([term.replaceRhoWithW() for term in self.terms])
 
 	def group(self):
 		assert self.isFlat()
@@ -264,6 +264,24 @@ class Sum:
 		assert self.isFlat()
 
 		return Sum([term.sortFactors() for term in self.terms])
+
+	def dropHighOrderDerivatives(self, cutoff):
+		assert self.isFlat()
+		assert self.hasDerivativesInFront()
+
+		new_terms = []
+		for term in self.terms:
+			order = 0
+			for factor in term.factors:
+				if factor in DERIVATIVES:
+					order += 1
+				else:
+					break
+
+			if order <= cutoff:
+				new_terms.append(term)
+
+		return Sum(new_terms)
 
 
 # Factors
@@ -290,6 +308,8 @@ x2 = Term(coeff=-1, factors=[A_PLUS, A, RHO])
 x3 = Term(coeff=-1, factors=[RHO, A_PLUS, A])
 s = Sum([x1, x2, x3])
 
-s = s.replaceRhoWithW().flatten().derivativesToFront().sortFactors().group()
+print s.replaceRhoWithW()
+
+s = s.replaceRhoWithW().flatten().derivativesToFront().sortFactors().group().dropHighOrderDerivatives(2)
 
 print str(s)
