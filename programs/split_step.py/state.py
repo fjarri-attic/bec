@@ -412,7 +412,7 @@ class ParticleStatistics(PairedCalculation):
 			N = self.countParticles(state1) + self.countParticles(state2)
 
 		return self._countStateTwoComponent(state1, state2, 1, N) + \
-			self._countStateTwoComponent(state1, state2, 1, N)
+			self._countStateTwoComponent(state2, state1, 1, N)
 
 
 class BlochSphereProjection(PairedCalculation):
