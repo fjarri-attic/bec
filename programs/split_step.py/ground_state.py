@@ -66,7 +66,7 @@ class TFGroundState(PairedCalculation):
 		res = State(self._env, self._constants, comp=comp)
 
 		g = self._constants.g[(comp, comp)]
-		mu = self._constants.mu[comp]
+		mu = self._constants.muTF(comp=comp, N=N)
 
 		self._create(res.data, g, mu)
 		return res

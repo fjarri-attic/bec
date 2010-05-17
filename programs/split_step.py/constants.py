@@ -70,16 +70,16 @@ class Constants:
 		self.g12 = 4 * math.pi * model.a12 * model.a0 / l_rho
 		self.g22 = 4 * math.pi * model.a22 * model.a0 / l_rho
 
-		self.N = model.N
-
-		# TF-approximated chemical potentials
-		mu_func = lambda g: self.scalar.cast((15.0 * self.N * g / (16.0 * math.pi * self.lambda_ * math.sqrt(2.0))) ** 0.4)
-		self.mu = {
-			COMP_1_minus1: mu_func(self.g11),
-			COMP_2_1: mu_func(self.g22)
+		self.g = {
+			(COMP_1_minus1, COMP_1_minus1): self.g11,
+			(COMP_1_minus1, COMP_2_1): self.g12,
+			(COMP_2_1, COMP_1_minus1): self.g12,
+			(COMP_2_1, COMP_2_1): self.g22
 		}
 
-		self.xmax = model.border * math.sqrt(2.0 * self.mu[COMP_1_minus1])
+		self.N = model.N
+
+		self.xmax = model.border * math.sqrt(2.0 * self.muTF(comp=COMP_1_minus1))
 		self.ymax = self.xmax
 		self.zmax = self.xmax * self.lambda_
 
@@ -105,14 +105,23 @@ class Constants:
 		self.ensembles = model.ensembles
 		self.ens_shape = (self.ensembles * self.nvz, self.nvy, self.nvx)
 
-		for attr in dir(self):
-			val = getattr(self, attr)
-			if isinstance(val, float):
-				self.__dict__[attr] = self.scalar.cast(val)
+		def recursiveCast(cast, obj):
+			if isinstance(obj, dict):
+				return dict([(key, recursiveCast(cast, obj[key])) for key in obj])
+			elif isinstance(obj, list):
+				return [recursiveCast(cast, elem) for elem in obj]
+			elif isinstance(obj, float):
+				return cast(obj)
+			else:
+				return obj
 
-		self.g = {
-			(COMP_1_minus1, COMP_1_minus1): self.g11,
-			(COMP_1_minus1, COMP_2_1): self.g12,
-			(COMP_2_1, COMP_1_minus1): self.g12,
-			(COMP_2_1, COMP_2_1): self.g22
-		}
+		self.__dict__ = recursiveCast(self.scalar.cast, self.__dict__)
+
+	def muTF(self, comp=COMP_1_minus1, N=None):
+		"""get TF-approximated chemical potential"""
+		if N is None:
+			N = self.N
+
+		g = self.g[(comp, comp)]
+
+		return self.scalar.cast((15.0 * N * g / (16.0 * math.pi * self.lambda_ * math.sqrt(2.0))) ** 0.4)
