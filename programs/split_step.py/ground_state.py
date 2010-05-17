@@ -239,7 +239,7 @@ class GPEGroundState(PairedCalculation):
 
 		if state2 is None:
 			a0 = state1.data.copy()
-			g = self._constants.g[(state1.type, state1.type)]
+			g = self._constants.g[(state1.comp, state1.comp)]
 
 			for iter in xrange(self._constants.itmax):
 				n = numpy.abs(state1.data) ** 2
@@ -250,12 +250,12 @@ class GPEGroundState(PairedCalculation):
 			a0 = state1.data.copy()
 			b0 = state2.data.copy()
 
-			type1 = state1.type
-			type2 = state2.type
+			comp1 = state1.comp
+			comp2 = state2.comp
 			g = self._constants.g
-			g11 = g[(type1, type1)]
-			g12 = g[(type1, type2)]
-			g22 = g[(type2, type2)]
+			g11 = g[(comp1, comp1)]
+			g12 = g[(comp1, comp2)]
+			g22 = g[(comp2, comp2)]
 
 			for iter in xrange(self._constants.itmax):
 				na = numpy.abs(state1.data) ** 2
@@ -275,15 +275,15 @@ class GPEGroundState(PairedCalculation):
 
 	def _gpu__xpropagate(self, state1, state2):
 		if state2 is None:
-			g = self._constants.g[(state1.type, state1.type)]
+			g = self._constants.g[(state1.comp, state1.comp)]
 			self._xpropagate_func(state1.shape, state1.data, self._potentials, g)
 		else:
-			type1 = state1.type
-			type2 = state2.type
+			comp1 = state1.comp
+			comp2 = state2.comp
 			g = self._constants.g
-			g11 = g[(type1, type1)]
-			g12 = g[(type1, type2)]
-			g22 = g[(type2, type2)]
+			g11 = g[(comp1, comp1)]
+			g12 = g[(comp1, comp2)]
+			g22 = g[(comp2, comp2)]
 
 			self._xpropagate2_func(state1.shape, state1.data, state2.data, self._potentials, g11, g22, g12)
 

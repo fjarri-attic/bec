@@ -184,7 +184,7 @@ class ParticleStatistics(PairedCalculation):
 		n = numpy.abs(data) ** 2
 		xk = data * kdata
 
-		g = self._constants.g[(state.type, state.type)]
+		g = self._constants.g[(state.comp, state.comp)]
 
 		for e in xrange(batch):
 			start = e * self._constants.cells
@@ -199,8 +199,8 @@ class ParticleStatistics(PairedCalculation):
 		n = numpy.abs(state.data) ** 2
 		second_n = numpy.abs(second_state.data) ** 2
 
-		g = self._constants.g[(state.type, state.type)]
-		interaction_g = self._constants.g[(state.type, second_state.type)]
+		g = self._constants.g[(state.comp, state.comp)]
+		interaction_g = self._constants.g[(state.comp, second_state.comp)]
 
 		batch = state.size / self._constants.cells
 
@@ -341,7 +341,7 @@ class ParticleStatistics(PairedCalculation):
 		res = self._env.allocate(state.shape, dtype=self._constants.scalar.dtype)
 		self._plan.execute(state.data, kstate, inverse=True, batch=state.size / self._constants.cells)
 		func(state.shape, res, state.data, kstate, self._potentials, self._kvectors,
-			self._constants.g[(state.type, state.type)])
+			self._constants.g[(state.comp, state.comp)])
 		return self._reduce(res) / (state.size / self._constants.cells) * self._constants.dV / N
 
 	def _gpu__countStateTwoComponent(self, state1, state2, coeff, N):
@@ -353,9 +353,9 @@ class ParticleStatistics(PairedCalculation):
 		self._plan.execute(state2.data, kstate2, inverse=True, batch=state2.size / self._constants.cells)
 
 		g = self._constants.g
-		g11 = g[(state1.type, state1.type)]
-		g22 = g[(state2.type, state2.type)]
-		g12 = g[(state1.type, state2.type)]
+		g11 = g[(state1.comp, state1.comp)]
+		g22 = g[(state2.comp, state2.comp)]
+		g12 = g[(state1.comp, state2.comp)]
 
 		if coeff == 1:
 			func = self._calculate_mu_2states
