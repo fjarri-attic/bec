@@ -36,6 +36,9 @@ class State(PairedCalculation):
 	def _cpu__fillWithZeros(self):
 		self.data = numpy.zeros(self.shape, dtype=self.dtype)
 
+	def _cpu_fillWithOnes(self):
+		self.data = numpy.ones(self.shape, dtype=self.dtype)
+
 	def _gpu__prepare(self):
 		kernel_template = """
 			<%!
@@ -46,6 +49,12 @@ class State(PairedCalculation):
 			{
 				DEFINE_INDEXES;
 				res[index] = ${c.complex.ctr}(0, 0);
+			}
+
+			__kernel void fillWithOnes(__global ${c.complex.name} *res)
+			{
+				DEFINE_INDEXES;
+				res[index] = ${c.complex.ctr}(1, 0);
 			}
 
 			// Initialize ensembles with steady state + noise for Wigner quasiprobability function
@@ -62,6 +71,7 @@ class State(PairedCalculation):
 
 		self._program = self._env.compile(kernel_template, self._constants)
 		self._zero_memory = self._program.zeroMemory
+		self._ones = self._program.fillWithOnes
 		self._initialize = self._program.initializeEnsembles
 
 	def _gpu__fillWithZeros(self):
@@ -73,6 +83,9 @@ class State(PairedCalculation):
 		cl.enqueue_write_buffer(self._env.queue, randoms_gpu, randoms)
 
 		self._initalize(new_data.ens_shape, self.data, randoms_gpu)
+
+	def _gpu_fillWithOnes(self):
+		self._ones(self.shape, self.data)
 
 	def _cpu__toWigner(self, new_data, randoms):
 		coeff = 1.0 / math.sqrt(self._constants.dV)
