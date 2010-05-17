@@ -318,7 +318,7 @@ class GPEGroundState(PairedCalculation):
 		assert not two_component or comp == COMP_1_minus1
 		state1 = self._tf_gs.create(comp=comp)
 		state2 = self._tf_gs.create(comp=COMP_2_1) if two_component else None
-		return state1, state2
+
 		stats = self._statistics
 		E = 0
 
