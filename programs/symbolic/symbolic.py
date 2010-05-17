@@ -11,13 +11,23 @@ ALPHA_STAR = "alpha*"
 D_ALPHA = "d/d_alpha" # partial derivative d/da
 D_ALPHA_STAR = "d/d_alpha*"
 
-GAMMA = "G"
+X = "x"
+Y = "y"
+D_X = "d/dx"
+D_Y = "d/dy"
 
-CONSTANTS = [GAMMA]
+GAMMA = "G"
+GAMMA_SMALL = "g"
+
+CONSTANTS = [GAMMA, GAMMA_SMALL]
+VARIABLES = [ALPHA, ALPHA_STAR, X, Y]
 
 DERIVATIVES = {
 	D_ALPHA: ALPHA,
-	D_ALPHA_STAR: ALPHA_STAR
+	D_ALPHA_STAR: ALPHA_STAR,
+
+	D_X: X,
+	D_Y: Y
 }
 
 
@@ -192,7 +202,7 @@ def derivativesToFront(obj):
 	else:
 		new_factors = term.factors[:pos-1] + [der, var] + term.factors[pos+1:]
 
-	return Term(term.coeff, new_factors)
+	return derivativesToFront(termToFlatSum(Term(term.coeff, new_factors)))
 
 def replaceRhoWithW(obj):
 	"""
@@ -253,18 +263,15 @@ def sortFactors(obj):
 		if elem in CONSTANTS:
 			return 1 + CONSTANTS.index(elem) / 10.0
 
-		if elem in [ALPHA, ALPHA_STAR, K]:
+		if elem in VARIABLES + [K]:
 			return 2
 
 	def key2(elem):
 		if elem in DERIVATIVES or elem in CONSTANTS:
 			return 0
 
-		if elem == ALPHA:
-			return 1
-
-		if elem == ALPHA_STAR:
-			return 2
+		if elem in VARIABLES:
+			return VARIABLES.index(elem) + 1
 
 	factors = sorted(term.factors, key=key1)
 
@@ -293,7 +300,7 @@ def groupTerms(sum):
 
 def dropHighOrderDerivatives(sum, cutoff):
 	"""Flat sum -> Flat sum"""
-	assert self.hasDerivativesInFront()
+	assert sum.hasDerivativesInFront()
 
 	new_terms = []
 	for term in sum.terms:
@@ -309,11 +316,72 @@ def dropHighOrderDerivatives(sum, cutoff):
 
 	return Sum(new_terms)
 
+def replace(obj, old, new):
+	if isinstance(obj, Sum):
+		new_terms = []
+		for term in obj.terms:
+			new_terms.append(replace(term, old, new))
+		return Sum(new_terms)
+
+	elif isinstance(obj, Term):
+		new_factors = []
+		for factor in obj.factors:
+			new_factors.append(replace(factor, old, new))
+
+		return Term(obj.coeff, new_factors)
+
+	else:
+		if obj == old:
+			return new
+		else:
+			return obj
+
+
 def process(sum):
-	return groupTerms(sortFactors(flattenSum(derivativesToFront(flattenSum(replaceRhoWithW(flattenSum(sum)))))))
+	sum = flattenSum(sum)
+	sum = replaceRhoWithW(sum)
+	sum = flattenSum(sum)
+	sum = derivativesToFront(sum)
+	sum = flattenSum(sum)
+	sum = sortFactors(sum)
+	sum = groupTerms(sum)
+	sum = dropHighOrderDerivatives(sum, 2)
+	return sum
+
+def replaceAlphaWithXY(sum):
+	sum = replace(sum, ALPHA, Sum([X, Term(1j, [Y])]))
+	sum = replace(sum, ALPHA_STAR, Sum([X, Term(-1j, [Y])]))
+	sum = replace(sum, D_ALPHA, Term(0.5, [Sum([D_X, Term(-1j, [D_Y])])]))
+	sum = replace(sum, D_ALPHA_STAR, Term(0.5, [Sum([D_X, Term(1j, [D_Y])])]))
+	return sum
+
+def processNoRho(sum):
+	sum = flattenSum(sum)
+	sum = derivativesToFront(sum)
+	sum = flattenSum(sum)
+	sum = sortFactors(sum)
+	sum = groupTerms(sum)
+	sum = dropHighOrderDerivatives(sum, 2)
+	return sum
+
 
 x1 = Term(2, [A, RHO, A_PLUS])
 x2 = Term(-1, [A_PLUS, A, RHO])
 x3 = Term(-1, [RHO, A_PLUS, A])
-s = Sum([x1, x2, x3])
-print process(s)
+losses1 = Term(0.5, [GAMMA_SMALL, Sum([x1, x2, x3])])
+
+h1 = Term(1, [A_PLUS, K, A])
+
+test = Sum([Term(1, [h1, RHO]), Term(-1, [RHO, h1])])
+s = process(test)
+print s
+s = processNoRho(replaceAlphaWithXY(s))
+print s
+
+h2 = Term(0.5, [GAMMA, A_PLUS, A_PLUS, A, A])
+h = Sum([h1, h2])
+
+h_comm = Sum([Term(-1j, [h, RHO]), Term(1j, [RHO, h])])
+full = Sum([h_comm, losses1])
+
+#print process(full)
