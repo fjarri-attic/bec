@@ -397,7 +397,7 @@ class ParticleStatistics(PairedCalculation):
 		if state1.type != PSI_FUNC or state2.type != PSI_FUNC:
 			raise NotImplementedError()
 
-		if N == None:
+		if N is None:
 			N = self.countParticles(state1) + self.countParticles(state2)
 
 		return self._countStateTwoComponent(state1, state2, 2, N) + \
@@ -408,7 +408,7 @@ class ParticleStatistics(PairedCalculation):
 		if state1.type != PSI_FUNC or state2.type != PSI_FUNC:
 			raise NotImplementedError()
 
-		if N == None:
+		if N is None:
 			N = self.countParticles(state1) + self.countParticles(state2)
 
 		return self._countStateTwoComponent(state1, state2, 1, N) + \
