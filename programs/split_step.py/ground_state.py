@@ -62,7 +62,7 @@ class TFGroundState(PairedCalculation):
 					e = mu - self._potentials[k, j, i]
 					data[k, j, i] = math.sqrt(max(e / g, 0))
 
-	def create(self, comp=COMP_1_minus1):
+	def create(self, comp=COMP_1_minus1, N=None):
 		res = State(self._env, self._constants, comp=comp)
 
 		g = self._constants.g[(comp, comp)]
@@ -313,11 +313,23 @@ class GPEGroundState(PairedCalculation):
 		if state2 is not None:
 			self._plan.execute(state2.data, inverse=True)
 
-	def _create(self, two_component=False, comp=COMP_1_minus1):
+	def _create(self, two_component=False, comp=COMP_1_minus1, ratio=0.5):
 
 		assert not two_component or comp == COMP_1_minus1
-		state1 = self._tf_gs.create(comp=comp)
-		state2 = self._tf_gs.create(comp=COMP_2_1) if two_component else None
+
+		desired_N1 = self._constants.N * ratio
+		desired_N2 = self._constants.N * (1 - ratio)
+
+		#state1 = self._tf_gs.create(comp=comp, N=desired_N1)
+		state1 = State(self._env, self._constants, comp=comp)
+		state1.fillWithOnes()
+
+		#state2 = self._tf_gs.create(comp=COMP_2_1, N=desired_N2) if two_component else None
+		if two_component:
+			state2 = State(self._env, self._constants, comp=COMP_2_1)
+			state2.fillWithOnes()
+		else:
+			state2 = None
 
 		stats = self._statistics
 		E = 0
@@ -346,13 +358,12 @@ class GPEGroundState(PairedCalculation):
 			if two_component:
 				N1 = stats.countParticles(state1)
 				N2 = stats.countParticles(state2)
-				c1 = math.sqrt(self._constants.N / (2 * N1))
-				c2 = math.sqrt(self._constants.N / (2 * N2))
+				c1 = math.sqrt(desired_N1 / N1)
+				c2 = math.sqrt(desired_N2 / N2)
 				self._renormalize(state1, state2, (c1, c2))
 			else:
 				N = stats.countParticles(state1)
 				self._renormalize(state1, state2, math.sqrt(self._constants.N / N))
-
 
 			E = new_E
 			if two_component:
@@ -378,8 +389,8 @@ class GPEGroundState(PairedCalculation):
 
 		return state1, state2
 
-	def createCloud(self, two_component=False):
-		state1, state2 = self._create(two_component=two_component)
+	def createCloud(self, two_component=False, ratio=0.5):
+		state1, state2 = self._create(two_component=two_component, ratio=ratio)
 		return TwoComponentCloud(self._env, self._constants, a=state1, b=state2)
 
 	def createState(self, comp=COMP_1_minus1):
