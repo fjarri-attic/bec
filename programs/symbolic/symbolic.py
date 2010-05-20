@@ -1,34 +1,123 @@
 from copy import deepcopy
 from itertools import product
 
-# Factors
-A = "a"
-A_PLUS = "a+"
-RHO = "rho"
-K = "K" # sum of kinetic and potential energy
-ALPHA = "alpha"
-ALPHA_STAR = "alpha*"
-D_ALPHA = "d/d_alpha" # partial derivative d/da
-D_ALPHA_STAR = "d/d_alpha*"
+class Atom:
 
-X = "x"
-Y = "y"
-D_X = "d/dx"
-D_Y = "d/dy"
+	def __init__(self, name, constant=False, operator=False, conjugate=False):
+		self._name = name
+		self._constant = constant
+		self._operator = operator
 
-GAMMA = "G"
-GAMMA_SMALL = "g"
+		self._differential_of = None
+		self._differential = None
+		self._corresponding_atom = None
+		self._conjugate_atom = None
+		self._conjugate = conjugate
 
-CONSTANTS = [GAMMA, GAMMA_SMALL]
-VARIABLES = [ALPHA, ALPHA_STAR, X, Y]
+	@staticmethod
+	def declareDifferential(atom, differential):
+		atom._differential = differential
+		differential._differential_of = atom
 
-DERIVATIVES = {
-	D_ALPHA: ALPHA,
-	D_ALPHA_STAR: ALPHA_STAR,
+	@staticmethod
+	def declareCorrespondence(operator, function):
+		operator._corresponding_atom = function
+		function._corresponding_atom = operator
 
-	D_X: X,
-	D_Y: Y
-}
+	@staticmethod
+	def declareConjugate(atom, other):
+		assert not atom.isConjugate()
+		assert other.isConjugate()
+		atom._conjugate_atom = other
+		other._conjugate_atom = atom
+
+	def correspondence(self):
+		assert self._corresponding_atom is not None
+		return self._corresponding_atom
+
+	def conjugate(self):
+		assert self._conjugate_atom is not None
+		return self._conjugate_atom
+
+	def differential(self):
+		assert self._differential is not None
+		return self._differential
+
+	def differentialOf(self):
+		assert self.isDifferential()
+		return self._differential_of
+
+	def isConjugate(self):
+		return self._conjugate
+
+	def isDifferential(self):
+		return self._differential_of is not None
+
+	def isOperator(self):
+		return self._operator
+
+	def isConstant(self):
+		return self._constant
+
+	def __str__(self):
+		return self._name
+
+	def __cmp__(self, other):
+		return cmp(self._name, other._name)
+
+	def __hash__(self):
+		return hash(self._name)
+
+
+# Atoms
+A = Atom("a", operator=True)
+A_PLUS = Atom("a+", operator=True, conjugate=True)
+RHO = Atom("rho", operator=True)
+
+PSI1_OP = Atom("psi1^", operator=True)
+PSI1_OP_PLUS = Atom("psi1^+", operator=True, conjugate=True)
+PSI2_OP = Atom("psi2^", operator=True)
+PSI2_OP_PLUS = Atom("psi2^+", operator=True, conjugate=True)
+
+ALPHA = Atom("alpha")
+ALPHA_STAR = Atom("alpha*", conjugate=True)
+PSI1 = Atom("psi1")
+PSI1_STAR = Atom("psi1*", conjugate=True)
+PSI2 = Atom("psi2")
+PSI2_STAR = Atom("psi2*", conjugate=True)
+
+D_ALPHA = Atom("d/dalpha")
+D_ALPHA_STAR = Atom("d/dalpha*", conjugate=True)
+D_PSI1 = Atom("d/dpsi1")
+D_PSI1_STAR = Atom("d/dpsi1*", conjugate=True)
+D_PSI2 = Atom("d/dpsi2")
+D_PSI2_STAR = Atom("d/dpsi2*", conjugate=True)
+
+GAMMA = Atom("G", constant=True)
+GAMMA1_SMALL = Atom("g1", constant=True)
+GAMMA2_SMALL = Atom("g2", constant=True)
+GAMMA3_SMALL = Atom("g3", constant=True)
+
+Atom.declareCorrespondence(A, ALPHA)
+Atom.declareCorrespondence(A_PLUS, ALPHA_STAR)
+Atom.declareCorrespondence(PSI1_OP, PSI1)
+Atom.declareCorrespondence(PSI1_OP_PLUS, PSI1_STAR)
+Atom.declareCorrespondence(PSI2_OP, PSI2)
+Atom.declareCorrespondence(PSI2_OP_PLUS, PSI2_STAR)
+
+Atom.declareDifferential(ALPHA, D_ALPHA)
+Atom.declareDifferential(ALPHA_STAR, D_ALPHA_STAR)
+Atom.declareDifferential(PSI1, D_PSI1)
+Atom.declareDifferential(PSI1_STAR, D_PSI1_STAR)
+Atom.declareDifferential(PSI2, D_PSI2)
+Atom.declareDifferential(PSI2_STAR, D_PSI2_STAR)
+
+Atom.declareConjugate(A, A_PLUS)
+Atom.declareConjugate(PSI1_OP, PSI1_OP_PLUS)
+Atom.declareConjugate(PSI2_OP, PSI2_OP_PLUS)
+Atom.declareConjugate(ALPHA, ALPHA_STAR)
+Atom.declareConjugate(PSI1, PSI1_STAR)
+Atom.declareConjugate(PSI2, PSI2_STAR)
 
 
 class Term:
@@ -53,17 +142,17 @@ class Term:
 
 		return True
 
-	def firstPostfixDerivative(self):
+	def firstPostfixDifferential(self):
 		assert self.isSimple()
 
 		for i in xrange(len(self.factors) - 1):
-			if self.factors[i] not in DERIVATIVES and self.factors[i + 1] in DERIVATIVES:
+			if not self.factors[i].isDifferential() and self.factors[i + 1].isDifferential():
 				return i + 1
 
 		return -1
 
-	def hasDerivativesInFront(self):
-		return self.firstPostfixDerivative() == -1
+	def hasDifferentialsInFront(self):
+		return self.firstPostfixDifferential() == -1
 
 	def __str__(self):
 		if len(self.factors) == 0:
@@ -91,12 +180,12 @@ class Sum:
 
 		return True
 
-	def hasDerivativesInFront(self):
+	def hasDifferentialsInFront(self):
 		if not self.isFlat():
 			return False
 
 		for term in self.terms:
-			if not term.hasDerivativesInFront():
+			if not term.hasDifferentialsInFront():
 				return False
 
 		return True
@@ -137,7 +226,7 @@ def termToFlatSum(term):
 		elif isinstance(factor, Term):
 			sums.append(termToFlatSum(factor))
 		else:
-			sums.append(Sum([Term(1, [factor])]))
+			sums.append(Sum([Term(1.0, [factor])]))
 
 	# multiply
 	terms = []
@@ -167,7 +256,7 @@ def flattenSum(sum):
 		elif isinstance(term, Sum):
 			sums.append(flattenSum(term))
 		else:
-			sums.append(Sum([Term(1, [term])]))
+			sums.append(Sum([Term(1.0, [term])]))
 
 	terms = []
 	for sum in sums:
@@ -187,22 +276,36 @@ def derivativesToFront(obj):
 	term = obj
 	assert term.isSimple()
 
-	pos = term.firstPostfixDerivative()
+	pos = term.firstPostfixDifferential()
 
 	if pos == -1:
 		return Term(term.coeff, term.factors)
 
-	der = term.factors[pos]
+	dif = term.factors[pos]
 	var = term.factors[pos - 1]
 
-	if var == DERIVATIVES[der]:
+	if dif.differentialOf() == var:
 		new_factors = term.factors[:pos-1] + \
-			[Sum([Term(1, [der, var]), Term(-1, [])])] + \
+			[Sum([Term(1.0, [dif, var]), Term(-1, [])])] + \
 			term.factors[pos+1:]
 	else:
-		new_factors = term.factors[:pos-1] + [der, var] + term.factors[pos+1:]
+		new_factors = term.factors[:pos-1] + [dif, var] + term.factors[pos+1:]
 
 	return derivativesToFront(termToFlatSum(Term(term.coeff, new_factors)))
+
+def wignerTerm(op, prefix):
+	assert op.isOperator()
+
+	is_conj = op.isConjugate()
+	conj_op = op.conjugate()
+
+	func = op.correspondence()
+	conj_func = conj_op.correspondence()
+
+	if prefix:
+		return Sum([func, Term(0.5 * (-1 if is_conj else 1), [conj_func.differential()])])
+	else:
+		return Sum([func, Term(0.5 * (1 if is_conj else -1), [conj_func.differential()])])
 
 def replaceRhoWithW(obj):
 	"""
@@ -219,26 +322,15 @@ def replaceRhoWithW(obj):
 	new_factors = []
 	rho_pos = term.factors.index(RHO)
 
-	WIGNER = {
-		(A, RHO): Sum([ALPHA, Term(0.5, [D_ALPHA_STAR])]),
-		(A_PLUS, RHO): Sum([ALPHA_STAR, Term(-0.5, [D_ALPHA])]),
-		(RHO, A): Sum([ALPHA, Term(-0.5, [D_ALPHA_STAR])]),
-		(RHO, A_PLUS): Sum([ALPHA_STAR, Term(0.5, [D_ALPHA])])
-	}
-
 	for i in xrange(rho_pos):
-		if term.factors[i] == A:
-			new_factors.append(WIGNER[(A, RHO)])
-		elif term.factors[i] == A_PLUS:
-			new_factors.append(WIGNER[(A_PLUS, RHO)])
+		if term.factors[i].isOperator():
+			new_factors.append(wignerTerm(term.factors[i], True))
 		else:
 			new_factors.append(term.factors[i])
 
 	for i in xrange(len(term.factors) - 1, rho_pos, -1):
-		if term.factors[i] == A:
-			new_factors.append(WIGNER[(RHO, A)])
-		elif term.factors[i] == A_PLUS:
-			new_factors.append(WIGNER[(RHO, A_PLUS)])
+		if term.factors[i].isOperator():
+			new_factors.append(wignerTerm(term.factors[i], False))
 		else:
 			new_factors.append(term.factors[i])
 
@@ -254,33 +346,18 @@ def sortFactors(obj):
 		return Sum([sortFactors(term) for term in obj.terms])
 
 	term = obj
-	assert term.hasDerivativesInFront()
+	assert term.hasDifferentialsInFront()
 
 	def key1(elem):
-		if elem in DERIVATIVES:
-			return sorted(DERIVATIVES).index(elem) / 10.0
+		if elem.isDifferential():
+			return "1" + str(elem)
 
-		if elem in CONSTANTS:
-			return 1 + CONSTANTS.index(elem) / 10.0
+		if elem.isConstant():
+			return "2" + str(elem)
 
-		if elem in VARIABLES + [K]:
-			return 2
-
-	def key2(elem):
-		if elem in DERIVATIVES or elem in CONSTANTS:
-			return 0
-
-		if elem in VARIABLES:
-			return VARIABLES.index(elem) + 1
+		return "3" + str(elem)
 
 	factors = sorted(term.factors, key=key1)
-
-	if K in factors:
-		k_pos = factors.index(K)
-		factors = sorted(factors[:k_pos], key=key2) + [K] + sorted(factors[k_pos+1:], key=key2)
-	else:
-		factors = sorted(factors, key=key2)
-
 	return Term(term.coeff, factors)
 
 def groupTerms(sum):
@@ -288,25 +365,27 @@ def groupTerms(sum):
 	assert sum.isFlat()
 
 	memo = {}
+	factors = {}
 
 	for term in sum.terms:
-		key = tuple(term.factors)
+		key = tuple([str(factor) for factor in term.factors])
+		factors[key] = term.factors
 		if key in memo:
 			memo[key] += term.coeff
 		else:
 			memo[key] = term.coeff
 
-	return Sum([Term(memo[key], list(key)) for key in memo if abs(memo[key]) > 0])
+	return Sum([Term(memo[key], factors[key]) for key in memo if abs(memo[key]) > 0])
 
 def dropHighOrderDerivatives(sum, cutoff):
 	"""Flat sum -> Flat sum"""
-	assert sum.hasDerivativesInFront()
+	assert sum.hasDifferentialsInFront()
 
 	new_terms = []
 	for term in sum.terms:
 		order = 0
 		for factor in term.factors:
-			if factor in DERIVATIVES:
+			if factor.isDifferential():
 				order += 1
 			else:
 				break
@@ -336,52 +415,25 @@ def replace(obj, old, new):
 		else:
 			return obj
 
+def apply(x, *args, **kwds):
+	if 'verbose' in kwds:
+		verbose = kwds['verbose']
+	else:
+		verbose = False
 
-def process(sum):
-	sum = flattenSum(sum)
-	sum = replaceRhoWithW(sum)
-	sum = flattenSum(sum)
-	sum = derivativesToFront(sum)
-	sum = flattenSum(sum)
-	sum = sortFactors(sum)
-	sum = groupTerms(sum)
-	sum = dropHighOrderDerivatives(sum, 2)
-	return sum
+	for arg in args:
+		if isinstance(arg, tuple):
+			func = arg[0]
+			func_args = list(arg[1:])
+		else:
+			func = arg
+			func_args = []
 
-def replaceAlphaWithXY(sum):
-	sum = replace(sum, ALPHA, Sum([X, Term(1j, [Y])]))
-	sum = replace(sum, ALPHA_STAR, Sum([X, Term(-1j, [Y])]))
-	sum = replace(sum, D_ALPHA, Term(0.5, [Sum([D_X, Term(-1j, [D_Y])])]))
-	sum = replace(sum, D_ALPHA_STAR, Term(0.5, [Sum([D_X, Term(1j, [D_Y])])]))
-	return sum
+		func_args = tuple([x] + func_args)
+		x = func(*func_args)
 
-def processNoRho(sum):
-	sum = flattenSum(sum)
-	sum = derivativesToFront(sum)
-	sum = flattenSum(sum)
-	sum = sortFactors(sum)
-	sum = groupTerms(sum)
-	sum = dropHighOrderDerivatives(sum, 2)
-	return sum
+		if verbose:
+			print "--- " + str(func)
+			print x
 
-
-x1 = Term(2, [A, RHO, A_PLUS])
-x2 = Term(-1, [A_PLUS, A, RHO])
-x3 = Term(-1, [RHO, A_PLUS, A])
-losses1 = Term(0.5, [GAMMA_SMALL, Sum([x1, x2, x3])])
-
-h1 = Term(1, [A_PLUS, K, A])
-
-test = Sum([Term(1, [h1, RHO]), Term(-1, [RHO, h1])])
-s = process(test)
-print s
-s = processNoRho(replaceAlphaWithXY(s))
-print s
-
-h2 = Term(0.5, [GAMMA, A_PLUS, A_PLUS, A, A])
-h = Sum([h1, h2])
-
-h_comm = Sum([Term(-1j, [h, RHO]), Term(1j, [RHO, h])])
-full = Sum([h_comm, losses1])
-
-#print process(full)
+	return x
