@@ -230,29 +230,28 @@ These coupled equations can be solved numerically with the same split-step Fouri
 In order to take into account quantum noise, we must start from the master equation. Second-quantized hamiltonian for the two-component system looks like:
 \[
 \hat{H} = \sum\limits^2_{i=1} \left\{ \int\limits_V d\textbf{r} \hat{\psi}_i^\dagger \hat{K}_i \hat{\psi}_i +
-\frac{\Gamma}{2} \int\limits_V d\textbf{r} \hat{\psi}_i^\dagger \hat{\psi}_i^\dagger \hat{\psi}_i \hat{\psi}_i \right\}
+\sum\limits^2_{j=1} \frac{\Gamma_{ij}}{2} \int\limits_V d\textbf{r} \hat{\psi}_i^\dagger \hat{\psi}_j^\dagger \hat{\psi}_i \hat{\psi}_j \right\}
 \]
 where $\hat{K}_i$ is the sum of kinetic and potential energy operators for the corresponding component, and $\hat{\psi}_i$ are field operators. Volume $V$ is, strictly speaking, the whole coordinate space, but we will need explicit integration boundaries later.
 
 The master equation can then be written as following:
 \[
-\frac{\partial\rho}{dt} = -i [\hat{H}, \rho] + \sum\limits_j \frac{\kappa_j}{2} \int\limits_V d\textbf{r}
+\frac{\partial\rho}{\partial t} = -i [\hat{H}, \rho] + \sum\limits_j \frac{\kappa_j}{2} \int\limits_V d\textbf{r}
 \left( 2  \hat{O}_j \rho \hat{O}_j^\dagger - \hat{O}_j^\dagger \hat{O}_j \rho - \rho \hat{O}_j^\dagger \hat{O}_j \right),
 \]
 where $\hat{O}_j$ are operators, describing bath couplings with corresponding strengths $\kappa_j$. In our case, we have three main sources of losses: three-body interactions between $\vert1\rangle$ particles, two-body $\vert1\rangle$-$\vert2\rangle$ and two-body $\vert2\rangle$-$\vert2\rangle$ interactions. Therefore bath couplings can be defined as:
-\[
+\begin{equation}
+\label{bath_coupling_operators}
 \hat{O}_1 = \hat{\psi}_1^3,\, \hat{O}_2 = \hat{\psi}_1 \hat{\psi}_2 + \hat{\psi}_2 \hat{\psi}_1,\, \hat{O}_3 = \hat{\psi}_2^2
-\]
+\end{equation}
 
 In order to get stochastic equations, which can be solved numerically, we must rewrite the master equation in Wigner representation using the functional correspondences:
-\[
-\hat{\psi} \rho = \left( \psi + \frac{1}{2} \frac{\partial}{\partial \psi^*} \right) W,\;\;\; \\
-\hat{\psi}^\dagger \rho = \left( \psi^* - \frac{1}{2} \frac{\partial}{\partial \psi} \right) W
-\]
-\[
-\rho \hat{\psi} = \left( \psi - \frac{1}{2} \frac{\partial}{\partial \psi^*} \right) W,\;\;\; \\
+\begin{eqnarray*}
+\hat{\psi} \rho = \left( \psi + \frac{1}{2} \frac{\partial}{\partial \psi^*} \right) W, & &
+\hat{\psi}^\dagger \rho = \left( \psi^* - \frac{1}{2} \frac{\partial}{\partial \psi} \right) W \\
+\rho \hat{\psi} = \left( \psi - \frac{1}{2} \frac{\partial}{\partial \psi^*} \right) W, & &
 \rho \hat{\psi}^\dagger = \left( \psi^* + \frac{1}{2} \frac{\partial}{\partial \psi} \right) W
-\]
+\end{eqnarray*}
 Note that first pair of correspondences is applied in left-to-right order, while the second pair is applied right-to-left. While simplifying the resulting equation, one can use the fact, that although $\psi$ and $\psi^*$ are not independent (one is the complex conjugate of the other), $\psi$ and $\partial/\partial\psi^*$ can still be exchanged. It can be proved with the help of transformation to independent variables $x$ and $y$:
 \[
 \psi = x + iy,\, \psi^* = x - iy,\, \\
@@ -293,6 +292,27 @@ Terms (\ref{dpsi_K_psi_term}) and~(\ref{dpsi_star_K_psi_star_term}) can be dealt
 [ \int\limits_V \hat{\psi}^\dagger \hat{K} \hat{\psi}, \rho ]  = - \int\limits_V d\textbf{r} \frac{\partial}{\partial\psi} \hat{K} \psi W +
 \int\limits_V d\textbf{r} \frac{\partial}{\partial\psi^*} \hat{K} \psi^* W
 \]
+
+Now we can transform the whole master equation to Wigner representation, writing it down in the form of Fokker-Planck equation. Let us first do it for the case of zero losses. After transformation to Wigner representation, and considering $\Gamma_{12} = \Gamma_{21} $, we will get:
+\begin{eqnarray*}
+\frac{\partial W}{\partial t} & =  & - \frac{\partial}{\partial \psi_1} i \left( - \hat{K}_1 + \Gamma_{11} \left( 1 - \vert \psi_1 \vert^2 \right) +
+\Gamma_{12} \left( \frac{1}{2} - \vert \psi_2 \vert^2 \right) \right) \psi_1 W - \\
+& - & \frac{\partial}{\partial \psi_2} i \left( - \hat{K}_2 + \Gamma_{22} \left( 1 - \vert \psi_2 \vert^2 \right) +
+\Gamma_{12} \left( \frac{1}{2} - \vert \psi_1 \vert^2 \right) \right) \psi_2 W +
+\textrm{c.c.}
+\end{eqnarray*}
+This leads us to stochastic differential equations (without the explicit noise term though, since there are no losses yet):
+\[
+\frac{\partial \psi_1}{\partial t} = i \left( - \hat{K}_1 + \Gamma_{11} \left( 1 - \vert \psi_1 \vert^2 \right) +
+\Gamma_{12} \left( \frac{1}{2} - \vert \psi_2 \vert^2 \right) \right) \psi_1
+\]
+\[
+\frac{\partial \psi_2}{\partial t} = i \left( - \hat{K}_2 + \Gamma_{22} \left( 1 - \vert \psi_2 \vert^2 \right) +
+\Gamma_{12} \left( \frac{1}{2} - \vert \psi_1 \vert^2 \right) \right) \psi_2,
+\]
+which look almost like coupled GPEs, except for the phase shifting term. Interaction coefficients $\Gamma_{11}$, $\Gamma_{12}$ and $\Gamma_{22}$ can be identified as $g_{11}$, $g_{12}$ and $g_{22}$ from GPEs.
+
+Now it's time to add losses to the picture using bath coupling operators~(\ref{bath_coupling_operators}).
 
 Since we are using pseudoclassical description of the condensate, we can increase accuracy of the model by taking into account quantum noise. According to \cite{PhysRevA.58.4824}, the quantum noise can be introduced as the addition of the following wave function to the initial conditions:
 \[ \psi_{noise}(\mathbf{r}) = \sum_{i=0}^{N_x} \sum_{j=0}^{N_y} \sum_{k=0}^{N_z} \frac{1}{2} \eta_{ijk} \phi_{ijk}(\mathbf{r}), \]
