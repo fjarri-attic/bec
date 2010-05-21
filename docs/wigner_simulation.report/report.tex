@@ -263,13 +263,13 @@ The transformation to Wigner representation is straightforward (though quite cum
 \begin{eqnarray}
 [ \int\limits_V \hat{\psi}^\dagger \hat{K} \hat{\psi}, \rho ]
 & = & \int\limits_V d\textbf{r} \hat{\psi}^\dagger \hat{K} \hat{\psi} \rho - \int\limits_V d\textbf{r} \rho \hat{\psi}^\dagger \hat{K} \hat{\psi} \nonumber \\
-& \leftrightarrow & \int\limits_V d\textbf{r} \left( \psi^* - \frac{1}{2}\frac{\partial}{\partial\psi}\right) \hat{K} \left( \psi + \frac{1}{2}\frac{\partial}{\partial\psi^*} \right) W - \nonumber \\
-& - & \int\limits_V d\textbf{r} \left( \psi - \frac{1}{2}\frac{\partial}{\partial\psi^*}\right) \hat{K} \left( \psi^* + \frac{1}{2}\frac{\partial}{\partial\psi}  \right) W \nonumber \\
-& = & \int\limits_V d\textbf{r} \left( \psi^* \hat{K} \psi - \psi \hat{K} \psi^* \right) W -  \label{annihilating_psi_K_psi} \\
-& - & \int\limits_V d\textbf{r} \left( \frac{1}{2}\frac{\partial}{\partial\psi} \hat{K} \psi +
-\frac{1}{2} \psi \hat{K} \frac{\partial}{\partial\psi} \right) W + \label{dpsi_K_psi_term} \\
-& + & \int\limits_V d\textbf{r} \left( \frac{1}{2}\frac{\partial}{\partial\psi^*} \hat{K} \psi^* +
-\frac{1}{2} \psi^* \hat{K} \frac{\partial}{\partial\psi^*} \label{dpsi_star_K_psi_star_term} \right) W
+& \leftrightarrow & \int\limits_V d\textbf{r} \left\{ \left( \psi^* - \frac{1}{2}\frac{\partial}{\partial\psi}\right) \hat{K} \left( \psi + \frac{1}{2}\frac{\partial}{\partial\psi^*} \right) - \nonumber \right. \\
+& & \left. - \left( \psi - \frac{1}{2}\frac{\partial}{\partial\psi^*}\right) \hat{K} \left( \psi^* + \frac{1}{2}\frac{\partial}{\partial\psi}  \right) \right\} W \nonumber \\
+& = & \int\limits_V d\textbf{r} \left\{ \left( \psi^* \hat{K} \psi - \psi \hat{K} \psi^* \right) -  \right. \label{annihilating_psi_K_psi} \\
+& & \left. - \left( \frac{1}{2}\frac{\partial}{\partial\psi} \hat{K} \psi +
+\frac{1}{2} \psi \hat{K} \frac{\partial}{\partial\psi} \right) \right. + \label{dpsi_K_psi_term} \\
+& & \left. + \left( \frac{1}{2}\frac{\partial}{\partial\psi^*} \hat{K} \psi^* +
+\frac{1}{2} \psi^* \hat{K} \frac{\partial}{\partial\psi^*} \right) \right\} W \label{dpsi_star_K_psi_star_term}
 \end{eqnarray}
 
 Operator $\hat{K}$ is the sum of kinetic and potential energy operators; the former is the second order derivative, and the latter is the function of coordinates:
@@ -279,8 +279,8 @@ Potential term does not depend on $\psi$ or $\psi^*$ and can be easily handled; 
 \int\limits_V d\textbf{r} \left( \psi^* \hat{K} \psi - \psi \hat{K} \psi^* \right) W
 & = & \frac{1}{2} \int\limits_V d\textbf{r} \left( - \psi^* \nabla^2 \psi - \psi \nabla^2 \psi^* \right) W \\
 & = & \frac{1}{2} \left\{ - \oint\limits_{\partial V} \psi^* (\nabla \psi \cdot \textbf{n}) dS +
-\int\limits_V d\textbf{r} \nabla \psi^* \nabla \psi \right\} W + \\
-& + & \frac{1}{2} \left\{ \oint\limits_{\partial V} \psi (\nabla \psi^* \cdot \textbf{n}) dS -
+\int\limits_V d\textbf{r} \nabla \psi^* \nabla \psi \right. + \\
+& & \left. + \oint\limits_{\partial V} \psi (\nabla \psi^* \cdot \textbf{n}) dS -
 \int\limits_V d\textbf{r} \nabla \psi \nabla \psi^* \right\} W \\
 & = & \frac{1}{2} \left\{ \oint\limits_{\partial V} \psi (\nabla \psi^* \cdot \textbf{n}) dS -
 \oint\limits_{\partial V} \psi^* (\nabla \psi \cdot \textbf{n}) dS \right\} W = 0
@@ -294,13 +294,15 @@ Terms (\ref{dpsi_K_psi_term}) and~(\ref{dpsi_star_K_psi_star_term}) can be dealt
 \]
 
 Now we can transform the whole master equation to Wigner representation, writing it down in the form of Fokker-Planck equation. Let us first do it for the case of zero losses. After transformation to Wigner representation, and considering $\Gamma_{12} = \Gamma_{21} $, we will get:
-\begin{eqnarray*}
-\frac{\partial W}{\partial t} & =  & - \frac{\partial}{\partial \psi_1} i \left( - \hat{K}_1 + \Gamma_{11} \left( 1 - \vert \psi_1 \vert^2 \right) +
-\Gamma_{12} \left( \frac{1}{2} - \vert \psi_2 \vert^2 \right) \right) \psi_1 W - \\
-& - & \frac{\partial}{\partial \psi_2} i \left( - \hat{K}_2 + \Gamma_{22} \left( 1 - \vert \psi_2 \vert^2 \right) +
-\Gamma_{12} \left( \frac{1}{2} - \vert \psi_1 \vert^2 \right) \right) \psi_2 W +
+\begin{equation*}
+\begin{split}
+\frac{\partial W}{\partial t} = & \int\limits_V d\textbf{r} \left\{ - \frac{\partial}{\partial \psi_1} i \left( - \hat{K}_1 + \Gamma_{11} \left( 1 - \vert \psi_1 \vert^2 \right) +
+\Gamma_{12} \left( \frac{1}{2} - \vert \psi_2 \vert^2 \right) \right) \psi_1 - \right. \\
+& \left. - \frac{\partial}{\partial \psi_2} i \left( - \hat{K}_2 + \Gamma_{22} \left( 1 - \vert \psi_2 \vert^2 \right) +
+\Gamma_{12} \left( \frac{1}{2} - \vert \psi_1 \vert^2 \right) \right) \psi_2 \right\} W +
 \textrm{c.c.}
-\end{eqnarray*}
+\end{split}
+\end{equation*}
 This leads us to stochastic differential equations (without the explicit noise term though, since there are no losses yet):
 \[
 \frac{\partial \psi_1}{\partial t} = i \left( - \hat{K}_1 + \Gamma_{11} \left( 1 - \vert \psi_1 \vert^2 \right) +
