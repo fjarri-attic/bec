@@ -312,7 +312,14 @@ This leads us to stochastic differential equations (without the explicit noise t
 \frac{\partial \psi_2}{\partial t} = i \left( - \hat{K}_2 + \Gamma_{22} \left( 1 - \vert \psi_2 \vert^2 \right) +
 \Gamma_{12} \left( \frac{1}{2} - \vert \psi_1 \vert^2 \right) \right) \psi_2,
 \]
-which look almost like coupled GPEs, except for the phase shifting term. Interaction coefficients $\Gamma_{11}$, $\Gamma_{12}$ and $\Gamma_{22}$ can be identified as $g_{11}$, $g_{12}$ and $g_{22}$ from GPEs.
+which look almost like coupled GPEs, except for the phase shifting term. In order to connect $\Gamma$ coefficients with interaction coefficients $g$ in GPEs, we must consider $\vert \psi_i \vert^2 \gg 1$ (areas where it is not true contain negligible amounts of atoms and therefore do not affect the evolution). Really, the average value of $\vert \psi_1 \vert^2$ can be estimated as following:
+\[
+\bar{\vert \psi_1 \vert^2} = \frac{N}{V} \approx \frac{N}{R_{TF}^3},
+\]
+where $R_{TF}$ is the radius of the condensate, obtained using Thomas-Fermi approximation. For $10^4$--$10^5$ atoms it gives the values of the order of $10^2$, which proves that our initial assumption was correct. Thus we can drop out lower orders of $\vert \psi_1 \vert^2$ and $\vert \psi_2 \vert^2$, and the following correspondences are valid:
+\[
+\Gamma_{11} = g_{11},\, \Gamma_{12} = g_{12},\, \Gamma_{22} = g_{22}.
+\]
 
 Now it's time to add losses to the picture using bath coupling operators~(\ref{bath_coupling_operators}). The resulting equation in Wigner representation is:
 \begin{equation*}
@@ -331,11 +338,7 @@ Now it's time to add losses to the picture using bath coupling operators~(\ref{b
 \right\} W + \textrm{c.c.},
 \end{split}
 \end{equation*}
-where $\hat{A}_1$ and $\hat{A}_2$ stand for previously calculated kinetic, potential and interaction terms for both components. In order to connect $\kappa$ coefficients with loss coefficients $\gamma$ in GPEs, we must consider $\vert \psi_i \vert^2 \gg 1$ (areas where it is not true, contain negligible amounts of atoms and therefore do not affect the evolution). Really, the average value of $\vert \psi_1 \vert^2$ can be estimated as following:
-\[
-\bar{\vert \psi_1 \vert^2} = \frac{N}{V} \approx \frac{N}{R_{TF}^3},
-\]
-where $R_{TF}$ is the radius of the condensate, obtained using Thomas-Fermi approximation. For $10^4$--$10^5$ atoms it gives the values of the order of $10^2$, which proves that our initial assumption was correct. Therefore, we can drop out lower orders of $\vert \psi_1 \vert^2$ and $\vert \psi_2 \vert^2$, and the following correspondences are valid:
+where $\hat{A}_1$ and $\hat{A}_2$ stand for previously calculated kinetic, potential and interaction terms for both components. Using the same estimation of $\vert \psi_1 \vert^2$ and $\vert \psi_2 \vert^2$, we can connect $\kappa$ coefficients with loss coefficients $\gamma$ in GPEs:
 \[
 \kappa_{111} = \frac{1}{3} \gamma_{111},\,
 \kappa_{12} = \frac{1}{2} \gamma_{12},\,
