@@ -314,7 +314,33 @@ This leads us to stochastic differential equations (without the explicit noise t
 \]
 which look almost like coupled GPEs, except for the phase shifting term. Interaction coefficients $\Gamma_{11}$, $\Gamma_{12}$ and $\Gamma_{22}$ can be identified as $g_{11}$, $g_{12}$ and $g_{22}$ from GPEs.
 
-Now it's time to add losses to the picture using bath coupling operators~(\ref{bath_coupling_operators}).
+Now it's time to add losses to the picture using bath coupling operators~(\ref{bath_coupling_operators}). The resulting equation in Wigner representation is:
+\begin{equation*}
+\begin{split}
+\frac{\partial W}{\partial t} = & \int\limits_V d\textbf{r} \left\{ - \frac{\partial}{\partial \psi_1} \left( \hat{A}_1 +
+\kappa_{111} \left( \frac{9}{2} \vert \psi_1 \vert^2 - \frac{9}{4} - \frac{3}{2} \vert \psi_1 \vert^4 \right) +
+\kappa_{12} \left( \frac{1}{2} - \vert \psi_2 \vert^2 \right) \right) \psi_1 - \right. \\
+& \left. - \frac{\partial}{\partial \psi_2} \left( \hat{A}_2 + \kappa_{12} \left( \frac{1}{2} - \vert \psi_1 \vert^2 \right) +
+\kappa_{22} \left( 1 - \vert \psi_2 \vert^2 \right) \right) \psi_2 + \right. \\
+& \left. + \frac{\partial^2}{\partial \psi_1 \partial \psi_1^*} \left( \kappa_{111} \left(\frac{9}{2} \vert \psi_1 \vert^4 -
+9 \vert \psi_1 \vert^2 + \frac{9}{4} \right) + \kappa_{12} \left( \vert \psi_2 \vert^2 - \frac{1}{2} \right) \right) + \right. \\
+& \left. + \frac{\partial^2}{\partial \psi_2 \partial \psi_2^*} \left( \kappa_{12} \left( \vert \psi_1 \vert^2 - \frac{1}{2} \right) +
+\kappa_{22} \left( 2 \vert \psi_2 \vert^2 - 1 \right) \right) + \right. \\
+& \left. + \frac{\partial^2}{\partial \psi_1 \partial \psi_2^*} \kappa_{12} \psi_1 \psi_2^* +
+\frac{\partial^2}{\partial \psi_1^* \partial \psi_2} \kappa_{12} \psi_1^* \psi_2
+\right\} W + \textrm{c.c.},
+\end{split}
+\end{equation*}
+where $\hat{A}_1$ and $\hat{A}_2$ stand for previously calculated kinetic, potential and interaction terms for both components. In order to connect $\kappa$ coefficients with loss coefficients $\gamma$ in GPEs, we must consider $\vert \psi_i \vert^2 \gg 1$ (areas where it is not true, contain negligible amounts of atoms and therefore do not affect the evolution). Really, the average value of $\vert \psi_1 \vert^2$ can be estimated as following:
+\[
+\bar{\vert \psi_1 \vert^2} = \frac{N}{V} \approx \frac{N}{R_{TF}^3},
+\]
+where $R_{TF}$ is the radius of the condensate, obtained using Thomas-Fermi approximation. For $10^4$--$10^5$ atoms it gives the values of the order of $10^2$, which proves that our initial assumption was correct. Therefore, we can drop out lower orders of $\vert \psi_1 \vert^2$ and $\vert \psi_2 \vert^2$, and the following correspondences are valid:
+\[
+\kappa_{111} = \frac{1}{3} \gamma_{111},\,
+\kappa_{12} = \frac{1}{2} \gamma_{12},\,
+\kappa_{22} = \frac{1}{2} \gamma_{22}.
+\]
 
 Since we are using pseudoclassical description of the condensate, we can increase accuracy of the model by taking into account quantum noise. According to \cite{PhysRevA.58.4824}, the quantum noise can be introduced as the addition of the following wave function to the initial conditions:
 \[ \psi_{noise}(\mathbf{r}) = \sum_{i=0}^{N_x} \sum_{j=0}^{N_y} \sum_{k=0}^{N_z} \frac{1}{2} \eta_{ijk} \phi_{ijk}(\mathbf{r}), \]
