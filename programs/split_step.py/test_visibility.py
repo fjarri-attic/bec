@@ -21,7 +21,7 @@ b = ParticleNumberCollector(env, constants, verbose=True)
 gs = GPEGroundState(env, constants)
 pulse = Pulse(env, constants)
 
-cloud = gs.create()
+cloud = gs.createCloud()
 pulse.halfPi(cloud)
 t1 = time.time()
 evolution.run(cloud, 0.0399, callbacks=[a, b], callback_dt=0.01)
