@@ -279,15 +279,28 @@ class TwoComponentEvolution(PairedCalculation):
 		l12 = self._constants.l12
 		l22 = self._constants.l22
 
+		p = self._potentials * 1j
+		nvz = self._constants.nvz
+
 		for iter in xrange(self._constants.itmax):
 			n_a = numpy.abs(a.data) ** 2
 			n_b = numpy.abs(b.data) ** 2
 
 			pa = n_a * n_a * (-l111 / 2) + n_b * (-l12 / 2) + \
-				1j * (self._potentials + n_a * g11 + n_b * g12)
+				1j * (n_a * g11 + n_b * g12)
 
 			pb = n_b * (-l22 / 2) + n_a * (-l12 / 2) + \
-				1j * (self._potentials + n_b * g22 + n_a * g12 - self._constants.detuning)
+				1j * (n_b * g22 + n_a * g12 - self._constants.detuning)
+
+			for e in xrange(cloud.a.size / self._constants.cells):
+				start = e * nvz
+				stop = (e + 1) * nvz
+				pa[start:stop] += p
+				pb[start:stop] += p
+
+			if cloud.type == WIGNER:
+				pa += (4.5 * n_a - 2.25) * (l111 / 3) + (l12 / 2) * 0.5 - 1j * (g11 + 0.5 * g12)
+				pb += (l12 / 2) * 0.5 + (l22 / 2) - 1j * (g22 + 0.5 * g12)
 
 			da = numpy.exp(pa * (dt / 2))
 			db = numpy.exp(pb * (dt / 2))
