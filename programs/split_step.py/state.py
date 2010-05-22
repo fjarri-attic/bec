@@ -108,6 +108,8 @@ class State(PairedCalculation):
 
 		self._toWigner(new_data, randoms)
 		self.data = new_data
+		self.shape = self._constants.ens_shape
+		self.size = self._constants.cells * self._constants.ensembles
 
 		self.type = WIGNER
 
@@ -127,6 +129,8 @@ class TwoComponentCloud:
 			type = b.type
 		else:
 			type = a.type
+
+		self.type = type
 
 		self.a = a if a is not None else State(env, constants, type=type, comp=COMP_1_minus1)
 		self.b = b if b is not None else State(env, constants, type=type, comp=COMP_2_1)
