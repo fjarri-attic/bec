@@ -165,12 +165,13 @@ class ParticleStatistics(PairedCalculation):
 
 		abs_values = numpy.abs(state.data)
 		normalized_values = abs_values * abs_values + add_term
-		density = self._reduce.sparse(normalized_values, state.size)
 
 		if state.type == WIGNER:
+			density = self._reduce.sparse(normalized_values, self._constants.cells)
 			density /= self._constants.ensembles
-
-		return density.reshape(self._constants.shape)
+			return density.reshape(self._constants.shape)
+		else:
+			return normalized_values
 
 	def _cpu__countState(self, state, coeff, N):
 		kdata = self._env.allocate(state.shape, dtype=state.dtype)
