@@ -223,10 +223,11 @@ class ParticleStatistics(PairedCalculation):
 		return self._reduce(res) / batch * self._constants.dV / N
 
 	def _cpu_getVisibility(self, state1, state2):
+		ensembles = state1.size / self._constants.cells
 		N1 = self.countParticles(state1)
 		N2 = self.countParticles(state2)
 
-		coeff = self._constants.dV / (state1.size / self._constants.cells)
+		coeff = self._constants.dV / ensembles
 		interaction = abs(self._reduce(state1.data * state2.data.conj())) * coeff
 
 		return 2 * interaction / (N1 + N2)
