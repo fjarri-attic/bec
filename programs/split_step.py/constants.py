@@ -23,6 +23,16 @@ class _Type:
 		self.ctr = '(' + name + ')'
 		self.cast = numpy.cast[dtype]
 
+	def __getstate__(self):
+		d = dict(self.__dict__)
+		del d['cast']
+		return d
+
+	def __setstate__(self, state):
+		self.__dict__ = state
+		self.cast = numpy.cast[self.dtype]
+
+
 class _Precision:
 	def __init__(self, scalar, complex):
 		self.scalar = scalar

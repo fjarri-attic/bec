@@ -62,20 +62,11 @@ class Environment:
 			self.context = cl.Context(devices=[self.device])
 			self.queue = cl.CommandQueue(self.context)
 
-		if gpu:
-			self.allocate = self.__gpu_allocate
+	def allocate(self, shape, dtype):
+		if self.gpu:
+			return _Buffer(self.context, shape, dtype)
 		else:
-			self.allocate = self.__cpu_allocate
-
-	def getContext(self):
-		assert self.gpu, "Context can be obtained only from GPU environment"
-		return self.context
-
-	def __cpu_allocate(self, shape, dtype):
-		return numpy.empty(shape, dtype=dtype)
-
-	def __gpu_allocate(self, shape, dtype):
-		return _Buffer(self.context, shape, dtype)
+			return numpy.empty(shape, dtype=dtype)
 
 	def synchronize(self):
 		if self.gpu:
@@ -129,15 +120,40 @@ class PairedCalculation:
 	"""
 
 	def __init__(self, env):
-		if env.gpu:
+		self.__gpu = env.gpu
+		self.__createAliases()
+
+	def __findPrefixedMethods(self):
+		if self.__gpu:
 			prefix = "_gpu_"
 		else:
 			prefix = "_cpu_"
 
+		res = {}
 		for attr in dir(self):
 			if attr.startswith(prefix):
-				name = attr[len(prefix):]
-				self.__dict__[name] = getattr(self, attr)
+				res[attr] = attr[len(prefix):]
+
+		return res
+
+	def __createAliases(self):
+		to_add = self.__findPrefixedMethods()
+		for attr in to_add:
+			self.__dict__[to_add[attr]] = getattr(self, attr)
+
+	def __deleteAliases(self, d):
+		to_del = self.__findPrefixedMethods()
+		for attr in to_del:
+			del d[to_del[attr]]
+
+	def __getstate__(self):
+		d = dict(self.__dict__)
+		self.__deleteAliases(d)
+		return d
+
+	def __setstate__(self, state):
+		self.__dict__ = state
+		self.__createAliases()
 
 
 class _ProgramWrapper:
