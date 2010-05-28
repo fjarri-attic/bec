@@ -9,61 +9,31 @@
 \begin{document}
 %%%%%%%%%   DO NOT MODIFY ANYTHING ABOVE THIS LINE %%%%%%%%
 
-\title{Abstract Submission for ICAP2010}
+\title{Simulation of quantum noise in BEC}
 
 \begin{authors}
-  \author{A.N.}{Author}{1,2},
-  \author{A.N.}{Other}{2},
-  \author{A.}{Third}{1}
+  \author{B.}{Opanchuk}{1},
 \end{authors}
 
 \address{1}{Swinburne University of Technology, Hawthorn, Victoria, Australia}
-\address{2}{Australian National University, Canberra, ACT, Australia}
 
 
 \begintext
-Submission of abstracts for the International Conference on Atomic
-Physics (ICAP) 2010 is very simple: use this example file as a
-template for your abstract. Please follow the guidelines:
+At the moment, coupled Gross-Pitaevskii equations are widely used to simulate the dynamics of BEC. This method is easy and relatively fast, and it allows one to obtain rather accurate predictions for the evolution of cloud structure$^1$. The problem is that it starts to produce incorrect results for low number of particles or long evolution times, and requires the addition of various phenomenological terms and coefficients. But there are theoretically strict ways to improve GPE-based simulations, one of which is the inclusion of quantum noise terms. 
 
-\begin{itemize}
+The noise can be taken into account by writing the master equation for the condensate and transforming it into one of the quasiprobability representations, like \mbox{positive-P}$^{2, 3}$ or Wigner$^2$. The resulting equation can then be expressed as a set of stochastic equations, which can be solved numerically. I present the results of such simulations for several types of experiments on $^{87}$Rb condensates (namely, the two-component clouds of $\vert1,-1\rangle$ and $\vert2,-1\rangle$ states in magnetic trap), performed in Swinburne CAOUS lab. In addition, I use the simulation data to revise the values of scattering lengths and loss terms for these components.
 
-\item Stay within the one page limit.
+\footnotetext[1]{R.~P.~Anderson, C.~Ticknor, A.~I.~Sidorov, B.~V.~Hall,
+``Spatially inhomogeneous phase evolution of a two-component Bose-Einstein condensate.'',
+Phys. Rev. A, {\bf 80}:023603 (2009)}
 
-\item Include your title and to list all authors, each one in a
-  separate \verb+\author+ command, with the following syntax:\\
-  \verb+\author{initials}{name}{address identifier}+,\\
-  where \verb+address identifier+ corresponds to one of the address
-  identifiers (see below).
+\footnotetext[2]{M.~J.~Steel, M.~K.~Olsen, L.~I.~Plimak, P.~D.~Drummond, S.~M.~Tan, M.~J.~Collett, D.~F.~Walls and R.~Graham,
+``Dynamical quantum noise in trapped Bose-Einstein condensates.'',
+Phys. Rev. A, {\bf 58}(6):4824Ð4835 (1998)}
 
-\item Provide the address(es) of all author(s) using the
-  \verb+\address+ command with the following syntax:\\
-  \verb+\address{address identifier}{address text}+
-
-\item Include references with the \verb+\footnote+
-  command\footnote{T.~Oetiker, H.~Partl, I.~Hyna and E.~Schlegl,
-    ``A (Not So) Short Introduction to LaTeX2e.'',
-    freely available for download from many locations.
-    }.
-
-  If you want to refer twice to the same reference use the command
-  ``\verb+$^x$+'', where \verb+x+ stands for the reference number.
-
-\item Include figures (see Fig.~1) with the \verb+\includegraphics+
-  command as in the example below. (Do not use the \verb+figure+
-  environment!)  See the {\LaTeX} documentation\footnote{Keith Reckdahl,
-    ``Using Imported Graphics in Latex and pdfLatex'',
-    freely available for download from many locations.}  for more details on possible
-  options. The caption command for icap2010 abstracts is
-  as following: \verb+\caption{id}{caption text}+
-\end{itemize}
-\begin{center}
-  \includegraphics[width=0.7\textwidth]{cairns.eps}
-\end{center}
-
-\caption{1}{Cairns Esplanade lagoon. You can position
-  the figure within the text using standard {\LaTeX}
-  commands$^{1,2}$.}
-
+\footnotetext[3]{J.~J.~Hope,
+``Quantum field effects in coupled atomic and molecular Bose-Einstein condensates.'',
+Phys. Rev. A, {\bf 64}(5):053608 (2001)}
+    
 %%%%%%%%%%   DO NOT MODIFY ANYTHING BELOW THIS LINE %%%%%%%%
 \end{document}
