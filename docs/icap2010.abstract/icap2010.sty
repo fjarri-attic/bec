@@ -1,0 +1,49 @@
+%% Style file for abstracts for the icap2010
+%% Prepared for ICAP2006 by Hartmut Haeffner, Dec 2005 (e-mail: hartmut.haeffner@uibk.ac.at)
+%% Modified for ICAP2008 March 2008, icap2008@phys.uconn.edu
+%% Further modified for ICAP2010, April 2010, rmclean@swin.edu.au
+
+\usepackage{graphicx}
+\usepackage{times}
+
+\oddsidemargin 0mm
+\headheight 0mm
+
+\hoffset -10mm
+\topmargin -20mm
+
+\setlength\paperheight{210mm}
+\setlength\paperwidth{148mm}
+
+\special{papersize=148mm,210mm}
+
+\textwidth 123mm
+\textheight 190mm
+
+\thispagestyle{empty}
+
+\renewcommand{\title}[1]{%
+\begin{centering}\Large\bf #1 \addcontentsline{toc}{section}{#1} \\[1mm]\end{centering}}
+
+\renewcommand{\author}[3]{#1~#2$^{#3}$}
+
+\newenvironment{authors}{\begin{center}}{\end{center}}
+
+\newcommand{\begintext}{~\\[1mm]}
+
+\newcommand{\address}[2]{{\centering $^#1$\textit{#2}\\}}
+
+\renewcommand{\caption}[2]{Figure~#1: \textit{#2}\\[1.7mm]}
+
+\renewcommand\label{%
+{\em ---Please do not use labels, reference instead manually--- \newpage}}
+
+\renewcommand\ref{%
+{\em ---Please reference to figures manually--- \newpage}}
+
+\renewcommand\cite{%
+{\em ---Please reference using the footnote---command-- \newpage}}
+
+\renewcommand\thebibliography{%
+{\em --Please reference manually--- \newpage}}
+
