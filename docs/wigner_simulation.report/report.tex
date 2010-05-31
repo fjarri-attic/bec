@@ -416,14 +416,16 @@ This leads us to stochastic differential equations (without the explicit noise t
 \]
 which look almost like coupled GPEs, except for the phase shifting term.
 In order to connect $\Gamma$ coefficients with interaction coefficients $g$ in GPEs,
-we must consider $\vert \psi_i \vert^2 \gg 1$
-(areas where it is not true contain negligible amounts of atoms and therefore do not affect the evolution).
-Really, the average value of $\vert \psi_1 \vert^2$ can be estimated as following:
-\[
-\bar{\vert \psi_1 \vert^2} = \frac{N}{V} \approx \frac{N}{R_{TF}^3},
-\]
-where $R_{TF}$ is the radius of the condensate, obtained using Thomas-Fermi approximation.
-For $10^4$--$10^5$ atoms it gives the values of the order of $10^2$, which proves that our initial assumption was correct.
+we must estimate the value of $\lvert \psi_i \rvert^2$:
+\[ \langle \lvert \psi_1 \rvert^2 \rangle = \frac{N}{V} \approx \frac{N}{R_{iTF}^3}, \]
+where $R_{iTF}$ is the radius of the condensate, obtained using Thomas-Fermi approximation.
+For $10^4$--$10^5$ atoms it gives the values of the order of $10^2$, therefore we can safely assume that:
+\begin{equation}
+\label{psi_estimation}
+\vert \psi_i \vert^2 \gg 1
+\end{equation}
+Areas where it is not true contain negligible amounts of atoms and therefore do not affect the evolution.
+
 Thus we can drop out lower orders of $\vert \psi_1 \vert^2$ and $\vert \psi_2 \vert^2$, and the following correspondences are valid:
 \[
 \Gamma_{11} = g_{11},\, \Gamma_{12} = g_{12},\, \Gamma_{22} = g_{22}.
