@@ -35,7 +35,7 @@ We will use the transformation that keeps the integral of wave function over spa
 We are looking for steady state of the system with pseudopotential model hamiltonian (in real units):
 \[ 
 \hat{H} = -\frac{\hbar^2}{2m} \frac{\partial^2}{\partial \mathbf{r}^2} + \\
-V(\mathbf{r}) + g_{11} \vert \psi(\mathbf{r}) \vert^2,
+V(\mathbf{r}) + g_{11} \lvert \psi(\mathbf{r}) \rvert^2,
 \]
 \[ g_{11} = \frac{4 \pi \hbar^2 a_{11}}{m}, \]
 \[ V(\mathbf{r}) = \frac{m}{2} \left( \omega_x^2 x^2 + \omega_y^2 y^2 + \omega_z^2 z^2 \right). \]
@@ -43,7 +43,7 @@ where $V(\mathbf{r})$ is the potential energy for parabolic trap, $g_{11}$ is th
 and $a_{11}$ is the scattering length for atoms in non-excited state. In natural units:
 \[
 \hat{H} = -\frac{1}{2} \frac{\partial^2}{\partial \mathbf{r}^2} + 
-\frac{1}{2} \left( x^2 + y^2 + \lambda^{-2} z^2 \right) + g_{11} \vert \psi(\mathbf{r}) \vert^2,
+\frac{1}{2} \left( x^2 + y^2 + \lambda^{-2} z^2 \right) + g_{11} \lvert \psi(\mathbf{r}) \rvert^2,
 \]
 where
 \[ \lambda = \frac{\omega_\rho}{\omega_z},\, g_{11} = \frac{4 \pi a_{11}}{l_\rho}. \]
@@ -53,15 +53,15 @@ The steady state should satisfy the Gross-Pitaevskii equation:
 To get the first approximation of the state function, we consider the kinetic term to be small as compared to other terms and omit it.
 The conditions for this operation to be valid will be determined later in this section.
 Thus we get the simple equation:
-\[ \left( V(\mathbf{r}) + g_{11} \vert \psi(\mathbf{r}) \vert^2 \right) \psi(\mathbf{r}) = \mu \psi(\mathbf{r}), \]
+\[ \left( V(\mathbf{r}) + g_{11} \lvert \psi(\mathbf{r}) \rvert^2 \right) \psi(\mathbf{r}) = \mu \psi(\mathbf{r}), \]
 which leads us to the state function:
-\[ \vert \psi(\mathbf{r}) \vert^2 = \frac{1}{g_{11}} \max \left( \mu - V(\mathbf{r}), 0 \right). \]
+\[ \lvert \psi(\mathbf{r}) \rvert^2 = \frac{1}{g_{11}} \max \left( \mu - V(\mathbf{r}), 0 \right). \]
 The condition for $V(\mathbf{r})$ defines the shape of the condensate - it is the ellipsoid with the following radii:
 \[ r_x = r_y = \sqrt{2\mu},\, r_z = \lambda \sqrt{2\mu}. \]
 
 Using the normalisation condition for the steady state function gives us the connection
 between the number of atoms in the condensate and the chemical potential:
-\[ \int\limits_{V} \vert \psi(\mathbf{r}) \vert^2 dV = N, \]
+\[ \int\limits_{V} \lvert \psi(\mathbf{r}) \rvert^2 dV = N, \]
 \[ \mu = \left( \frac{15 N g_{11}}{16 \pi \lambda \sqrt{2}} \right)^{\frac{2}{5}}, \]
 or, in real units:
 \[ 
@@ -157,13 +157,13 @@ Since the energy will decrease exponentially after each step and the precision o
 renormalisation after each step will be required.
 Known total number of atoms in steady state serves best in this case
 (because we will have to renormalise the final steady state anyway):
-\[ \int\limits_V \vert \psi(\tau, \mathbf{r}) \vert^2 dV = N. \]
+\[ \int\limits_V \lvert \psi(\tau, \mathbf{r}) \rvert^2 dV = N. \]
 
 Propagation should be terminated when the total energy of the state stops changing
 (that is, only one component with the lowest energy is left out).
 So, we need to calculate the total energy after each step:
 \[ E(\psi) = \int\limits_V \psi^\dagger \left(
--\frac{\nabla^2}{2} + V(\mathbf{r}) + \frac{g_{11}}{2} \vert \psi(\mathbf{r}) \vert^2 \right) \psi dV \]
+-\frac{\nabla^2}{2} + V(\mathbf{r}) + \frac{g_{11}}{2} \lvert \psi(\mathbf{r}) \rvert^2 \right) \psi dV \]
 and compare it to the previous value.
 
 Now how do we propagate the state of the system?
@@ -182,12 +182,12 @@ in Fourier and spatial domains correspondingly.
 For our Hamiltonian
 \[ 
 \hat{H} = -\frac{1}{2} \frac{\partial^2}{\partial \mathbf{r}^2} +
-V(\mathbf{r}) + g_{11} \vert \psi(\mathbf{r}) \vert^2,
+V(\mathbf{r}) + g_{11} \lvert \psi(\mathbf{r}) \rvert^2,
 \]
 it means that
 \[
 \hat{D} = \frac{1}{2} \frac{\partial^2}{\partial \mathbf{r}^2},\,
-\hat{N} = -\left( V(\mathbf{r}) + g_{11} \vert \psi(\mathbf{r}) \vert^2 \right).
+\hat{N} = -\left( V(\mathbf{r}) + g_{11} \lvert \psi(\mathbf{r}) \rvert^2 \right).
 \]
 The spatial derivative is a simple multiplication in Fourier domain, so the propagation can be performed straightforwardly:
 \[
@@ -224,11 +224,11 @@ They can contain different terms depending on which features of the system we ne
 Basic form can be found in many sources, i.e. \cite{pitaevskii_bec}; with the addition of loss terms it looks like (in real units):
 \[ i \hbar \frac{\partial \psi_1}{\partial t} = \left(
 	-\frac{\hbar^2\nabla^2}{2m} + V_1(\mathbf{r}) +
-	g_{11} \vert \psi_1 \vert^2 + g_{12} \vert \psi_2 \vert^2 - i \hbar \Gamma_1
+	g_{11} \lvert \psi_1 \rvert^2 + g_{12} \lvert \psi_2 \rvert^2 - i \hbar \Gamma_1
 \right) \psi_1 + \frac{\hbar \Omega}{2}e^{i \omega t} \psi_2, \]
 \[ i \hbar \frac{\partial \psi_2}{\partial t} = \left(
 	-\frac{\hbar^2\nabla^2}{2m} + V_2(\mathbf{r}) +
-	g_{12} \vert \psi_1 \vert^2 + g_{22} \vert \psi_2 \vert^2 - i \hbar \Gamma_2
+	g_{12} \lvert \psi_1 \rvert^2 + g_{22} \lvert \psi_2 \rvert^2 - i \hbar \Gamma_2
 \right) \psi_2 + \frac{\hbar \Omega}{2}e^{i \omega t} \psi_1 - \hbar \Delta \psi_2. \]
 
 Let us now explain each term in this system.
@@ -398,21 +398,21 @@ Let us first do it for the case of zero losses.
 After transformation to Wigner representation, and considering $\Gamma_{12} = \Gamma_{21} $, we will get:
 \begin{equation*}
 \begin{split}
-\frac{\partial W}{\partial t} = & \int\limits_V d\textbf{r} \left\{ - \frac{\partial}{\partial \psi_1} i \left( - \hat{K}_1 + \Gamma_{11} \left( 1 - \vert \psi_1 \vert^2 \right) +
-\Gamma_{12} \left( \frac{1}{2} - \vert \psi_2 \vert^2 \right) \right) \psi_1 - \right. \\
-& \left. - \frac{\partial}{\partial \psi_2} i \left( - \hat{K}_2 + \Gamma_{22} \left( 1 - \vert \psi_2 \vert^2 \right) +
-\Gamma_{12} \left( \frac{1}{2} - \vert \psi_1 \vert^2 \right) \right) \psi_2 \right\} W +
+\frac{\partial W}{\partial t} = & \int\limits_V d\textbf{r} \left\{ - \frac{\partial}{\partial \psi_1} i \left( - \hat{K}_1 + \Gamma_{11} \left( 1 - \lvert \psi_1 \rvert^2 \right) +
+\Gamma_{12} \left( \frac{1}{2} - \lvert \psi_2 \rvert^2 \right) \right) \psi_1 - \right. \\
+& \left. - \frac{\partial}{\partial \psi_2} i \left( - \hat{K}_2 + \Gamma_{22} \left( 1 - \lvert \psi_2 \rvert^2 \right) +
+\Gamma_{12} \left( \frac{1}{2} - \lvert \psi_1 \rvert^2 \right) \right) \psi_2 \right\} W +
 \textrm{c.c.}
 \end{split}
 \end{equation*}
 This leads us to stochastic differential equations (without the explicit noise term though, since there are no losses yet):
 \[
-\frac{\partial \psi_1}{\partial t} = i \left( - \hat{K}_1 + \Gamma_{11} \left( 1 - \vert \psi_1 \vert^2 \right) +
-\Gamma_{12} \left( \frac{1}{2} - \vert \psi_2 \vert^2 \right) \right) \psi_1
+\frac{\partial \psi_1}{\partial t} = i \left( - \hat{K}_1 + \Gamma_{11} \left( 1 - \lvert \psi_1 \rvert^2 \right) +
+\Gamma_{12} \left( \frac{1}{2} - \lvert \psi_2 \rvert^2 \right) \right) \psi_1
 \]
 \[
-\frac{\partial \psi_2}{\partial t} = i \left( - \hat{K}_2 + \Gamma_{22} \left( 1 - \vert \psi_2 \vert^2 \right) +
-\Gamma_{12} \left( \frac{1}{2} - \vert \psi_1 \vert^2 \right) \right) \psi_2,
+\frac{\partial \psi_2}{\partial t} = i \left( - \hat{K}_2 + \Gamma_{22} \left( 1 - \lvert \psi_2 \rvert^2 \right) +
+\Gamma_{12} \left( \frac{1}{2} - \lvert \psi_1 \rvert^2 \right) \right) \psi_2,
 \]
 which look almost like coupled GPEs, except for the phase shifting term.
 In order to connect $\Gamma$ coefficients with interaction coefficients $g$ in GPEs,
@@ -422,11 +422,11 @@ where $R_{iTF}$ is the radius of the condensate, obtained using Thomas-Fermi app
 For $10^4$--$10^5$ atoms it gives the values of the order of $10^2$, therefore we can safely assume that:
 \begin{equation}
 \label{psi_estimation}
-\vert \psi_i \vert^2 \gg 1
+\lvert \psi_i \rvert^2 \gg 1
 \end{equation}
 Areas where it is not true contain negligible amounts of atoms and therefore do not affect the evolution.
 
-Thus we can drop out lower orders of $\vert \psi_1 \vert^2$ and $\vert \psi_2 \vert^2$, and the following correspondences are valid:
+Thus we can drop out lower orders of $\lvert \psi_1 \rvert^2$ and $\lvert \psi_2 \rvert^2$, and the following correspondences are valid:
 \[
 \Gamma_{11} = g_{11},\, \Gamma_{12} = g_{12},\, \Gamma_{22} = g_{22}.
 \]
@@ -437,27 +437,38 @@ The resulting equation in Wigner representation is:
 \label{full_wigner_equation}
 \begin{split}
 \frac{\partial W}{\partial t} = & \int\limits_V d\textbf{r} \left\{ - \frac{\partial}{\partial \psi_1} \left( \hat{A}_1 +
-\kappa_{111} \left( \frac{9}{2} \vert \psi_1 \vert^2 - \frac{9}{4} - \frac{3}{2} \vert \psi_1 \vert^4 \right) +
-\kappa_{12} \left( \frac{1}{2} - \vert \psi_2 \vert^2 \right) \right) \psi_1 - \right. \\
-& \left. - \frac{\partial}{\partial \psi_2} \left( \hat{A}_2 + \kappa_{12} \left( \frac{1}{2} - \vert \psi_1 \vert^2 \right) +
-\kappa_{22} \left( 1 - \vert \psi_2 \vert^2 \right) \right) \psi_2 +  \textrm{c.c.} + \right. \\
-& \left. + \frac{\partial^2}{\partial \psi_1 \partial \psi_1^*} \left( \kappa_{111} \left(\frac{9}{2} \vert \psi_1 \vert^4 -
-9 \vert \psi_1 \vert^2 + \frac{9}{4} \right) + \kappa_{12} \left( \vert \psi_2 \vert^2 - \frac{1}{2} \right) \right) + \right. \\
-& \left. + \frac{\partial^2}{\partial \psi_2 \partial \psi_2^*} \left( \kappa_{12} \left( \vert \psi_1 \vert^2 - \frac{1}{2} \right) +
-\kappa_{22} \left( 2 \vert \psi_2 \vert^2 - 1 \right) \right) + \right. \\
+\kappa_{111} \left( \frac{9}{2} \lvert \psi_1 \rvert^2 - \frac{9}{4} - \frac{3}{2} \lvert \psi_1 \rvert^4 \right) +
+\kappa_{12} \left( \frac{1}{2} - \lvert \psi_2 \rvert^2 \right) \right) \psi_1 - \right. \\
+& \left. - \frac{\partial}{\partial \psi_2} \left( \hat{A}_2 + \kappa_{12} \left( \frac{1}{2} - \lvert \psi_1 \rvert^2 \right) +
+\kappa_{22} \left( 1 - \lvert \psi_2 \rvert^2 \right) \right) \psi_2 +  \textrm{c.c.} + \right. \\
+& \left. + \frac{\partial^2}{\partial \psi_1 \partial \psi_1^*} \left( \kappa_{111} \left(\frac{9}{2} \lvert \psi_1 \rvert^4 -
+9 \lvert \psi_1 \rvert^2 + \frac{9}{4} \right) + \kappa_{12} \left( \lvert \psi_2 \rvert^2 - \frac{1}{2} \right) \right) + \right. \\
+& \left. + \frac{\partial^2}{\partial \psi_2 \partial \psi_2^*} \left( \kappa_{12} \left( \lvert \psi_1 \rvert^2 - \frac{1}{2} \right) +
+\kappa_{22} \left( 2 \lvert \psi_2 \rvert^2 - 1 \right) \right) + \right. \\
 & \left. + \frac{\partial^2}{\partial \psi_1 \partial \psi_2^*} \kappa_{12} \psi_1 \psi_2^* +
 \frac{\partial^2}{\partial \psi_1^* \partial \psi_2} \kappa_{12} \psi_1^* \psi_2
 \right\} W,
 \end{split}
 \end{equation*}
 where $\hat{A}_1$ and $\hat{A}_2$ stand for previously calculated kinetic, potential and interaction terms for both components.
-Using the same estimation of $\vert \psi_1 \vert^2$ and $\vert \psi_2 \vert^2$,
+Using the same estimation of $\lvert \psi_1 \rvert^2$ and $\lvert \psi_2 \rvert^2$,
 we can connect $\kappa$ coefficients with loss coefficients $\gamma$ in GPEs:
 \[
 \kappa_{111} = \frac{1}{3} \gamma_{111},\,
 \kappa_{12} = \frac{1}{2} \gamma_{12},\,
 \kappa_{22} = \frac{1}{2} \gamma_{22}.
 \]
+
+\subsection*{Diffusion matrix decomposition}
+
+Now there is a tricky bit. Let us write down the second order derivative part of equation~[\ref{full_wigner_equation}]
+in a matrix form, dropping out
+\[
+D = \frac{\kappa_{12} \lvert \psi_1 \rvert^2}{2}  \begin{pmatrix}
+
+\end{pmatrix}
+\]
+
 
 Since we are using pseudoclassical description of the condensate,
 we can increase accuracy of the model by taking into account quantum noise.
@@ -538,11 +549,11 @@ the evolution of cloud structure goes similarly on both images.
 
 Then we may try to reproduce another experimental result, namely, visibility measurements.
 Visibility can be described as:
-\[ V = \max_{\phi} \frac{\vert N_1(\phi) - N_2(\phi) \vert}{N_1(\phi) + N_2(\phi)}, \]
+\[ V = \max_{\phi} \frac{\lvert N_1(\phi) - N_2(\phi) \rvert}{N_1(\phi) + N_2(\phi)}, \]
 where $N_1(\phi)$ and $N_2(\phi)$ are numbers of atoms in two states after $\frac{\pi}{2}$-pulse,
 described by rotation matrix \ref{rotation_matrix}.
 One can work out the analytical formula for visibility, which looks like:
-\[ V = \frac{2 \vert \langle \psi_1 \vert \psi_2 \rangle \vert}{N_1 + N_2}, \]
+\[ V = \frac{2 \lvert \langle \psi_1 \vert \psi_2 \rangle \rvert}{N_1 + N_2}, \]
 where $N_1$ and $N_2$ are numbers of atoms in two states without any pulses (with noise term subtracted, if necessary).
 
 As can be seen on figure~\ref{visibility_vs_reference},
