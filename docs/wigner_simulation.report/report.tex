@@ -12,15 +12,22 @@
 
 \section*{Natural units}
 
-Before we start doing any calculations, a transformation to dimensionless units should be defined. It will significantly increase readability of equations and facilitate various estimations.
+Before we start doing any calculations, a transformation to dimensionless units should be defined.
+It will significantly increase readability of equations and facilitate various estimations.
 
-There are several ways to do it; since we are working with the harmonic potential, the obvious variant is to use the parameters of harmonic oscillator as new units, taking into account the usual symmetry $\omega_x = \omega_y = \omega_\rho$ which exists in experiments:
+There are several ways to do it; since we are working with the harmonic potential,
+the obvious variant is to use the parameters of harmonic oscillator as new units,
+taking into account the usual symmetry $\omega_x = \omega_y = \omega_\rho$ which exists in experiments:
 \[ l_\rho =  \sqrt{\frac{\hbar}{m\omega_\rho}},\, t_\rho = \frac{1}{\omega_\rho},\, E_\rho = \hbar \omega_\rho. \]
 
-Dimensionless variables will be mainly used throughout the article, so, for the sake of readability, they will be explicitly marked with primes only when they can be confused with variables in real units. In other places all variables should be considered dimensionless unless explicitly specified as real. For example, the transformation of coordinates will look like:
+Dimensionless variables will be mainly used throughout the article, so, for the sake of readability,
+they will be explicitly marked with primes only when they can be confused with variables in real units.
+In other places all variables should be considered dimensionless unless explicitly specified as real.
+For example, the transformation of coordinates will look like:
 \[ x = x^\prime l_\rho,\, y = y^\prime l_\rho,\, z = z^\prime l_\rho. \]
 
-Wave function can be transformed in different ways depending on the normalisation. We will use the transformation that keeps the integral of wave function over space equal to number of particles in the system:
+Wave function can be transformed in different ways depending on the normalisation.
+We will use the transformation that keeps the integral of wave function over space equal to number of particles in the system:
 \[ \psi = \psi^\prime / l_\rho^\frac{3}{2}. \]
 
 \section*{Thomas-Fermi approximation}
@@ -32,7 +39,8 @@ V(\mathbf{r}) + g_{11} \vert \psi(\mathbf{r}) \vert^2,
 \]
 \[ g_{11} = \frac{4 \pi \hbar^2 a_{11}}{m}, \]
 \[ V(\mathbf{r}) = \frac{m}{2} \left( \omega_x^2 x^2 + \omega_y^2 y^2 + \omega_z^2 z^2 \right). \]
-where $V(\mathbf{r})$ is the potential energy for parabolic trap, $g_{11}$ is the interaction coefficient and $a_{11}$ is the scattering length for atoms in non-excited state. In natural units:
+where $V(\mathbf{r})$ is the potential energy for parabolic trap, $g_{11}$ is the interaction coefficient,
+and $a_{11}$ is the scattering length for atoms in non-excited state. In natural units:
 \[
 \hat{H} = -\frac{1}{2} \frac{\partial^2}{\partial \mathbf{r}^2} + 
 \frac{1}{2} \left( x^2 + y^2 + \lambda^{-2} z^2 \right) + g_{11} \vert \psi(\mathbf{r}) \vert^2,
@@ -42,14 +50,17 @@ where
 
 The steady state should satisfy the Gross-Pitaevskii equation:
 \[ \hat{H} \psi = \mu \psi. \]
-To get the first approximation of the state function, we consider the kinetic term to be small as compared to other terms and omit it. The conditions for this operation to be valid will be determined later in this section. Thus we get the simple equation:
+To get the first approximation of the state function, we consider the kinetic term to be small as compared to other terms and omit it.
+The conditions for this operation to be valid will be determined later in this section.
+Thus we get the simple equation:
 \[ \left( V(\mathbf{r}) + g_{11} \vert \psi(\mathbf{r}) \vert^2 \right) \psi(\mathbf{r}) = \mu \psi(\mathbf{r}), \]
 which leads us to the state function:
 \[ \vert \psi(\mathbf{r}) \vert^2 = \frac{1}{g_{11}} \max \left( \mu - V(\mathbf{r}), 0 \right). \]
 The condition for $V(\mathbf{r})$ defines the shape of the condensate - it is the ellipsoid with the following radii:
 \[ r_x = r_y = \sqrt{2\mu},\, r_z = \lambda \sqrt{2\mu}. \]
 
-Using the normalisation condition for the steady state function gives us the connection between the number of atoms in the condensate and the chemical potential:
+Using the normalisation condition for the steady state function gives us the connection
+between the number of atoms in the condensate and the chemical potential:
 \[ \int\limits_{V} \vert \psi(\mathbf{r}) \vert^2 dV = N, \]
 \[ \mu = \left( \frac{15 N g_{11}}{16 \pi \lambda \sqrt{2}} \right)^{\frac{2}{5}}, \]
 or, in real units:
@@ -60,7 +71,8 @@ or, in real units:
 \]
 where $\bar{\omega} = \sqrt[3]{\omega_x \omega_y \omega_z}$.
 
-Now we can roughly estimate the conditions necessary to drop the kinetic term from equation. Substitution of the approximate solution and calculation of the second derivative gives us the following inequation:
+Now we can roughly estimate the conditions necessary to drop the kinetic term from equation.
+Substitution of the approximate solution and calculation of the second derivative gives us the following inequation:
 \[
 \left( 
 	\frac{2 + \lambda^{-2}}{2 \sqrt{\mu - V(\mathbf{r})}} +
@@ -68,26 +80,54 @@ Now we can roughly estimate the conditions necessary to drop the kinetic term fr
 \right) \ll
 \mu \sqrt{\mu - V(\mathbf{r})}.
 \]
-In the experiments $\lambda$ is usually of the order of ten, so we can drop terms with $\lambda^{-2}$. Therefore, near the centre of the condensate we this inequation simplifies to $\mu \gg 1$, which, in turn gives us the condition:
+In the experiments $\lambda$ is usually of the order of ten, so we can drop terms with $\lambda^{-2}$.
+Therefore, near the centre of the condensate we this inequation simplifies to $\mu \gg 1$, which, in turn gives us the condition:
 \[ \frac{N a_{11}}{\lambda l_\rho} \gg 1. \]
 
-On the other hand, near the edges the left-hand side of the inequation converges to infinity, while the right-hand side equals zero. This means that near the edges of the condensate Thomas-Fermi approximation fails regardless of the conditions. Fortunately, the density of the particles there is low, so we can estimate the width $h$ of the "belt" where our first approximation of the state function is significantly incorrect. If it happens to be small as compared to the size of the condensate, the approximation can be considered valid.
+On the other hand, near the edges the left-hand side of the inequation converges to infinity, while the right-hand side equals zero.
+This means that near the edges of the condensate Thomas-Fermi approximation fails regardless of the conditions.
+Fortunately, the density of the particles there is low, so we can estimate the width $h$ of the "belt"
+where our first approximation of the state function is significantly incorrect.
+If it happens to be small as compared to the size of the condensate, the approximation can be considered valid.
 
-The first term at the left-hand side of the inequation converges to infinity slower than the second one and can be dropped. Then, for the sake of simplicity, we consider two of three coordinates to be zero and the third one to equal $r - h$, where $r$ is the corresponding radius of the condensate. After replacing "$\ll$" by "$\approx$" and assuming $h$ to be small as compared to $r$, we obtain:
+The first term at the left-hand side of the inequation converges to infinity slower than the second one and can be dropped.
+Then, for the sake of simplicity, we consider two of three coordinates to be zero and the third one to equal $r - h$,
+where $r$ is the corresponding radius of the condensate.
+After replacing "$\ll$" by "$\approx$" and assuming $h$ to be small as compared to $r$, we obtain:
 \[ h_x \approx \frac{2}{\sqrt{2 \mu}},\, h_z \approx \frac{2}{\lambda \sqrt{2 \mu}}. \]
 They have to be much smaller than corresponding radii, which gives us:
 \[ x:\: \mu \gg 1,\, z:\: \mu \gg \lambda^{-2}. \]
-The former condition is the same as for the centre of the condensate, but the latter one is much less strict. Therefore, we have only one condition justifying the application of Thomas-Fermi approximation: $\mu \gg 1$.
+The former condition is the same as for the centre of the condensate, but the latter one is much less strict.
+Therefore, we have only one condition justifying the application of Thomas-Fermi approximation: $\mu \gg 1$.
  
-Let us use some real-life experimental parameters and check how well Thomas-Fermi approximation works. For three-dimensional trap with frequencies $f_x = f_y = 97.6 \textrm{ Hz}$ and $f_x = 11.96 \textrm{ Hz}$ and $10^5$ rubidium atoms (which have scattering length $a_{11} = 100.4 a_0$, where $a_0$ is Bohr radius) we have $\mu \approx 7.56$. This means that Thomas-Fermi approximation produces solution which is close to the real one. But for lower amount of atoms, say $10^4$, we get $\mu \approx 3.02$, which is a sign that the we have reached the limit of the approximation's applicability. Therefore, for low amounts of atoms, Thomas-Fermi approximation must be used with care.
+Let us use some real-life experimental parameters and check how well Thomas-Fermi approximation works.
+For three-dimensional trap with frequencies $f_x = f_y = 97.6 \textrm{ Hz}$ and $f_x = 11.96 \textrm{ Hz}$
+and $10^5$ rubidium atoms (which have scattering length $a_{11} = 100.4 a_0$, where $a_0$ is Bohr radius),
+we have $\mu \approx 7.56$.
+This means that Thomas-Fermi approximation produces solution which is close to the real one.
+But for lower amount of atoms, say $10^4$, we get $\mu \approx 3.02$,
+which is a sign that the we have reached the limit of the approximation's applicability.
+Therefore, for low amounts of atoms, Thomas-Fermi approximation must be used with care.
 
 \section*{Steady state calculation}
 
-The steady state obtained using Thomas-Fermi approximation is good for estimation purposes, but not for real-life calculations - for example, it does not have continuous first derivative everywhere (namely, near the edges of the condensate). That is why we have to employ numerical calculations in order to find precise (to a certain extent) solution of the Gross-Pitevskii equation. One of the possible ways, the propagation in imaginary time using split-step Fourier method, will be described in this section.
+The steady state obtained using Thomas-Fermi approximation is good for estimation purposes,
+but not for real-life calculations --- for example, it does not have continuous first derivative everywhere
+(namely, near the edges of the condensate).
+That is why we have to employ numerical calculations in order to find precise (to a certain extent) solution
+of the Gross-Pitaevskii equation.
+One of the possible ways, the propagation in imaginary time using split-step Fourier method, will be described in this section.
 
-The idea of the propagation in imaginary time is that propagating the system state using the time-dependent GPE but with substitution $t \rightarrow \tau = it$ diminishes energy of the system, so after the sufficient amount of time this propagation will lead us to steady state. The rigorous proof of this method can be found in \cite{gpe_ngf}, but there is a simple "hand-waving" explanation. It assumes the superposition principle works for GPE, though it does not because of the nonlinearity.
+The idea of the propagation in imaginary time is that propagating the system state using the time-dependent GPE,
+but with the substitution $t \rightarrow \tau = it$, diminishes energy of the system,
+so after the sufficient amount of time this propagation will lead us to steady state.
+The rigorous proof of this method can be found in \cite{gpe_ngf}, but there is a simple "hand-waving" explanation.
+It assumes the superposition principle works for GPE, though it does not because of the nonlinearity.
 
-Let us say we have the system with Hamiltonian $\hat{H}$, whose eigenvalues are $\mu_1 < \mu_2 < ...$. They do not have to correspond to real states of BEC, we just know that this Hamiltonian must have discrete spectre (because of the form of the potential) and the lowest eigenvalue corresponds to steady state we want to find. The steady solution of time-dependent GPE
+Let us say we have the system with Hamiltonian $\hat{H}$, whose eigenvalues are $\mu_1 < \mu_2 < ...$.
+They do not have to correspond to real states of BEC, we just know that this Hamiltonian must have discrete spectre
+(because of the form of the potential) and the lowest eigenvalue corresponds to steady state we want to find.
+The steady solution of time-dependent GPE
 \[ i \frac{\partial \psi}{\partial t} = \hat{H} \psi \]
 then looks like
 \[ \psi(\mathbf{r}, t) = \sum_k e^{-i \mu_k t} f_k(\mathbf{r}). \]
@@ -97,27 +137,38 @@ We can use Hamiltonian to propagate the solution in time:
 \psi(t) + \frac{dt}{i} \hat{H} \psi(t).
 \]
 
-Now consider the substitution $t \rightarrow \tau = it$; after it the steady solution will become fading, with higher-energy components fading faster:
+Now consider the substitution $t \rightarrow \tau = it$; after it the steady solution will become fading,
+with higher-energy components fading faster:
 \begin{equation}
 \label{split_step_steady_state:general_solution_imaginary_time}
 \psi(\mathbf{r}, \tau) = \sum_k e^{-\mu_k \tau} f_k(\mathbf{r}).
 \end{equation}
-Therefore, if we take some random initial solution and propagate it for a sufficient amount of time, higher-energy components will eventually die out (in comparison with the lowest-energy state) and leave us with desired steady state:
+Therefore, if we take some random initial solution and propagate it for a sufficient amount of time,
+higher-energy components will eventually die out (in comparison with the lowest-energy state)
+and leave us with desired steady state:
 \begin{equation}
 \label{split_step_steady_state:iterative_process}
 \psi(\tau + d\tau) \simeq \psi(\tau) - d\tau \hat{H} \psi(\tau).
 \end{equation}
-The state obtained from Thomas-Fermi approximated GPE can be taken as an initial one, since it is rather close to the desired one (and, therefore, higher-energy components are already quite small).
+The state obtained from Thomas-Fermi approximated GPE can be taken as an initial one,
+since it is rather close to the desired one (and, therefore, higher-energy components are already quite small).
 
-Since the energy will decrease exponentially after each step and the precision of numerical calculations is limited, renormalisation after each step will be required. Known total number of atoms in steady state serves best in this case (because we will have to renormalise the final steady state anyway):
+Since the energy will decrease exponentially after each step and the precision of numerical calculations is limited,
+renormalisation after each step will be required.
+Known total number of atoms in steady state serves best in this case
+(because we will have to renormalise the final steady state anyway):
 \[ \int\limits_V \vert \psi(\tau, \mathbf{r}) \vert^2 dV = N. \]
 
-Propagation should be terminated when the total energy of the state stops changing (that is, only one component with the lowest energy is left out). So, we need to calculate the total energy after each step:
+Propagation should be terminated when the total energy of the state stops changing
+(that is, only one component with the lowest energy is left out).
+So, we need to calculate the total energy after each step:
 \[ E(\psi) = \int\limits_V \psi^\dagger \left(
 -\frac{\nabla^2}{2} + V(\mathbf{r}) + \frac{g_{11}}{2} \vert \psi(\mathbf{r}) \vert^2 \right) \psi dV \]
 and compare it to the previous value.
 
-Now how do we propagate the state of the system? There are a lot of possibilities, one of which is split-step Fourier method. It is rather simple and can be effectively parallelised, which means a good scaling and low computation times. 
+Now how do we propagate the state of the system?
+There are a lot of possibilities, one of which is split-step Fourier method.
+It is rather simple and can be effectively parallelised, which means a good scaling and low computation times. 
 
 The propagation in imaginary time can be described as:
 \[ \psi(\tau + d\tau, \mathbf{r}) \simeq \exp ( -d\tau \hat{H} ) \psi(\tau, \mathbf{r}). \]
@@ -126,7 +177,9 @@ The idea of split-step Fourier method is to separate the execution of different 
 \label{split_step_steady_state:splitted_propagation}
 \psi(\tau + d\tau, \mathbf{r}) \simeq \exp(d\tau \hat{D}) \exp(d\tau \hat{N}) \psi(\tau, \mathbf{r}),
 \end{equation}
-where $\hat{D}$ and $\hat{N}$ are chosen so that they could be executed most conveniently in Fourier and spatial domains correspondingly. For our Hamiltonian
+where $\hat{D}$ and $\hat{N}$ are chosen so that they could be executed most conveniently
+in Fourier and spatial domains correspondingly.
+For our Hamiltonian
 \[ 
 \hat{H} = -\frac{1}{2} \frac{\partial^2}{\partial \mathbf{r}^2} +
 V(\mathbf{r}) + g_{11} \vert \psi(\mathbf{r}) \vert^2,
@@ -141,7 +194,8 @@ The spatial derivative is a simple multiplication in Fourier domain, so the prop
 \psi(\tau + d\tau, \mathbf{r}) \simeq \left\{ \hat{F}^{-1} \exp \left[ d\tau \hat{D}(i\omega) \right] \hat{F} \right\}
 \exp(d\tau \hat{N}) \psi(\tau, \mathbf{r}).
 \]
-Here $\hat{D}(i\omega)$ is obtained by replacing differential operator by $i \omega$, where $\omega$ is a frequency in Fourier domain.
+Here $\hat{D}(i\omega)$ is obtained by replacing differential operator by $i \omega$,
+where $\omega$ is a frequency in Fourier domain.
 
 In order to improve the accuracy of the method, equation \ref{split_step_steady_state:splitted_propagation} can be rewritten as
 \[
@@ -149,18 +203,25 @@ In order to improve the accuracy of the method, equation \ref{split_step_steady_
 \exp \left( \int\limits^{\tau + d\tau}_\tau \hat{N} (\tau^\prime) d\tau^\prime \right)
 \exp \left( \frac{d\tau}{2} \hat{D} \right) \psi(\tau, \mathbf{r}).
 \]
-This method is called the symmetrized split-step Fourier method. Integral can be evaluated either by approximating it with $d\tau\hat{N}$ or by using more accurate method, like trapezoidal rule
+This method is called the symmetrized split-step Fourier method.
+Integral can be evaluated either by approximating it with $d\tau\hat{N}$ or by using more accurate method,
+like trapezoidal rule
 \[
 \int\limits^{\tau + d\tau}_\tau \hat{N} (\tau^\prime) d\tau^\prime \simeq
 \frac{d\tau}{2} \left( \hat{N}(\tau) + \hat{N}(\tau + d\tau) \right).
 \]
-Since the value of $\hat{N}(\tau + d\tau)$ is unknown at the time of the calculation (it is performed in the middle of the step), an iterative procedure is necessary.
+Since the value of $\hat{N}(\tau + d\tau)$ is unknown at the time of the calculation
+(it is performed in the middle of the step), an iterative procedure is necessary.
 
 \section*{Two-component evolution}
 
-Now when we have got the steady state for one-component system, it is the time to start the simulation of two-component system. The initial state for the component $\vert1\rangle$ is the one-component steady state, and for $\vert2\rangle$ the initial state equals to zero.
+Now when we have got the steady state for one-component system, it is the time to start the simulation of two-component system.
+The initial state for the component $\vert1\rangle$ is the one-component steady state,
+and for $\vert2\rangle$ the initial state equals to zero.
 
-The evolution of the system is described by coupled Gross-Pitaevskii equations. They can contain different terms depending on which features of the system we need to take into account. Basic form can be found in many sources, i.e. \cite{pitaevskii_bec}; with the addition of loss terms it looks like (in real units):
+The evolution of the system is described by coupled Gross-Pitaevskii equations.
+They can contain different terms depending on which features of the system we need to take into account.
+Basic form can be found in many sources, i.e. \cite{pitaevskii_bec}; with the addition of loss terms it looks like (in real units):
 \[ i \hbar \frac{\partial \psi_1}{\partial t} = \left(
 	-\frac{\hbar^2\nabla^2}{2m} + V_1(\mathbf{r}) +
 	g_{11} \vert \psi_1 \vert^2 + g_{12} \vert \psi_2 \vert^2 - i \hbar \Gamma_1
@@ -170,15 +231,25 @@ The evolution of the system is described by coupled Gross-Pitaevskii equations. 
 	g_{12} \vert \psi_1 \vert^2 + g_{22} \vert \psi_2 \vert^2 - i \hbar \Gamma_2
 \right) \psi_2 + \frac{\hbar \Omega}{2}e^{i \omega t} \psi_1 - \hbar \Delta \psi_2. \]
 
-Let us now explain each term in this system. $V_1$ and $V_2$ stand for the external potential (which, in general, is different for each component). For our purposes we can consider $V_1 = V_2 = V_{ext}$ (symmetric trapping), where $V_{ext}$ is a trap potential. Interaction coefficients $g_{11}$, $g_{12}$ and $g_{22}$ depend on corresponding scattering lengths:
+Let us now explain each term in this system.
+$V_1$ and $V_2$ stand for the external potential (which, in general, is different for each component).
+For our purposes we can consider $V_1 = V_2 = V_{ext}$ (symmetric trapping), where $V_{ext}$ is a trap potential.
+Interaction coefficients $g_{11}$, $g_{12}$ and $g_{22}$ depend on corresponding scattering lengths:
 \[ g_{ij} = \frac{4 \pi \hbar^2 a_{ij}}{m}. \]
-For rubidium, according to the latest experimental data (\cite{PhysRevLett.99.190402}), $a_{11} = 100.40\ a_0$, $a_{22} = 95.00\ a_0$ and $a_{12} = 97.66\ a_0$ where $a_0$ is the Bohr radius. $\Gamma_1 = (\gamma_{111} n_1^2 + \gamma_{12} n_2) / 2$ and $\Gamma_2 = (\gamma_{22} n_2 + \gamma_{12} n_1) / 2$, where $n_1$ and $n_2$ stand for the densities of components, are responsible for two- and three-body loss processes. Loss rates $\gamma$ can be found in \cite{PhysRevLett.99.190402} and \cite{PhysRevLett.79.337}:
+For rubidium, according to the latest experimental data (\cite{PhysRevLett.99.190402}),
+$a_{11} = 100.40\ a_0$, $a_{22} = 95.00\ a_0$ and $a_{12} = 97.66\ a_0$ where $a_0$ is the Bohr radius.
+$\Gamma_1 = (\gamma_{111} n_1^2 + \gamma_{12} n_2) / 2$ and $\Gamma_2 = (\gamma_{22} n_2 + \gamma_{12} n_1) / 2$,
+where $n_1$ and $n_2$ stand for the densities of components, are responsible for two- and three-body loss processes.
+Loss rates $\gamma$ can be found in \cite{PhysRevLett.99.190402} and \cite{PhysRevLett.79.337}:
 \[ \gamma_{111} = 5.4(11) \times 10^{-30}\ \textrm{cm}^6/\textrm{s}, \]
 \[ \gamma_{12} = 0.780(19) \times 10^{-13}\ \textrm{cm}^3/\textrm{s}, \]
 \[ \gamma_{22} = 1.194(19) \times 10^{-13}\ \textrm{cm}^3/\textrm{s}. \]
 $\Delta$ is a detuning frequency and depends on experimental conditions.
 
-$\Omega$ is a constant for state transitions due to external oscillating magnetic field, for example, during $\frac{\pi}{2}$-pulses. Since these pulses act for a short amount of time (as compared to the time scale of the system), we can apply corresponding matrix instantaneously instead of explicitly use $\Omega$ terms. For example, matrix for $\frac{\pi}{2}$-pulse will look like:
+$\Omega$ is a constant for state transitions due to external oscillating magnetic field, for example, during $\frac{\pi}{2}$-pulses.
+Since these pulses act for a short amount of time (as compared to the time scale of the system),
+we can apply corresponding matrix instantaneously instead of explicitly use $\Omega$ terms.
+For example, matrix for $\frac{\pi}{2}$-pulse will look like:
 \[
 \begin{pmatrix}
 	\psi^\prime_1 \\	\psi^\prime_2
@@ -217,7 +288,10 @@ After transformation to natural units and considering the above explanation of t
 where $l_{111}$, $l_{12}$ and $l_{22}$ are dimensionless loss terms:
 \[ l_{ijk} = \gamma_{ijk} / l_\rho^6 \omega_{\rho},\, l_{ij} = \gamma_{ij} / l_\rho^3 \omega_{\rho}. \]
 
-These coupled equations can be solved numerically with the same split-step Fourier propagation as we used to get single component ground state. Since the propagation is performed in real time now, and there are additional terms in the equations, differential and nonlinear operators will change:
+These coupled equations can be solved numerically with the same split-step Fourier propagation
+as we used to get single component ground state.
+Since the propagation is performed in real time now, and there are additional terms in the equations,
+differential and nonlinear operators will change:
 \[ \hat{D} = i \frac{\nabla^2}{2}, \]
 \[ \hat{N}_1 = -i \left( V_{ext} + g_{11} n_1 + g_{12} n_2 \right) - \frac{1}{2} \left( l_{111} n_1^2 + l_{12} n_2 \right), \]
 \[
@@ -227,39 +301,51 @@ These coupled equations can be solved numerically with the same split-step Fouri
 
 \section*{Quantum noise}
 
-In order to take into account quantum noise, we must start from the master equation. Second-quantized hamiltonian for the two-component system looks like:
+In order to take into account quantum noise, we must start from the master equation.
+Second-quantized hamiltonian for the two-component system looks like:
 \[
 \hat{H} = \sum\limits^2_{i=1} \left\{ \int\limits_V d\textbf{r} \hat{\psi}_i^\dagger \hat{K}_i \hat{\psi}_i +
 \sum\limits^2_{j=1} \frac{\Gamma_{ij}}{2} \int\limits_V d\textbf{r} \hat{\psi}_i^\dagger \hat{\psi}_j^\dagger \hat{\psi}_i \hat{\psi}_j \right\}
 \]
-where $\hat{K}_i$ is the sum of kinetic and potential energy operators for the corresponding component, and $\hat{\psi}_i$ are field operators. Volume $V$ is, strictly speaking, the whole coordinate space, but we will need explicit integration boundaries later.
+where $\hat{K}_i$ is the sum of kinetic and potential energy operators for the corresponding component,
+and $\hat{\psi}_i$ are field operators.
+Volume $V$ is, strictly speaking, the whole coordinate space, but we will need explicit integration boundaries later.
 
 The master equation can then be written as following:
 \[
 \frac{\partial\rho}{\partial t} = -i [\hat{H}, \rho] + \sum\limits_j \frac{\kappa_j}{2} \int\limits_V d\textbf{r}
 \left( 2  \hat{O}_j \rho \hat{O}_j^\dagger - \hat{O}_j^\dagger \hat{O}_j \rho - \rho \hat{O}_j^\dagger \hat{O}_j \right),
 \]
-where $\hat{O}_j$ are operators, describing bath couplings with corresponding strengths $\kappa_j$. In our case, we have three main sources of losses: three-body interactions between $\vert1\rangle$ particles, two-body $\vert1\rangle$-$\vert2\rangle$ and two-body $\vert2\rangle$-$\vert2\rangle$ interactions. Therefore bath couplings can be defined as:
+where $\hat{O}_j$ are operators, describing bath couplings with corresponding strengths $\kappa_j$.
+In our case, we have three main sources of losses: three-body interactions between $\vert1\rangle$ particles,
+two-body $\vert1\rangle$-$\vert2\rangle$ and two-body $\vert2\rangle$-$\vert2\rangle$ interactions.
+Therefore bath couplings can be defined as:
 \begin{equation}
 \label{bath_coupling_operators}
 \hat{O}_1 = \hat{\psi}_1^3,\, \hat{O}_2 = \hat{\psi}_1 \hat{\psi}_2 + \hat{\psi}_2 \hat{\psi}_1,\, \hat{O}_3 = \hat{\psi}_2^2
 \end{equation}
 
-In order to get stochastic equations, which can be solved numerically, we must rewrite the master equation in Wigner representation using the functional correspondences:
+In order to get stochastic equations, which can be solved numerically,
+we must rewrite the master equation in Wigner representation using the functional correspondences:
 \begin{eqnarray*}
 \hat{\psi} \rho = \left( \psi + \frac{1}{2} \frac{\partial}{\partial \psi^*} \right) W, & &
 \hat{\psi}^\dagger \rho = \left( \psi^* - \frac{1}{2} \frac{\partial}{\partial \psi} \right) W \\
 \rho \hat{\psi} = \left( \psi - \frac{1}{2} \frac{\partial}{\partial \psi^*} \right) W, & &
 \rho \hat{\psi}^\dagger = \left( \psi^* + \frac{1}{2} \frac{\partial}{\partial \psi} \right) W
 \end{eqnarray*}
-Note that first pair of correspondences is applied in left-to-right order, while the second pair is applied right-to-left. While simplifying the resulting equation, one can use the fact, that although $\psi$ and $\psi^*$ are not independent (one is the complex conjugate of the other), $\psi$ and $\partial/\partial\psi^*$ can still be exchanged. It can be proved with the help of transformation to independent variables $x$ and $y$:
+Note that first pair of correspondences is applied in left-to-right order, while the second pair is applied right-to-left.
+While simplifying the resulting equation, one can use the fact, that, although $\psi$ and $\psi^*$ are not independent
+(one is the complex conjugate of the other), $\psi$ and $\partial/\partial\psi^*$ can still be exchanged.
+It can be proved with the help of transformation to independent variables $x$ and $y$:
 \[
 \psi = x + iy,\, \psi^* = x - iy,\, \\
 \frac{\partial}{\partial\psi} = \frac{1}{2} \left( \frac{\partial}{\partial x} - i \frac{\partial}{\partial y} \right),\, \\
 \frac{\partial}{\partial\psi^*} = \frac{1}{2} \left( \frac{\partial}{\partial x} + i \frac{\partial}{\partial y} \right).
 \]
 
-The transformation to Wigner representation is straightforward (though quite cumbersome), except for the term with $\hat{K}$ operator, which requires some special treatment. Let's do the transformation for this term step by step:
+The transformation to Wigner representation is straightforward (though quite cumbersome),
+except for the term with $\hat{K}$ operator, which requires some special treatment.
+Let's do the transformation for this term step by step:
 \begin{eqnarray}
 [ \int\limits_V \hat{\psi}^\dagger \hat{K} \hat{\psi}, \rho ]
 & = & \int\limits_V d\textbf{r} \hat{\psi}^\dagger \hat{K} \hat{\psi} \rho - \int\limits_V d\textbf{r} \rho \hat{\psi}^\dagger \hat{K} \hat{\psi} \nonumber \\
@@ -272,9 +358,13 @@ The transformation to Wigner representation is straightforward (though quite cum
 \frac{1}{2} \psi^* \hat{K} \frac{\partial}{\partial\psi^*} \right) \right\} W \label{dpsi_star_K_psi_star_term}
 \end{eqnarray}
 
-Operator $\hat{K}$ is the sum of kinetic and potential energy operators; the former is the second order derivative, and the latter is the function of coordinates:
+Operator $\hat{K}$ is the sum of kinetic and potential energy operators;
+the former is the second order derivative, and the latter is the function of coordinates:
 \[ \hat{K} = - \frac{1}{2} \nabla^2 + V(\textbf{r}) \]
-Potential term does not depend on $\psi$ or $\psi^*$ and can be easily handled; kinetic term can be moved to desired place using integration by parts (since our case is three-dimensional, we will use Green's first identity). For example, let us prove that the term~(\ref{annihilating_psi_K_psi}) is equal to zero:
+Potential term does not depend on $\psi$ or $\psi^*$ and can be easily handled;
+kinetic term can be moved to desired place using integration by parts
+(since our case is three-dimensional, we will use Green's first identity).
+For example, let us prove that the term~(\ref{annihilating_psi_K_psi}) is equal to zero:
 \begin{eqnarray*}
 \int\limits_V d\textbf{r} \left( \psi^* \hat{K} \psi - \psi \hat{K} \psi^* \right) W
 & = & \frac{1}{2} \int\limits_V d\textbf{r} \left( - \psi^* \nabla^2 \psi - \psi \nabla^2 \psi^* \right) W \\
@@ -285,15 +375,20 @@ Potential term does not depend on $\psi$ or $\psi^*$ and can be easily handled; 
 & = & \frac{1}{2} \left\{ \oint\limits_{\partial V} \psi (\nabla \psi^* \cdot \textbf{n}) dS -
 \oint\limits_{\partial V} \psi^* (\nabla \psi \cdot \textbf{n}) dS \right\} W = 0
 \end{eqnarray*}
-Here $\partial V$ stands for the boundary of region $V$. Differential operator needs to be Hermitian, therefore it equals to zero along the boundary $V$. This results in both surface integrals being equal to zero. 
+Here $\partial V$ stands for the boundary of region $V$.
+Differential operator needs to be Hermitian, therefore it equals to zero along the boundary $V$.
+This results in both surface integrals being equal to zero. 
 
-Terms (\ref{dpsi_K_psi_term}) and~(\ref{dpsi_star_K_psi_star_term}) can be dealt with analagously. The resulting expression for commutator will then look like:
+Terms~(\ref{dpsi_K_psi_term}) and~(\ref{dpsi_star_K_psi_star_term}) can be dealt with analagously.
+The resulting expression for commutator will then look like:
 \[
 [ \int\limits_V \hat{\psi}^\dagger \hat{K} \hat{\psi}, \rho ]  = - \int\limits_V d\textbf{r} \frac{\partial}{\partial\psi} \hat{K} \psi W +
 \int\limits_V d\textbf{r} \frac{\partial}{\partial\psi^*} \hat{K} \psi^* W
 \]
 
-Now we can transform the whole master equation to Wigner representation, writing it down in the form of Fokker-Planck equation. Let us first do it for the case of zero losses. After transformation to Wigner representation, and considering $\Gamma_{12} = \Gamma_{21} $, we will get:
+Now we can transform the whole master equation to Wigner representation, writing it down in the form of Fokker-Planck equation.
+Let us first do it for the case of zero losses.
+After transformation to Wigner representation, and considering $\Gamma_{12} = \Gamma_{21} $, we will get:
 \begin{equation*}
 \begin{split}
 \frac{\partial W}{\partial t} = & \int\limits_V d\textbf{r} \left\{ - \frac{\partial}{\partial \psi_1} i \left( - \hat{K}_1 + \Gamma_{11} \left( 1 - \vert \psi_1 \vert^2 \right) +
@@ -312,16 +407,23 @@ This leads us to stochastic differential equations (without the explicit noise t
 \frac{\partial \psi_2}{\partial t} = i \left( - \hat{K}_2 + \Gamma_{22} \left( 1 - \vert \psi_2 \vert^2 \right) +
 \Gamma_{12} \left( \frac{1}{2} - \vert \psi_1 \vert^2 \right) \right) \psi_2,
 \]
-which look almost like coupled GPEs, except for the phase shifting term. In order to connect $\Gamma$ coefficients with interaction coefficients $g$ in GPEs, we must consider $\vert \psi_i \vert^2 \gg 1$ (areas where it is not true contain negligible amounts of atoms and therefore do not affect the evolution). Really, the average value of $\vert \psi_1 \vert^2$ can be estimated as following:
+which look almost like coupled GPEs, except for the phase shifting term.
+In order to connect $\Gamma$ coefficients with interaction coefficients $g$ in GPEs,
+we must consider $\vert \psi_i \vert^2 \gg 1$
+(areas where it is not true contain negligible amounts of atoms and therefore do not affect the evolution).
+Really, the average value of $\vert \psi_1 \vert^2$ can be estimated as following:
 \[
 \bar{\vert \psi_1 \vert^2} = \frac{N}{V} \approx \frac{N}{R_{TF}^3},
 \]
-where $R_{TF}$ is the radius of the condensate, obtained using Thomas-Fermi approximation. For $10^4$--$10^5$ atoms it gives the values of the order of $10^2$, which proves that our initial assumption was correct. Thus we can drop out lower orders of $\vert \psi_1 \vert^2$ and $\vert \psi_2 \vert^2$, and the following correspondences are valid:
+where $R_{TF}$ is the radius of the condensate, obtained using Thomas-Fermi approximation.
+For $10^4$--$10^5$ atoms it gives the values of the order of $10^2$, which proves that our initial assumption was correct.
+Thus we can drop out lower orders of $\vert \psi_1 \vert^2$ and $\vert \psi_2 \vert^2$, and the following correspondences are valid:
 \[
 \Gamma_{11} = g_{11},\, \Gamma_{12} = g_{12},\, \Gamma_{22} = g_{22}.
 \]
 
-Now it's time to add losses to the picture using bath coupling operators~(\ref{bath_coupling_operators}). The resulting equation in Wigner representation is:
+Now it's time to add losses to the picture using bath coupling operators~(\ref{bath_coupling_operators}).
+The resulting equation in Wigner representation is:
 \begin{equation*}
 \begin{split}
 \frac{\partial W}{\partial t} = & \int\limits_V d\textbf{r} \left\{ - \frac{\partial}{\partial \psi_1} \left( \hat{A}_1 +
@@ -338,26 +440,45 @@ Now it's time to add losses to the picture using bath coupling operators~(\ref{b
 \right\} W + \textrm{c.c.},
 \end{split}
 \end{equation*}
-where $\hat{A}_1$ and $\hat{A}_2$ stand for previously calculated kinetic, potential and interaction terms for both components. Using the same estimation of $\vert \psi_1 \vert^2$ and $\vert \psi_2 \vert^2$, we can connect $\kappa$ coefficients with loss coefficients $\gamma$ in GPEs:
+where $\hat{A}_1$ and $\hat{A}_2$ stand for previously calculated kinetic, potential and interaction terms for both components.
+Using the same estimation of $\vert \psi_1 \vert^2$ and $\vert \psi_2 \vert^2$,
+we can connect $\kappa$ coefficients with loss coefficients $\gamma$ in GPEs:
 \[
 \kappa_{111} = \frac{1}{3} \gamma_{111},\,
 \kappa_{12} = \frac{1}{2} \gamma_{12},\,
 \kappa_{22} = \frac{1}{2} \gamma_{22}.
 \]
 
-Since we are using pseudoclassical description of the condensate, we can increase accuracy of the model by taking into account quantum noise. According to \cite{PhysRevA.58.4824}, the quantum noise can be introduced as the addition of the following wave function to the initial conditions:
+Since we are using pseudoclassical description of the condensate,
+we can increase accuracy of the model by taking into account quantum noise.
+According to \cite{PhysRevA.58.4824}, the quantum noise can be introduced
+as the addition of the following wave function to the initial conditions:
 \[ \psi_{noise}(\mathbf{r}) = \sum_{i=0}^{N_x} \sum_{j=0}^{N_y} \sum_{k=0}^{N_z} \frac{1}{2} \eta_{ijk} \phi_{ijk}(\mathbf{r}), \]
-where $\eta_{ijk}$ are complex random numbers with independent normally distributed real and imaginary parts in such a way that:
+where $\eta_{ijk}$ are complex random numbers with independent normally distributed
+real and imaginary parts in such a way that:
 \[ \overline{\eta_{ijk}^* \eta_{lmn}} = \delta_{il} \delta_{jm} \delta_{kn}, \]
 and $\phi_{ijk}(\mathbf{r})$ are functions from a discrete position basis
 \[ \phi_{ijk}(\mathbf{r}) = \delta(x - i\Delta x) \delta(y - j\Delta y) \delta(z - k\Delta z) / \sqrt{\Delta x \Delta y \Delta z} \]
-with $\Delta x$, $\Delta y$ and $\Delta z$ being the steps of the spatial lattice. Practically, it means that, in order to take into account the quantum noise, we must add the field of random complex numbers to the initial state (in our case it would be GPE steady state for component $\vert1\rangle$ and zero for component $\vert2\rangle$). Real and imaginary parts of these fields must be Gaussian random numbers with variance equal to $1 / 2 \sqrt{\Delta x \Delta y \Delta z}$.
+with $\Delta x$, $\Delta y$ and $\Delta z$ being the steps of the spatial lattice.
+Practically, it means that, in order to take into account the quantum noise,
+we must add the field of random complex numbers to the initial state
+(in our case it would be GPE steady state for component $\vert1\rangle$ and zero for component $\vert2\rangle$).
+Real and imaginary parts of these fields must be Gaussian random numbers
+with variance equal to $1 / 2 \sqrt{\Delta x \Delta y \Delta z}$.
 
 \section*{Implementation}
 
-The model explained above is implemented using C++ and CUDA. Calculation is performed in three steps: first, GPE for one-component gas is solved, producing the steady state. Then there is an optional equilibration phase (corresponding to the time before first $\frac{\pi}{2}$ pulse), followed by the $\frac{\pi}{2}$ pulse and evolution phase. During the evolution phase, each step propagates system state for given time step and prepares data necessary for rendering. Preparation includes second $\frac{\pi}{2}$ pulse (which does not spoil original wave-functions, so that they could be propagated further), particle density calculation, projection on two orthogonal planes and writing these projections to textures for rendering.
+The model explained above is implemented using C++ and CUDA.
+Calculation is performed in three steps: first, GPE for one-component gas is solved, producing the steady state.
+Then there is an optional equilibration phase (corresponding to the time before first $\frac{\pi}{2}$ pulse),
+followed by the $\frac{\pi}{2}$ pulse and evolution phase.
+During the evolution phase, each step propagates system state for given time step and prepares data necessary for rendering.
+Preparation includes second $\frac{\pi}{2}$ pulse
+(which does not spoil original wave-functions, so that they could be propagated further),
+particle density calculation, projection on two orthogonal planes and writing these projections to textures for rendering.
 
-Program uses $128\times32\times32$ lattice and calculates propagation in 1 or 4 ensembles (for quantum noise turned off or on, correspondingly), giving the following times for different stages:
+Program uses $128\times32\times32$ lattice and calculates propagation in 1 or 4 ensembles
+(for quantum noise turned off or on, correspondingly), giving the following times for different stages:
 
 \begin{itemize}
 \item Steady state calculation: 3.4 s (20 $\mu$s time step)
@@ -365,7 +486,10 @@ Program uses $128\times32\times32$ lattice and calculates propagation in 1 or 4 
 \item Evolution: 49.2 ms per step per ensemble
 \end{itemize}
 
-When number of ensembles multiplied by number of lattice points is low, calculation speed is affected mainly by rendering functions and decreases linearly with each additional ensemble; with lots of ensembles (or dense lattice), the bottleneck is FFT, and calculation speed depends on number of ensembles as $O(N\log{N})$.
+When number of ensembles multiplied by number of lattice points is low,
+calculation speed is affected mainly by rendering functions and decreases linearly with each additional ensemble;
+with lots of ensembles (or dense lattice), the bottleneck is FFT,
+and calculation speed depends on number of ensembles as $O(N\log{N})$.
 
 \section*{Simulation results}
 
@@ -379,13 +503,18 @@ When number of ensembles multiplied by number of lattice points is low, calculat
 \label{evolution_vs_reference}
 \end{figure}
 
-The results produced by the program seems to be close to experiments and to reference simulations from \cite{anderson-2009-80}. As an example consider figure~\ref{evolution_vs_reference}, which shows the evolution of the density of $\vert2\rangle$-state. It contains the image from \cite{anderson-2009-80} and the result of split-step simulation with the same model parameters:
+The results produced by the program seems to be close to experiments and to reference simulations from \cite{anderson-2009-80}.
+As an example consider figure~\ref{evolution_vs_reference},
+which shows the evolution of the density of $\vert2\rangle$-state.
+It contains the image from \cite{anderson-2009-80} and the result of split-step simulation with the same model parameters:
 \[ N = 150000 \]
 \[ a_{11} = 100.40 a_0, a_{12} = 97.66 a_0, a_{22} = 95.00 a_0 \]
 \[ f_x = 11.962 \textrm{ Hz}, f_y = f_z = 97.62 \textrm{ Hz} \]
 \[ m = 87 m_p \textrm{ (Rubidium)}\]
 \[ \Delta = 1 \textrm{ Hz} \]
-Although there are some discrepancies, caused by different scales and the fact that reference image simulates condensate after expansion, the evolution of cloud structure goes similarly on both images.
+Although there are some discrepancies,
+caused by different scales and the fact that reference image simulates condensate after expansion,
+the evolution of cloud structure goes similarly on both images.
 
 \begin{figure}
 \begin{center}
@@ -397,13 +526,20 @@ Although there are some discrepancies, caused by different scales and the fact t
 \label{visibility_vs_reference}
 \end{figure}
 
-Then we may try to reproduce another experimental result, namely, visibility measurements. Visibility can be described as:
+Then we may try to reproduce another experimental result, namely, visibility measurements.
+Visibility can be described as:
 \[ V = \max_{\phi} \frac{\vert N_1(\phi) - N_2(\phi) \vert}{N_1(\phi) + N_2(\phi)}, \]
-where $N_1(\phi)$ and $N_2(\phi)$ are numbers of atoms in two states after $\frac{\pi}{2}$-pulse, described by rotation matrix \ref{rotation_matrix}. One can work out the analytical formula for visibility, which looks like:
+where $N_1(\phi)$ and $N_2(\phi)$ are numbers of atoms in two states after $\frac{\pi}{2}$-pulse,
+described by rotation matrix \ref{rotation_matrix}.
+One can work out the analytical formula for visibility, which looks like:
 \[ V = \frac{2 \vert \langle \psi_1 \vert \psi_2 \rangle \vert}{N_1 + N_2}, \]
 where $N_1$ and $N_2$ are numbers of atoms in two states without any pulses (with noise term subtracted, if necessary).
 
-As can be seen on figure~\ref{visibility_vs_reference}, split-step simulation results for 70000 atoms lie close to reference simulation (blue dotted line), but start to differ from experimental results after approximately 400 ms. This can be explained by the incorrect values of loss terms, or by quantum noise -- as you can see, simulation with noise seems to be more close to the experiment.
+As can be seen on figure~\ref{visibility_vs_reference},
+split-step simulation results for 70000 atoms lie close to reference simulation (blue dotted line),
+but start to differ from experimental results after approximately 400 ms.
+This can be explained by the incorrect values of loss terms, or by quantum noise --- as you can see,
+simulation with noise seems to be more close to the experiment.
 
 \begin{figure}
 \includegraphics[width=4.5in]{visibility_150k.pdf}
@@ -423,7 +559,12 @@ As can be seen on figure~\ref{visibility_vs_reference}, split-step simulation re
 \label{particle_number}
 \end{figure}
 
-Current model of quantum noise seems to be affected by lattice size. As can be seen on figure~\ref{visibility_noise}, for denser lattice the results diverge noticeably from expected picture. On the other hand, number of ensembles does not play a big role (at least, for large amounts of atoms). For low amounts of atoms, simulation with noise gives ugly pictures like figure~\ref{visibility_noise_10k}. Noise also contributes in particle loss over time, see figure~\ref{particle_number} for particle number changes over time for different noise settings.
+Current model of quantum noise seems to be affected by lattice size.
+As can be seen on figure~\ref{visibility_noise}, for denser lattice the results diverge noticeably from expected picture.
+On the other hand, number of ensembles does not play a big role (at least, for large amounts of atoms).
+For low amounts of atoms, simulation with noise gives ugly pictures like figure~\ref{visibility_noise_10k}.
+Noise also contributes in particle loss over time,
+see figure~\ref{particle_number} for particle number changes over time for different noise settings.
 
 \begin{figure}
 \includegraphics[width=4.5in]{axial_view.pdf}
@@ -437,9 +578,15 @@ Current model of quantum noise seems to be affected by lattice size. As can be s
 \label{axial_pi_pulse}
 \end{figure}
 
-Next in line is a visualisation technique, proposed by Russell Anderson. The idea is to project density of each state to $z$-axis and render the difference between the density of two states along this axis in time. The difference is divided by the sum of the densities before rendering in order to correspond to spin projection. Fig~\ref{axial_view} shows the example of such visualisation for detuning $\Delta = -41 \textrm{ Hz}$. The noise at the borders of the condensate is caused by the low total density.
+Next in line is a visualisation technique, proposed by Russell Anderson.
+The idea is to project density of each state to $z$-axis
+and render the difference between the density of two states along this axis in time.
+The difference is divided by the sum of the densities before rendering in order to correspond to spin projection.
+Fig~\ref{axial_view} shows the example of such visualisation for detuning $\Delta = -41 \textrm{ Hz}$.
+The noise at the borders of the condensate is caused by the low total density.
 
-The last exhibit is the axial view of the same system, but with additional $\pi$-pulse after 30ms, which can be described by rotation matrix:
+The last exhibit is the axial view of the same system, but with additional $\pi$-pulse after 30ms,
+which can be described by rotation matrix:
 \[
 \begin{pmatrix}
 	\psi^\prime_1 \\	\psi^\prime_2
@@ -460,7 +607,9 @@ The last exhibit is the axial view of the same system, but with additional $\pi$
 	\psi_1 \\ \psi_2
 \end{pmatrix}.
 \]
-The result can be seen on fig~\ref{axial_pi_pulse}. Comparing it to the fig~\ref{axial_view}, you can see the so called 'revival' - the amplitude of spin projection oscillations did not decrease after 120ms.
+The result can be seen on fig~\ref{axial_pi_pulse}.
+Comparing it to the fig~\ref{axial_view}, you can see the so called 'revival' ---
+the amplitude of spin projection oscillations did not decrease after 120ms.
 
 \bibliographystyle{plain}
 \bibliography{refs}
