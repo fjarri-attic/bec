@@ -301,6 +301,8 @@ differential and nonlinear operators will change:
 
 \section*{Quantum noise}
 
+\subsection*{Master equation}
+
 In order to take into account quantum noise, we must start from the master equation.
 Second-quantized hamiltonian for the two-component system looks like:
 \[
@@ -325,7 +327,9 @@ Therefore bath couplings can be defined as:
 \hat{O}_1 = \hat{\psi}_1^3,\, \hat{O}_2 = \hat{\psi}_1 \hat{\psi}_2 + \hat{\psi}_2 \hat{\psi}_1,\, \hat{O}_3 = \hat{\psi}_2^2
 \end{equation}
 
-In order to get stochastic equations, which can be solved numerically,
+\subsection*{Wigner representation}
+
+To get stochastic equations, which can be solved numerically,
 we must rewrite the master equation in Wigner representation using the functional correspondences
 from~\cite{gardiner_quantum_noise}:
 \begin{eqnarray*}
@@ -386,6 +390,8 @@ The resulting expression for commutator will then look like:
 [ \int\limits_V \hat{\psi}^\dagger \hat{K} \hat{\psi}, \rho ]  = - \int\limits_V d\textbf{r} \frac{\partial}{\partial\psi} \hat{K} \psi W +
 \int\limits_V d\textbf{r} \frac{\partial}{\partial\psi^*} \hat{K} \psi^* W
 \]
+
+\subsection*{Stochastic equations}
 
 Now we can transform the whole master equation to Wigner representation, writing it down in the form of Fokker-Planck equation.
 Let us first do it for the case of zero losses.
