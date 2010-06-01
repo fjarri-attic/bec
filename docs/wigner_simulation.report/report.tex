@@ -459,16 +459,52 @@ we can connect $\kappa$ coefficients with loss coefficients $\gamma$ in GPEs:
 \kappa_{22} = \frac{1}{2} \gamma_{22}.
 \]
 
-\subsection*{Diffusion matrix decomposition}
+\subsection*{Decomposition of the diffusion matrix}
 
-Now there is a tricky bit. Let us write down the second order derivative part of equation~[\ref{full_wigner_equation}]
-in a matrix form, dropping out
+Now there is a tricky part. Let us write down the second order derivative part of equation~(\ref{full_wigner_equation})
+in matrix form, dropping out small terms according to criterion~(\ref{psi_estimation}):
 \[
 D = \frac{\kappa_{12} \lvert \psi_1 \rvert^2}{2}  \begin{pmatrix}
-
-\end{pmatrix}
+0 & 1 & 0 & \alpha \\
+1 & 0 & \alpha^* & 0 \\
+0 & \alpha^* & 0 & \lvert \alpha \rvert^2 + \beta \\
+\alpha & 0 & \lvert \alpha \rvert^2 + \beta & 0 \end{pmatrix},
 \]
+where
+\[
+\alpha = \frac{\psi_1}{\psi_2},\, \beta = \frac{2 \kappa_{22}}{\kappa_{12}}.
+\]
+In order to map equation~(\ref{full_wigner_equation}) to a set of stochastic equations, 
+one has to decompose matrix $D$ as following (note that transpose is not conjugate):
+\[ D = \frac{1}{2} B B^T \]
+This is the form of so called Takagi's factorization, which is described in detail in \cite{horn_matrix_analysis}.
 
+To simplify formulas, we will first find factorization of $D' = B' B'^T$, where $D = \left( \kappa_{12} \lvert \psi_1 \rvert^2 / 2 \right) D'$,
+using the adaptation of the algorithm from \cite{horn_matrix_analysis}.
+First, we need to find eigenvalues and eigenvectors of $D'D'^H$; this can be done analytically:
+\[ \lambda_{1,2} = \frac{1}{2} \left( x^2 - 2 \beta - x \sqrt{x^2 - 4 \beta} \right), \]
+\[ \lambda_{3,4} = \frac{1}{2} \left( x^2 - 2 \beta + x \sqrt{x^2 - 4 \beta} \right), \]
+\[ v_1 = \begin{pmatrix} 0 & \frac{2 - x - \sqrt{x^2 - 4 \beta}}{2 \alpha} & 0 & 1 \end{pmatrix}^T, \]
+\[ v_2 = \begin{pmatrix} \frac{2 - x - \sqrt{x^2 - 4 \beta}}{2 \alpha^*} & 0 & 1 & 0 \end{pmatrix}^T, \]
+\[ v_3 = \begin{pmatrix} 0 & \frac{2 - x + \sqrt{x^2 - 4 \beta}}{2 \alpha} & 0 & 1 \end{pmatrix}^T, \]
+\[ v_4 = \begin{pmatrix} \frac{2 - x + \sqrt{x^2 - 4 \beta}}{2 \alpha^*} & 0 & 1 & 0 \end{pmatrix}^T, \]
+where $x = \lvert \alpha \rvert^2 + \beta + 1$.
+
+Since eigenvalues have multiplicity greater than 1, we cannot simply construct matrix $B'$ from eigenvectors;
+we have to use modified set instead:
+\begin{eqnarray*}
+q_1 = D' v_1^* + \sqrt{\lambda_1} v_1, & &
+q_2 = D' v_2^* - \sqrt{\lambda_2} v_2, \\
+q_3 = D' v_3^* + \sqrt{\lambda_3} v_3, & &
+q_4 = D' v_4^* - \sqrt{\lambda_4} v_4.
+\end{eqnarray*}
+Now, one can prove that if $u_i$ are normalized $v_i$, and $U$ is the matrix, constructed from $u_i$ vectors,
+the following equation is valid:
+\[ D' = U \textrm{diag} \left( \sqrt{\lambda{1}}, -\sqrt{\lambda{2}}, \sqrt{\lambda{3}}, -\sqrt{\lambda{4}} \right) U^T \]
+This means that we have found the decomposition for $D'$:
+\[ B' = U \textrm{diag} \left( \sqrt[4]{\lambda{1}}, i \sqrt[4]{\lambda{2}}, \sqrt[4]{\lambda{3}}, i \sqrt[4]{\lambda{4}} \right) \]
+Therefore, the decomposition of the initial matrix $D$ looks like:
+\[ B = \sqrt{\kappa_{12} \lvert \psi_1 \rvert^2} B' \]
 
 Since we are using pseudoclassical description of the condensate,
 we can increase accuracy of the model by taking into account quantum noise.
