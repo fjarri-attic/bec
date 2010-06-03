@@ -266,7 +266,7 @@ def getPotentials(env, constants):
 	if not env.gpu:
 		return potentials
 
-	return cl.Image(env.getContext(), cl.mem_flags.READ_ONLY | cl.mem_flags.USE_HOST_PTR,
+	return cl.Image(env.context, cl.mem_flags.READ_ONLY | cl.mem_flags.USE_HOST_PTR,
 		cl.ImageFormat(cl.channel_order.R, cl.channel_type.UNSIGNED_INT32),
 		shape=tuple(reversed(constants.shape)), hostbuf=potentials)
 
@@ -294,6 +294,6 @@ def getKVectors(env, constants):
 	if not env.gpu:
 		return kvectors
 
-	return cl.Image(env.getContext(), cl.mem_flags.READ_ONLY | cl.mem_flags.USE_HOST_PTR,
+	return cl.Image(env.context, cl.mem_flags.READ_ONLY | cl.mem_flags.USE_HOST_PTR,
 		cl.ImageFormat(cl.channel_order.R, cl.channel_type.UNSIGNED_INT32),
 		shape=tuple(reversed(constants.shape)), hostbuf=kvectors)
