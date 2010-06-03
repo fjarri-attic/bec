@@ -309,14 +309,34 @@ def wignerTerm(op, prefix):
 	else:
 		return Sum([func, Term(0.5 * (1 if is_conj else -1), [conj_func.differential()])])
 
-def replaceRhoWithW(obj):
+def pTerm(op, prefix):
+	assert op.isOperator()
+
+	is_conj = op.isConjugate()
+	conj_op = op.conjugate()
+
+	func = op.correspondence()
+	conj_func = conj_op.correspondence()
+
+	if prefix:
+		if is_conj:
+			return Sum([func, Term(-1, [conj_func.differential()])])
+		else:
+			return Term(1, [func])
+	else:
+		if is_conj:
+			return Term(1, [func])
+		else:
+			return Sum([func, Term(-1, [conj_func.differential()])])
+
+def replaceRhoWithQuasiprobability(obj, term_gen):
 	"""
 	Simple term -> Arbitrary term
 	Flat sum -> Arbitrary sum
 	"""
 	if isinstance(obj, Sum):
 		assert obj.isFlat()
-		return Sum([replaceRhoWithW(term) for term in obj.terms])
+		return Sum([replaceRhoWithQuasiprobability(term, term_gen) for term in obj.terms])
 
 	term = obj
 	assert term.isSimple()
@@ -326,13 +346,13 @@ def replaceRhoWithW(obj):
 
 	for i in xrange(rho_pos):
 		if term.factors[i].isOperator():
-			new_factors.append(wignerTerm(term.factors[i], True))
+			new_factors.append(term_gen(term.factors[i], True))
 		else:
 			new_factors.append(term.factors[i])
 
 	for i in xrange(len(term.factors) - 1, rho_pos, -1):
 		if term.factors[i].isOperator():
-			new_factors.append(wignerTerm(term.factors[i], False))
+			new_factors.append(term_gen(term.factors[i], False))
 		else:
 			new_factors.append(term.factors[i])
 

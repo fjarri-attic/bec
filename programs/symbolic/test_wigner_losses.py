@@ -1,8 +1,9 @@
 from symbolic import *
 
 
-def process(sum):
-	return apply(sum, flattenSum, replaceRhoWithW, flattenSum, derivativesToFront, flattenSum,
+def process(sum, term_gen=wignerTerm):
+	return apply(sum, flattenSum, (replaceRhoWithQuasiprobability, term_gen),
+		flattenSum, derivativesToFront, flattenSum,
 		sortFactors, (dropHighOrderDerivatives, 2), groupTerms)
 
 def hermitianConjugate(term):
