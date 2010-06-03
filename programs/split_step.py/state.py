@@ -135,6 +135,11 @@ class TwoComponentCloud:
 		self.a = a if a is not None else State(env, constants, type=type, comp=COMP_1_minus1)
 		self.b = b if b is not None else State(env, constants, type=type, comp=COMP_2_1)
 
+	def toWigner(self):
+		self.a.toWigner()
+		self.b.toWigner()
+		self.type = self.a.type
+
 	def copy(self):
 		return TwoComponentCloud(self._env, self._constants, a=self.a.copy(), b=self.b.copy())
 
