@@ -22,9 +22,8 @@ gs = GPEGroundState(env, constants)
 pulse = Pulse(env, constants)
 
 cloud = gs.createCloud()
-cloud.a.toWigner()
-cloud.b.toWigner()
 
+cloud.toWigner()
 pulse.halfPi(cloud)
 t1 = time.time()
 evolution.run(cloud, 0.399, callbacks=[a, b], callback_dt=0.01)
