@@ -506,6 +506,60 @@ This means that we have found the decomposition for $D'$:
 Therefore, the decomposition of the initial matrix $D$ looks like:
 \[ B = \sqrt{\kappa_{12} \lvert \psi_1 \rvert^2} B' \]
 
+\subsection*{Measurement}
+
+One must not forget that $\psi$ functions in Wigner representation are not actual $\psi$-functions,
+and some work is necessary in order to obtain measurable quantities from them.
+Moments of field operators can be found as following:
+\[
+\langle \left\{ \hat{\psi}^r ( \hat{\psi}^\dagger )^s \right\}_{sym} \rangle =
+\int \psi^r \left( \psi^* \right)^s W(\psi, \psi^*) d\psi^2,
+\]
+where $\{\}_{sym}$ stands for symmetrically ordered product,
+which is equal to the average of all possible orderings of the product.
+Since we do not know the actual Wigner function, we can use the fact that it is the probability of finding the system in state $\psi$.
+Therefore, if we simulate the behavior of the system for many separate paths,
+we can expect that density of the paths will be larger in areas where $W$ is large.
+In other words, we can approximate the weighted integration of the moment by the averaged sum over many paths:
+\begin{equation*}
+\begin{split}
+\int\limits_V \langle \left\{ \hat{\psi}^r ( \hat{\psi}^\dagger )^s \right\}_{sym} \rangle d\textbf{r} & =
+\int\limits_V \int \psi^r \left( \psi^* \right)^s W(\psi, \psi^*) d\psi^2 d\textbf{r} \\
+& \approx \sum\limits_{V} \left( \frac{1}{N_{paths}} \sum\limits_{paths} \psi^r \left( \psi^* \right)^s \right) dV \\
+& = \frac{1}{N_{paths}} \sum\limits_{paths} \sum\limits_{V} \psi^r \left( \psi^* \right)^s dV
+\end{split}
+\end{equation*}
+
+As an example, let us work out the formula for measuring state density:
+\begin{equation*}
+\begin{split}
+n_i & = \langle \hat{\psi}^\dagger_i \hat{\psi}_i \rangle \\
+& = \frac{1}{2} \left( \langle \hat{\psi}^\dagger_i \hat{\psi}_i \rangle +
+\langle \hat{\psi}_i \hat{\psi}^\dagger_i \rangle - 1 \right) \\
+& = \langle \left\{ \hat{\psi} \hat{\psi}^\dagger \right\}_{sym} \rangle - \frac{1}{2} \\
+& = \frac{1}{N_{paths}} \sum\limits_{paths} \lvert \psi_i \rvert^2 - \frac{1}{2}
+\end{split}
+\end{equation*}
+and population:
+\begin{equation*}
+\begin{split}
+N_i & = \int\limits_V n_i d\textbf{r} \\
+& \approx \sum\limits_V \left( \frac{1}{N_{paths}} \sum\limits_{paths} \lvert \psi_i \rvert^2 - \frac{1}{2} \right) dV \\
+& = \frac{1}{N_{paths}} \sum\limits_{paths} \sum\limits_{V} \lvert \psi_i \rvert^2 dV - \frac{N_{cells} dV}{2},
+\end{split}
+\end{equation*}
+where $N_{cells}$ is the number of cells in spatial lattice.
+
+Interaction term $\langle \hat{\psi}^\dagger_1 \hat{\psi}_2 \rangle$, which is necessary for visibility measurement,
+can serve as another example. Operators $\hat{\psi}_1$ and $\hat{\psi}_2$ do not commute,
+therefore their symmetrically ordered product is equal to the normally ordered product, which gives us the simple formula:
+\[
+\int\limits_V \langle \hat{\psi}^\dagger_1 \hat{\psi}_2 \rangle d\textbf{r} =
+\frac{1}{N_{paths}} \sum\limits_{paths} \sum\limits_{V} \psi_1^* \psi_2 dV
+\]
+
+\subsection*{Initial state}
+
 Since we are using pseudoclassical description of the condensate,
 we can increase accuracy of the model by taking into account quantum noise.
 According to \cite{PhysRevA.58.4824}, the quantum noise can be introduced
