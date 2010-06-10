@@ -82,7 +82,7 @@ class State(PairedCalculation):
 		randoms_gpu = self._env.allocate(randoms.shape, randoms.dtype)
 		cl.enqueue_write_buffer(self._env.queue, randoms_gpu, randoms)
 
-		self._initalize(new_data.ens_shape, self.data, randoms_gpu)
+		self._initialize(self._constants.ens_shape, new_data, self.data, randoms_gpu)
 
 	def _gpu_fillWithOnes(self):
 		self._ones(self.shape, self.data)
@@ -167,18 +167,13 @@ class ParticleStatistics(PairedCalculation):
 		pass
 
 	def _cpu_getAverageDensity(self, state):
-		if state.type == WIGNER:
-			add_term = -0.5 / self._constants.dV
-		else:
-			add_term = 0
-
 		abs_values = numpy.abs(state.data)
-		normalized_values = abs_values * abs_values + add_term
+		normalized_values = abs_values * abs_values
 
 		if state.type == WIGNER:
 			density = self._reduce.sparse(normalized_values, self._constants.cells)
 			density /= self._constants.ensembles
-			return density.reshape(self._constants.shape)
+			return density.reshape(self._constants.shape) - 0.5 / self._constants.dV
 		else:
 			return normalized_values
 
@@ -249,7 +244,7 @@ class ParticleStatistics(PairedCalculation):
 				${c.scalar.name} statistics_term)
 			{
 				DEFINE_INDEXES;
-				res[index] = squared_abs(state[index] + statistics_term) / ensembles;
+				res[index] = (squared_abs(state[index]) + statistics_term) / ensembles;
 			}
 
 			__kernel void calculateDensityTwoStates(__global ${c.scalar.name} *a_res,
@@ -336,7 +331,7 @@ class ParticleStatistics(PairedCalculation):
 		density = self._env.allocate(state.shape, self._constants.scalar.dtype)
 		ensembles = state.size / self._constants.cells
 
-		statistics_term = 0 if state.type == PSI_FUNC else 0.5 / self._constants.dV
+		statistics_term = 0 if state.type == PSI_FUNC else -0.5 / self._constants.dV
 		self._calculate_density(state.shape, density, state.data,
 			numpy.int32(ensembles), self._constants.scalar.cast(statistics_term))
 		density = self._reduce.sparse(density, final_length=self._constants.cells)
