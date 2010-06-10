@@ -309,8 +309,8 @@ differential and nonlinear operators will change:
 In order to take into account quantum noise, we must start from the master equation.
 Second-quantized hamiltonian for the two-component system looks like:
 \[
-\hat{H} = \sum\limits^2_{i=1} \left\{ \int\limits_V d\textbf{r} \hat{\psi}_i^\dagger \hat{K}_i \hat{\psi}_i +
-\sum\limits^2_{j=1} \frac{\Gamma_{ij}}{2} \int\limits_V d\textbf{r} \hat{\psi}_i^\dagger \hat{\psi}_j^\dagger \hat{\psi}_i \hat{\psi}_j \right\}
+\hat{H} = \sum\limits^2_{i=1} \left\{ \int\limits_V d\mathbf{r} \hat{\psi}_i^\dagger \hat{K}_i \hat{\psi}_i +
+\sum\limits^2_{j=1} \frac{\Gamma_{ij}}{2} \int\limits_V d\mathbf{r} \hat{\psi}_i^\dagger \hat{\psi}_j^\dagger \hat{\psi}_i \hat{\psi}_j \right\}
 \]
 where $\hat{K}_i$ is the sum of kinetic and potential energy operators for the corresponding component,
 and $\hat{\psi}_i$ are field operators.
@@ -318,7 +318,7 @@ Volume $V$ is, strictly speaking, the whole coordinate space, but we will need e
 
 The master equation can then be written as following:
 \[
-\frac{\partial\rho}{\partial t} = -i [\hat{H}, \rho] + \sum\limits_j \frac{\kappa_j}{2} \int\limits_V d\textbf{r}
+\frac{\partial\rho}{\partial t} = -i [\hat{H}, \rho] + \sum\limits_j \frac{\kappa_j}{2} \int\limits_V d\mathbf{r}
 \left( 2  \hat{O}_j \rho \hat{O}_j^\dagger - \hat{O}_j^\dagger \hat{O}_j \rho - \rho \hat{O}_j^\dagger \hat{O}_j \right),
 \]
 where $\hat{O}_j$ are operators, describing bath couplings with corresponding strengths $\kappa_j$.
@@ -356,10 +356,10 @@ except for the term with $\hat{K}$ operator, which requires some special treatme
 Let's do the transformation for this term step by step:
 \begin{eqnarray}
 [ \int\limits_V \hat{\psi}^\dagger \hat{K} \hat{\psi}, \rho ]
-& = & \int\limits_V d\textbf{r} \hat{\psi}^\dagger \hat{K} \hat{\psi} \rho - \int\limits_V d\textbf{r} \rho \hat{\psi}^\dagger \hat{K} \hat{\psi} \nonumber \\
-& \leftrightarrow & \int\limits_V d\textbf{r} \left\{ \left( \psi^* - \frac{1}{2}\frac{\partial}{\partial\psi}\right) \hat{K} \left( \psi + \frac{1}{2}\frac{\partial}{\partial\psi^*} \right) - \nonumber \right. \\
+& = & \int\limits_V d\mathbf{r} \hat{\psi}^\dagger \hat{K} \hat{\psi} \rho - \int\limits_V d\mathbf{r} \rho \hat{\psi}^\dagger \hat{K} \hat{\psi} \nonumber \\
+& \leftrightarrow & \int\limits_V d\mathbf{r} \left\{ \left( \psi^* - \frac{1}{2}\frac{\partial}{\partial\psi}\right) \hat{K} \left( \psi + \frac{1}{2}\frac{\partial}{\partial\psi^*} \right) - \nonumber \right. \\
 & & \left. - \left( \psi - \frac{1}{2}\frac{\partial}{\partial\psi^*}\right) \hat{K} \left( \psi^* + \frac{1}{2}\frac{\partial}{\partial\psi}  \right) \right\} W \nonumber \\
-& = & \int\limits_V d\textbf{r} \left\{ \left( \psi^* \hat{K} \psi - \psi \hat{K} \psi^* \right) -  \right. \label{annihilating_psi_K_psi} \\
+& = & \int\limits_V d\mathbf{r} \left\{ \left( \psi^* \hat{K} \psi - \psi \hat{K} \psi^* \right) -  \right. \label{annihilating_psi_K_psi} \\
 & & \left. - \left( \frac{1}{2}\frac{\partial}{\partial\psi} \hat{K} \psi +
 \frac{1}{2} \psi \hat{K} \frac{\partial}{\partial\psi} \right) \right. + \label{dpsi_K_psi_term} \\
 & & \left. + \left( \frac{1}{2}\frac{\partial}{\partial\psi^*} \hat{K} \psi^* +
@@ -368,20 +368,20 @@ Let's do the transformation for this term step by step:
 
 Operator $\hat{K}$ is the sum of kinetic and potential energy operators;
 the former is the second order derivative, and the latter is the function of coordinates:
-\[ \hat{K} = - \frac{1}{2} \nabla^2 + V(\textbf{r}) \]
+\[ \hat{K} = - \frac{1}{2} \nabla^2 + V(\mathbf{r}) \]
 Potential term does not depend on $\psi$ or $\psi^*$ and can be easily handled;
 kinetic term can be moved to desired place using integration by parts
 (since our case is three-dimensional, we will use Green's first identity).
 For example, let us prove that the term~(\ref{annihilating_psi_K_psi}) is equal to zero:
 \begin{eqnarray*}
-\int\limits_V d\textbf{r} \left( \psi^* \hat{K} \psi - \psi \hat{K} \psi^* \right) W
-& = & \frac{1}{2} \int\limits_V d\textbf{r} \left( - \psi^* \nabla^2 \psi - \psi \nabla^2 \psi^* \right) W \\
-& = & \frac{1}{2} \left\{ - \oint\limits_{\partial V} \psi^* (\nabla \psi \cdot \textbf{n}) dS +
-\int\limits_V d\textbf{r} \nabla \psi^* \nabla \psi \right. + \\
-& & \left. + \oint\limits_{\partial V} \psi (\nabla \psi^* \cdot \textbf{n}) dS -
-\int\limits_V d\textbf{r} \nabla \psi \nabla \psi^* \right\} W \\
-& = & \frac{1}{2} \left\{ \oint\limits_{\partial V} \psi (\nabla \psi^* \cdot \textbf{n}) dS -
-\oint\limits_{\partial V} \psi^* (\nabla \psi \cdot \textbf{n}) dS \right\} W = 0
+\int\limits_V d\mathbf{r} \left( \psi^* \hat{K} \psi - \psi \hat{K} \psi^* \right) W
+& = & \frac{1}{2} \int\limits_V d\mathbf{r} \left( - \psi^* \nabla^2 \psi - \psi \nabla^2 \psi^* \right) W \\
+& = & \frac{1}{2} \left\{ - \oint\limits_{\partial V} \psi^* (\nabla \psi \cdot \mathbf{n}) dS +
+\int\limits_V d\mathbf{r} \nabla \psi^* \nabla \psi \right. + \\
+& & \left. + \oint\limits_{\partial V} \psi (\nabla \psi^* \cdot \mathbf{n}) dS -
+\int\limits_V d\mathbf{r} \nabla \psi \nabla \psi^* \right\} W \\
+& = & \frac{1}{2} \left\{ \oint\limits_{\partial V} \psi (\nabla \psi^* \cdot \mathbf{n}) dS -
+\oint\limits_{\partial V} \psi^* (\nabla \psi \cdot \mathbf{n}) dS \right\} W = 0
 \end{eqnarray*}
 Here $\partial V$ stands for the boundary of region $V$.
 Differential operator needs to be Hermitian, therefore it equals to zero along the boundary $V$.
@@ -390,8 +390,8 @@ This results in both surface integrals being equal to zero.
 Terms~(\ref{dpsi_K_psi_term}) and~(\ref{dpsi_star_K_psi_star_term}) can be dealt with analagously.
 The resulting expression for commutator will then look like:
 \[
-[ \int\limits_V \hat{\psi}^\dagger \hat{K} \hat{\psi}, \rho ]  = - \int\limits_V d\textbf{r} \frac{\partial}{\partial\psi} \hat{K} \psi W +
-\int\limits_V d\textbf{r} \frac{\partial}{\partial\psi^*} \hat{K} \psi^* W
+[ \int\limits_V \hat{\psi}^\dagger \hat{K} \hat{\psi}, \rho ]  = - \int\limits_V d\mathbf{r} \frac{\partial}{\partial\psi} \hat{K} \psi W +
+\int\limits_V d\mathbf{r} \frac{\partial}{\partial\psi^*} \hat{K} \psi^* W
 \]
 
 \subsection*{Stochastic equations}
@@ -401,7 +401,8 @@ Let us first do it for the case of zero losses.
 After transformation to Wigner representation, and considering $\Gamma_{12} = \Gamma_{21} $, we will get:
 \begin{equation*}
 \begin{split}
-\frac{\partial W}{\partial t} = & \int\limits_V d\textbf{r} \left\{ - \frac{\partial}{\partial \psi_1} i \left( - \hat{K}_1 + \Gamma_{11} \left( 1 - \lvert \psi_1 \rvert^2 \right) +
+\frac{\partial W}{\partial t} = & \int\limits_V d\mathbf{r} \left\{ - \frac{\partial}{\partial \psi_1} i \left( - \hat{K}_1 +
+\Gamma_{11} \left( 1 - \lvert \psi_1 \rvert^2 \right) +
 \Gamma_{12} \left( \frac{1}{2} - \lvert \psi_2 \rvert^2 \right) \right) \psi_1 - \right. \\
 & \left. - \frac{\partial}{\partial \psi_2} i \left( - \hat{K}_2 + \Gamma_{22} \left( 1 - \lvert \psi_2 \rvert^2 \right) +
 \Gamma_{12} \left( \frac{1}{2} - \lvert \psi_1 \rvert^2 \right) \right) \psi_2 \right\} W +
@@ -439,7 +440,7 @@ The resulting equation in Wigner representation is:
 \begin{equation}
 \label{full_wigner_equation}
 \begin{split}
-\frac{\partial W}{\partial t} = & \int\limits_V d\textbf{r} \left\{ - \frac{\partial}{\partial \psi_1} \left( \hat{A}_1 +
+\frac{\partial W}{\partial t} = & \int\limits_V d\mathbf{r} \left\{ - \frac{\partial}{\partial \psi_1} \left( \hat{A}_1 +
 \kappa_{111} \left( \frac{9}{2} \lvert \psi_1 \rvert^2 - \frac{9}{4} - \frac{3}{2} \lvert \psi_1 \rvert^4 \right) +
 \kappa_{12} \left( \frac{1}{2} - \lvert \psi_2 \rvert^2 \right) \right) \psi_1 - \right. \\
 & \left. - \frac{\partial}{\partial \psi_2} \left( \hat{A}_2 + \kappa_{12} \left( \frac{1}{2} - \lvert \psi_1 \rvert^2 \right) +
