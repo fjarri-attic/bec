@@ -394,7 +394,7 @@ The resulting expression for commutator will then look like:
 \int\limits_V d\mathbf{r} \frac{\partial}{\partial\psi^*} \hat{K} \psi^* W
 \]
 
-\subsection*{Stochastic equations}
+\subsection*{Fokker-Planck equations}
 
 Now we can transform the whole master equation to Wigner representation, writing it down in the form of Fokker-Planck equation.
 Let us first do it for the case of zero losses.
@@ -419,18 +419,7 @@ This leads us to stochastic differential equations (without the explicit noise t
 \Gamma_{12} \left( \frac{1}{2} - \lvert \psi_1 \rvert^2 \right) \right) \psi_2,
 \]
 which look almost like coupled GPEs, except for the phase shifting term.
-In order to connect $\Gamma$ coefficients with interaction coefficients $g$ in GPEs,
-we must estimate the value of $\lvert \psi_i \rvert^2$:
-\[ \langle \lvert \psi_1 \rvert^2 \rangle = \frac{N}{V} \approx \frac{N}{R_{iTF}^3}, \]
-where $R_{iTF}$ is the radius of the condensate, obtained using Thomas-Fermi approximation.
-For $10^4$--$10^5$ atoms it gives the values of the order of $10^2$, therefore we can safely assume that:
-\begin{equation}
-\label{psi_estimation}
-\lvert \psi_i \rvert^2 \gg 1
-\end{equation}
-Areas where it is not true contain negligible amounts of atoms and therefore do not affect the evolution.
-
-Thus we can drop out lower orders of $\lvert \psi_1 \rvert^2$ and $\lvert \psi_2 \rvert^2$, and the following correspondences are valid:
+Apparently, the following correspondences are valid:
 \[
 \Gamma_{11} = g_{11},\, \Gamma_{12} = g_{12},\, \Gamma_{22} = g_{22}.
 \]
@@ -455,13 +444,141 @@ The resulting equation in Wigner representation is:
 \end{split}
 \end{equation}
 where $\hat{A}_1$ and $\hat{A}_2$ stand for previously calculated kinetic, potential and interaction terms for both components.
-Using the same estimation of $\lvert \psi_1 \rvert^2$ and $\lvert \psi_2 \rvert^2$,
-we can connect $\kappa$ coefficients with loss coefficients $\gamma$ in GPEs:
+Comparing this equation with coupled GPEs, we can connect $\kappa$ coefficients with loss coefficients $\gamma$:
 \[
 \kappa_{111} = \frac{1}{3} \gamma_{111},\,
 \kappa_{12} = \frac{1}{2} \gamma_{12},\,
 \kappa_{22} = \frac{1}{2} \gamma_{22}.
 \]
+
+\subsection*{Discretisation}
+
+In Wigner representation, virtual particles are added to the each mode of classical field to mimic quantum noise.
+In continuous case this leads to infinities because of the infinite number of modes.
+Therefore, we have to perform discretisation and use the finite grid; the process is described in detail in \cite{0953-4075-35-17-301}.
+In 3D case it is the box $L_x \times L_y \times L_z$ with $N = N_x N_y N_z$ points.
+The volume of the box is $V = L_x L_y L_z$ and the volume of the cell $dV$ equals $V / N$.
+
+There are some conditions for discretised hamiltonian to be close to reality.
+First, the spatial step must be smaller than healing length:
+\[ dx_\nu \ll \left( 8 \pi \rho a \right)^{-\frac{1}{2}},\, \nu = x,y,z \]
+where $\rho$ is the density at the centre of the condensate, and the equation is in real units.
+Using Thomas-Fermi approximation and natural units, we can transform this condition to
+\[ dx_\nu \ll \left( 2 \mu \right)^{-\frac{1}{2}} \]
+Taking into account the size of the condensate~(\ref{tf_condensate_size}), we obtain the following criteria:
+\begin{equation}
+\label{grid_size_criteria}
+N_x \gg 2 \mu,\, N_y \gg 2 \mu,\, N_z \gg 2 \lambda \mu
+\end{equation}
+
+Secondly, the spatial step of the grid must be larger than the scattering length:
+\[ dx_\nu \gg a \]
+This is necessary for discretised interaction term in the hamiltonian to be correct; see \cite{0953-4075-35-17-301} for details.
+
+Equation~(\ref{full_wigner_equation}) in discrete form will then look like:
+\begin{equation*}
+\begin{split}
+\frac{\partial W}{\partial t} = & \sum\limits_{\mathbf{r}} \left\{
+	- \frac{\partial}{\partial \psi_1} \hat{A}_1 \psi_1 -
+	\frac{\partial}{\partial \psi_2} \hat{A}_2 \psi_2 -
+	\frac{\partial}{\partial \psi^*_1} \hat{A}^*_1 \psi^*_1 -
+	\frac{\partial}{\partial \psi^*_2} \hat{A}^*_2 \psi^*_2 +
+\right. \\
+& \left.
+	\frac{\partial^2}{\partial \psi_1 \partial \psi_1^*} \hat{D}_{11} +
+	\frac{\partial^2}{\partial \psi_2 \partial \psi_2^*} \hat{D}_{22} +
+	\frac{\partial^2}{\partial \psi_1 \partial \psi_2^*} \hat{D}_{12} +
+	\frac{\partial^2}{\partial \psi_1^* \partial \psi_2} \hat{D}^*_{12}
+\right\} W,
+\end{split}
+\end{equation*}
+where
+\begin{eqnarray*}
+\hat{A}_1 & = & \hat{K}_1 + g_{11} \left( \frac{1}{dV} - \lvert \psi_1 \rvert^2 \right) +
+g_{12} \left( \frac{1}{2 dV} - \lvert \psi_2 \rvert^2 \right) + \\
+& & +\frac{\gamma_{111}}{2} \left( \frac{3}{dV} \lvert \psi_1 \rvert^2 - \frac{3}{2 dV^2} - \lvert \psi_1 \rvert^4 \right) +
+\frac{\gamma_{12}}{2} \left( \frac{1}{2 dV} - \lvert \psi_2 \rvert^2 \right), \\
+\hat{A}_2 & = & - \hat{K}_2 + g_{22} \left( \frac{1}{dV} - \lvert \psi_2 \rvert^2 \right) +
+g_{12} \left( \frac{1}{2 dV} - \lvert \psi_1 \rvert^2 \right) + \\
+& & + \frac{\gamma_{12}}{2} \left( \frac{1}{2 dV} - \lvert \psi_1 \rvert^2 \right) +
+\frac{\gamma_{22}}{2} \left( \frac{1}{dV} - \lvert \psi_2 \rvert^2 \right), \\
+\hat{D}_{11} & = & \frac{\gamma_{111}}{2} \left(3 \lvert \psi_1 \rvert^4 -
+\frac{6}{dV} \lvert \psi_1 \rvert^2 + \frac{3}{2 dV} \right) + \frac{\gamma_{12}}{2} \left( \lvert \psi_2 \rvert^2 - \frac{1}{2 dV} \right) \\
+\hat{D}_{22} & = & \frac{\gamma_{12}}{2} \left( \lvert \psi_1 \rvert^2 - \frac{1}{2 dV} \right) +
+\frac{\gamma_{22}}{2} \left( 2 \lvert \psi_2 \rvert^2 - \frac{1}{dV} \right) \\
+\hat{D}_{12} & = & \frac{\gamma_{12}}{2} \psi_1 \psi_2^*
+\end{eqnarray*}
+
+\subsection*{Measurement}
+
+One must not forget that $\psi$ functions in Wigner representation are not actual $\psi$-functions,
+and some work is necessary in order to obtain measurable quantities from them.
+Moments of field operators can be found as following:
+\[
+\langle \left\{ \hat{\psi}^r ( \hat{\psi}^\dagger )^s \right\}_{sym} \rangle =
+\int \psi^r \left( \psi^* \right)^s W(\psi, \psi^*) d\psi^2,
+\]
+where $\{\}_{sym}$ stands for symmetrically ordered product,
+which is equal to the average of all possible orderings of the product.
+Since we do not know the actual Wigner function, we can use the fact that it is the probability of finding the system in state $\psi$.
+Therefore, if we simulate the behavior of the system for many separate paths,
+we can expect that density of the paths will be larger in areas where $W$ is large.
+In other words, we can approximate the weighted integration of the moment by the averaged sum over many paths:
+\begin{equation*}
+\begin{split}
+\int\limits_V \langle \left\{ \hat{\psi}^r ( \hat{\psi}^\dagger )^s \right\}_{sym} \rangle d\mathbf{r} & =
+\int\limits_V \int \psi^r \left( \psi^* \right)^s W(\psi, \psi^*) d\psi^2 d\mathbf{r} \\
+& \approx \sum\limits_{V} \left( \frac{1}{N_{paths}} \sum\limits_{paths} \psi^r \left( \psi^* \right)^s \right) dV \\
+& = \frac{1}{N_{paths}} \sum\limits_{paths} \sum\limits_{V} \psi^r \left( \psi^* \right)^s dV
+\end{split}
+\end{equation*}
+
+As an example, let us work out the formula for measuring state density.
+We must take into account the discretised form of the commutator \cite{0953-4075-35-17-301}:
+\[ \left[ \hat{\psi}(\mathbf{r}_i), \hat{\psi}^\dagger(\mathbf{r}_j) \right] = \frac{1}{dV} \delta_{ij} \]
+Using this, we can obtain the normally ordered product of operators from the symmetrical one:
+\begin{equation*}
+\begin{split}
+n_i & = \langle \hat{\psi}^\dagger_i \hat{\psi}_i \rangle \\
+& = \frac{1}{2} \left( \langle \hat{\psi}^\dagger_i \hat{\psi}_i \rangle +
+\langle \hat{\psi}_i \hat{\psi}^\dagger_i \rangle - \frac{1}{dV} \right) \\
+& = \langle \left\{ \hat{\psi} \hat{\psi}^\dagger \right\}_{sym} \rangle - \frac{1}{2 dV} \\
+& = \frac{1}{N_{paths}} \sum\limits_{paths} \lvert \psi_i \rvert^2 - \frac{1}{2 dV}
+\end{split}
+\end{equation*}
+Consequently, the formula for population is:
+\begin{equation*}
+\begin{split}
+N_i & = \int\limits_V n_i d\mathbf{r} \\
+& \approx \sum\limits_\mathbf{r} \left( \frac{1}{N_{paths}} \sum\limits_{paths} \lvert \psi_i \rvert^2 - \frac{1}{2 dV} \right) dV \\
+& = \frac{1}{N_{paths}} \sum\limits_{paths} \sum\limits_\mathbf{r} \lvert \psi_i \rvert^2 dV - \frac{N}{2}
+\end{split}
+\end{equation*}
+
+Interaction term $\langle \hat{\psi}^\dagger_1 \hat{\psi}_2 \rangle$, which is necessary for visibility measurement,
+can serve as another example. Operators $\hat{\psi}_1$ and $\hat{\psi}_2$ commute,
+therefore their symmetrically ordered product is equal to the normally ordered product, which gives us the simple formula:
+\[
+\int\limits_V \langle \hat{\psi}^\dagger_1 \hat{\psi}_2 \rangle d\mathbf{r} =
+\frac{1}{N_{paths}} \sum\limits_{paths} \sum\limits_\mathbf{r} \psi_1^* \psi_2 dV
+\]
+
+\subsection*{Initial state}
+
+At zero temperatures, the initial state for Wigner representation
+is the combination of classical ground state and quantum noise in all modes~\cite{PhysRevA.58.4824}.
+The simplest way to construct it is to use the discrete position basis:
+\[
+\psi(\mathbf{r}) = \psi_{GP}(\mathbf{r}) + \frac{1}{2 \sqrt{dV}} \eta(\mathbf{r}),
+\]
+where $\eta(\mathbf{r})$ are complex random numbers with independent normally distributed
+real and imaginary parts in such a way that:
+\[ \overline{\eta^*(\mathbf{r}) \eta(\mathbf{r}')} = \delta(\mathbf{r} - \mathbf{r}'), \]
+and $\psi_{GP}$ is the ground state as obtained from GPE.
+
+This method has its drawback, though: it links the cutoff for the quantum noise to the simulation grid size.
+This means that if we need to use large grid (for example, in order to meet criteria~(\ref{grid_size_criteria})),
+the cutoff will be too large.
 
 \subsection*{Decomposition of the diffusion matrix}
 
@@ -508,78 +625,24 @@ the following equation is valid:
 This means that we have found the decomposition for $D'$:
 \[ B' = U \textrm{diag} \left( \sqrt[4]{\lambda{1}}, i \sqrt[4]{\lambda{2}}, \sqrt[4]{\lambda{3}}, i \sqrt[4]{\lambda{4}} \right) \]
 Therefore, the decomposition of the initial matrix $D$ looks like:
-\[ B = \sqrt{\kappa_{12} \lvert \psi_1 \rvert^2} B' \]
+\begin{equation}
+\label{noise_decomposition}
+B = \sqrt{\kappa_{12} \lvert \psi_1 \rvert^2} B'
+\end{equation}
 
-\subsection*{Measurement}
+\subsection*{Stochastic equations with noise terms}
 
-One must not forget that $\psi$ functions in Wigner representation are not actual $\psi$-functions,
-and some work is necessary in order to obtain measurable quantities from them.
-Moments of field operators can be found as following:
+Now we are ready to write down the full set of stochastic equations using the master equation in form~(\ref{full_wigner_equation})
+and noise matrix decomposition~(\ref{noise_decomposition}):
 \[
-\langle \left\{ \hat{\psi}^r ( \hat{\psi}^\dagger )^s \right\}_{sym} \rangle =
-\int \psi^r \left( \psi^* \right)^s W(\psi, \psi^*) d\psi^2,
+\frac{\partial \psi_1}{\partial t} = i \left( \hat{A}_1 +
+\kappa_{111} \left( \frac{9}{2} \lvert \psi_1 \rvert^2 - \frac{9}{4} - \frac{3}{2} \lvert \psi_1 \rvert^4 \right) +
+\kappa_{12} \left( \frac{1}{2} - \lvert \psi_2 \rvert^2 \right) \right) \psi_1 +
 \]
-where $\{\}_{sym}$ stands for symmetrically ordered product,
-which is equal to the average of all possible orderings of the product.
-Since we do not know the actual Wigner function, we can use the fact that it is the probability of finding the system in state $\psi$.
-Therefore, if we simulate the behavior of the system for many separate paths,
-we can expect that density of the paths will be larger in areas where $W$ is large.
-In other words, we can approximate the weighted integration of the moment by the averaged sum over many paths:
-\begin{equation*}
-\begin{split}
-\int\limits_V \langle \left\{ \hat{\psi}^r ( \hat{\psi}^\dagger )^s \right\}_{sym} \rangle d\textbf{r} & =
-\int\limits_V \int \psi^r \left( \psi^* \right)^s W(\psi, \psi^*) d\psi^2 d\textbf{r} \\
-& \approx \sum\limits_{V} \left( \frac{1}{N_{paths}} \sum\limits_{paths} \psi^r \left( \psi^* \right)^s \right) dV \\
-& = \frac{1}{N_{paths}} \sum\limits_{paths} \sum\limits_{V} \psi^r \left( \psi^* \right)^s dV
-\end{split}
-\end{equation*}
-
-As an example, let us work out the formula for measuring state density:
-\begin{equation*}
-\begin{split}
-n_i & = \langle \hat{\psi}^\dagger_i \hat{\psi}_i \rangle \\
-& = \frac{1}{2} \left( \langle \hat{\psi}^\dagger_i \hat{\psi}_i \rangle +
-\langle \hat{\psi}_i \hat{\psi}^\dagger_i \rangle - 1 \right) \\
-& = \langle \left\{ \hat{\psi} \hat{\psi}^\dagger \right\}_{sym} \rangle - \frac{1}{2} \\
-& = \frac{1}{N_{paths}} \sum\limits_{paths} \lvert \psi_i \rvert^2 - \frac{1}{2}
-\end{split}
-\end{equation*}
-and population:
-\begin{equation*}
-\begin{split}
-N_i & = \int\limits_V n_i d\textbf{r} \\
-& \approx \sum\limits_V \left( \frac{1}{N_{paths}} \sum\limits_{paths} \lvert \psi_i \rvert^2 - \frac{1}{2} \right) dV \\
-& = \frac{1}{N_{paths}} \sum\limits_{paths} \sum\limits_{V} \lvert \psi_i \rvert^2 dV - \frac{N_{cells} dV}{2},
-\end{split}
-\end{equation*}
-where $N_{cells}$ is the number of cells in spatial lattice.
-
-Interaction term $\langle \hat{\psi}^\dagger_1 \hat{\psi}_2 \rangle$, which is necessary for visibility measurement,
-can serve as another example. Operators $\hat{\psi}_1$ and $\hat{\psi}_2$ do not commute,
-therefore their symmetrically ordered product is equal to the normally ordered product, which gives us the simple formula:
 \[
-\int\limits_V \langle \hat{\psi}^\dagger_1 \hat{\psi}_2 \rangle d\textbf{r} =
-\frac{1}{N_{paths}} \sum\limits_{paths} \sum\limits_{V} \psi_1^* \psi_2 dV
+\frac{\partial \psi_2}{\partial t} = i \left( - \hat{K}_2 + \Gamma_{22} \left( 1 - \lvert \psi_2 \rvert^2 \right) +
+\Gamma_{12} \left( \frac{1}{2} - \lvert \psi_1 \rvert^2 \right) \right) \psi_2,
 \]
-
-\subsection*{Initial state}
-
-Since we are using pseudoclassical description of the condensate,
-we can increase accuracy of the model by taking into account quantum noise.
-According to \cite{PhysRevA.58.4824}, the quantum noise can be introduced
-as the addition of the following wave function to the initial conditions:
-\[ \psi_{noise}(\mathbf{r}) = \sum_{i=0}^{N_x} \sum_{j=0}^{N_y} \sum_{k=0}^{N_z} \frac{1}{2} \eta_{ijk} \phi_{ijk}(\mathbf{r}), \]
-where $\eta_{ijk}$ are complex random numbers with independent normally distributed
-real and imaginary parts in such a way that:
-\[ \overline{\eta_{ijk}^* \eta_{lmn}} = \delta_{il} \delta_{jm} \delta_{kn}, \]
-and $\phi_{ijk}(\mathbf{r})$ are functions from a discrete position basis
-\[ \phi_{ijk}(\mathbf{r}) = \delta(x - i\Delta x) \delta(y - j\Delta y) \delta(z - k\Delta z) / \sqrt{\Delta x \Delta y \Delta z} \]
-with $\Delta x$, $\Delta y$ and $\Delta z$ being the steps of the spatial lattice.
-Practically, it means that, in order to take into account the quantum noise,
-we must add the field of random complex numbers to the initial state
-(in our case it would be GPE steady state for component $\vert1\rangle$ and zero for component $\vert2\rangle$).
-Real and imaginary parts of these fields must be Gaussian random numbers
-with variance equal to $1 / 2 \sqrt{\Delta x \Delta y \Delta z}$.
 
 \section*{Implementation}
 
