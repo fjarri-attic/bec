@@ -181,7 +181,8 @@ class TwoComponentEvolution(PairedCalculation):
 			}
 
 			// Propagates state vector in x-space for evolution calculation
-			__kernel void propagateXSpaceTwoComponent(__global ${c.complex.name} *aa,
+			%for suffix in ('', 'Wigner'):
+			__kernel void propagateXSpaceTwoComponent${suffix}(__global ${c.complex.name} *aa,
 				__global ${c.complex.name} *bb, ${c.scalar.name} dt,
 				read_only image3d_t potentials)
 			{
@@ -213,6 +214,15 @@ class TwoComponentEvolution(PairedCalculation):
 						-(${c.l22} * n_b + ${c.l12} * n_a) / 2,
 						-(-V - ${c.g22} * n_b - ${c.g12} * n_a + ${c.detuning}));
 
+					%if suffix == "Wigner":
+						pa += ${c.complex.ctr}(
+							(1.5 * n_a - 0.75 / ${c.dV}) * ${c.l111} + ${c.l12} * 0.25,
+							-(${c.g11} + 0.5 * ${c.g12})) / ${c.dV};
+						pb += ${c.complex.ctr}(
+							${c.l12} * 0.25 + ${c.l22} * 0.5,
+							-(${c.g22} + 0.5 * ${c.g12})) / ${c.dV};
+					%endif
+
 					// calculate midpoint log derivative and exponentiate
 					da = cexp(complex_mul_scalar(pa, (dt / 2)));
 					db = cexp(complex_mul_scalar(pb, (dt / 2)));
@@ -226,11 +236,13 @@ class TwoComponentEvolution(PairedCalculation):
 				aa[index] = complex_mul(a, da);
 				bb[index] = complex_mul(b, db);
 			}
+			%endfor
 		"""
 
 		self._program = self._env.compile(kernels, self._constants)
 		self._kpropagate_func = self._program.propagateKSpaceRealTime
 		self._xpropagate_func = self._program.propagateXSpaceTwoComponent
+		self._xpropagate_wigner = self._program.propagateXSpaceTwoComponentWigner
 
 	def _toKSpace(self, cloud):
 		batch = cloud.a.size / self._constants.cells
@@ -259,8 +271,13 @@ class TwoComponentEvolution(PairedCalculation):
 			data2[start:stop,:,:] *= kcoeff
 
 	def _gpu__xpropagate(self, cloud, dt):
-		self._xpropagate_func(cloud.a.shape,
-			cloud.a.data, cloud.b.data, self._constants.scalar.cast(dt), self._potentials)
+		if cloud.type == WIGNER:
+			func = self._xpropagate_wigner
+		else:
+			func = self._xpropagate_func
+
+		func(cloud.a.shape, cloud.a.data, cloud.b.data,
+			self._constants.scalar.cast(dt), self._potentials)
 
 	def _cpu__xpropagate(self, cloud, dt):
 		a = cloud.a
@@ -299,8 +316,11 @@ class TwoComponentEvolution(PairedCalculation):
 				pb[start:stop] += p
 
 			if cloud.type == WIGNER:
-				pa += (4.5 * n_a - 2.25) * (l111 / 3) + (l12 / 2) * 0.5 - 1j * (g11 + 0.5 * g12)
-				pb += (l12 / 2) * 0.5 + (l22 / 2) - 1j * (g22 + 0.5 * g12)
+				dV = self._constants.dV
+				pa += ((1.5 * n_a - 0.75 / dV) * l111 + l12 * 0.25 -
+					1j * (g11 + 0.5 * g12)) / dV
+				pb += (l12 * 0.25 + l22 * 0.5 -
+					1j * (g22 + 0.5 * g12)) / dV
 
 			da = numpy.exp(pa * (dt / 2))
 			db = numpy.exp(pb * (dt / 2))
