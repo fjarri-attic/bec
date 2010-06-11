@@ -63,8 +63,8 @@ class ParticleNumberCondition:
 
 		ratio = Na / (Na + Nb)
 
-		#if self._verbose:
-		print "Particle ratio: " + str((t, Na, Nb, ratio))
+		if self._verbose:
+			print "Particle ratio: " + str((t, Na, Nb, ratio))
 
 		if self._previous_ratio is None:
 			self._previous_ratio = ratio
@@ -72,6 +72,7 @@ class ParticleNumberCondition:
 		if (ratio > self._ratio and self._previous_ratio < self._ratio) or \
 				(ratio < self._ratio and self._previous_ratio > self._ratio):
 			raise TerminateEvolution()
+
 
 class VisibilityCollector:
 
