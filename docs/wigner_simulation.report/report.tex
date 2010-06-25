@@ -3,6 +3,7 @@
 \usepackage[pdftex]{graphicx}
 \usepackage{subfig}
 \usepackage{amsmath}
+\usepackage{color}
 
 \title{Two-component BEC dynamics calculations using split-step Fourier method}
 \author{Bogdan Opanchuk}
@@ -10,29 +11,13 @@
 \begin{document}
 \maketitle
 
-\section*{Natural units}
+\chapter{Mean-field approximation}
 
-Before we start doing any calculations, a transformation to dimensionless units should be defined.
-It will significantly increase readability of equations and facilitate various estimations.
+\textcolor{red}{[Introduction needed]}
 
-There are several ways to do it; since we are working with the harmonic potential,
-the obvious variant is to use the parameters of harmonic oscillator as new units,
-taking into account the usual symmetry $\omega_x = \omega_y = \omega_\rho$ which exists in experiments:
-\[ l_\rho =  \sqrt{\frac{\hbar}{m\omega_\rho}},\, t_\rho = \frac{1}{\omega_\rho},\, E_\rho = \hbar \omega_\rho. \]
+\section{Thomas-Fermi approximation}
 
-Dimensionless variables will be mainly used throughout the article, so, for the sake of readability,
-they will be explicitly marked with primes only when they can be confused with variables in real units.
-In other places all variables should be considered dimensionless unless explicitly specified as real.
-For example, the transformation of coordinates will look like:
-\[ x = x^\prime l_\rho,\, y = y^\prime l_\rho,\, z = z^\prime l_\rho. \]
-
-Wave function can be transformed in different ways depending on the normalisation.
-We will use the transformation that keeps the integral of wave function over space equal to number of particles in the system:
-\[ \psi = \psi^\prime / l_\rho^\frac{3}{2}. \]
-
-\section*{Thomas-Fermi approximation}
-
-We are looking for steady state of the system with pseudopotential model hamiltonian (in real units):
+We are looking for the ground state of the system with pseudopotential model hamiltonian~\cite{pitaevskii_bec}:
 \[ 
 \hat{H} = -\frac{\hbar^2}{2m} \frac{\partial^2}{\partial \mathbf{r}^2} + \\
 V(\mathbf{r}) + g_{11} \lvert \psi(\mathbf{r}) \rvert^2,
@@ -40,7 +25,8 @@ V(\mathbf{r}) + g_{11} \lvert \psi(\mathbf{r}) \rvert^2,
 \[ g_{11} = \frac{4 \pi \hbar^2 a_{11}}{m}, \]
 \[ V(\mathbf{r}) = \frac{m}{2} \left( \omega_x^2 x^2 + \omega_y^2 y^2 + \omega_z^2 z^2 \right). \]
 where $V(\mathbf{r})$ is the potential energy for parabolic trap, $g_{11}$ is the interaction coefficient,
-and $a_{11}$ is the scattering length for atoms in non-excited state. In natural units:
+and $a_{11}$ is the scattering length for atoms in non-excited state. In natural units
+(see Appendix~\ref{chapter:natural_units} for details):
 \[
 \hat{H} = -\frac{1}{2} \frac{\partial^2}{\partial \mathbf{r}^2} + 
 \frac{1}{2} \left( x^2 + y^2 + \lambda^{-2} z^2 \right) + g_{11} \lvert \psi(\mathbf{r}) \rvert^2,
@@ -48,21 +34,28 @@ and $a_{11}$ is the scattering length for atoms in non-excited state. In natural
 where
 \[ \lambda = \frac{\omega_\rho}{\omega_z},\, g_{11} = \frac{4 \pi a_{11}}{l_\rho}. \]
 
-The steady state should satisfy the Gross-Pitaevskii equation:
-\[ \hat{H} \psi = \mu \psi. \]
+The ground state satisfies the Gross-Pitaevskii equation~\cite{pitaevskii_bec}:
+\begin{equation}
+\label{thomas-fermi:exact_eqn}
+\hat{H} \psi = \mu \psi,
+\end{equation}
+where $\mu$ is the chemical potential of the state.
 To get the first approximation of the state function, we consider the kinetic term to be small as compared to other terms and omit it.
 The conditions for this operation to be valid will be determined later in this section.
 Thus we get the simple equation:
 \[ \left( V(\mathbf{r}) + g_{11} \lvert \psi(\mathbf{r}) \rvert^2 \right) \psi(\mathbf{r}) = \mu \psi(\mathbf{r}), \]
 which leads us to the state function:
-\[ \lvert \psi(\mathbf{r}) \rvert^2 = \frac{1}{g_{11}} \max \left( \mu - V(\mathbf{r}), 0 \right). \]
-The condition for $V(\mathbf{r})$ defines the shape of the condensate - it is the ellipsoid with the following radii:
 \begin{equation}
-\label{tf_condensate_size}
+\label{thomas-fermi:wave_function}
+\lvert \psi(\mathbf{r}) \rvert^2 = \frac{1}{g_{11}} \max \left( \mu - V(\mathbf{r}), 0 \right).
+\end{equation}
+The condition for $V(\mathbf{r})$ defines the shape of the condensate --- it is the ellipsoid with the following radii:
+\begin{equation}
+\label{thomas-fermi:condensate_size}
 r_x = r_y = \sqrt{2\mu},\, r_z = \lambda \sqrt{2\mu}.
 \end{equation}
 
-Using the normalisation condition for the steady state function gives us the connection
+Normalisation condition for the ground state function gives us the connection
 between the number of atoms in the condensate and the chemical potential:
 \[ \int\limits_{V} \lvert \psi(\mathbf{r}) \rvert^2 dV = N, \]
 \[ \mu = \left( \frac{15 N g_{11}}{16 \pi \lambda \sqrt{2}} \right)^{\frac{2}{5}}, \]
@@ -75,25 +68,30 @@ or, in real units:
 where $\bar{\omega} = \sqrt[3]{\omega_x \omega_y \omega_z}$.
 
 Now we can roughly estimate the conditions necessary to drop the kinetic term from equation.
-Substitution of the approximate solution and calculation of the second derivative gives us the following inequation:
-\[
+Substituting approximate solution~(\ref{thomas-fermi:wave_function}) to~(\ref{thomas-fermi:exact_eqn})
+and comparing kinetic and potential term, we can get the following inequation:
+\begin{equation}
+\label{thomas-fermi:inequation}
 \left( 
 	\frac{2 + \lambda^{-2}}{2 \sqrt{\mu - V(\mathbf{r})}} +
 	\frac{\left( x + y + \lambda^{-2}z \right)^2}{4 \left( \mu - V(\mathbf{r}) \right)^{\frac{3}{2}}} 
 \right) \ll
 \mu \sqrt{\mu - V(\mathbf{r})}.
-\]
+\end{equation}
 In the experiments $\lambda$ is usually of the order of ten, so we can drop terms with $\lambda^{-2}$.
-Therefore, near the centre of the condensate we this inequation simplifies to $\mu \gg 1$, which, in turn gives us the condition:
+Therefore, near the centre of the condensate this inequation simplifies to $\mu \gg 1$,
+which, in turn, gives us the condition in real units:
 \[ \frac{N a_{11}}{\lambda l_\rho} \gg 1. \]
 
-On the other hand, near the edges the left-hand side of the inequation converges to infinity, while the right-hand side equals zero.
+On the other hand, the left-hand side of the inequation~(\ref{thomas-fermi:inequation}) converges to infinity near the edges,
+while the right-hand side equals zero there.
 This means that near the edges of the condensate Thomas-Fermi approximation fails regardless of the conditions.
 Fortunately, the density of the particles there is low, so we can estimate the width $h$ of the "belt"
 where our first approximation of the state function is significantly incorrect.
 If it happens to be small as compared to the size of the condensate, the approximation can be considered valid.
 
-The first term at the left-hand side of the inequation converges to infinity slower than the second one and can be dropped.
+The first term at the left-hand side of the inequation~(\ref{thomas-fermi:inequation})
+converges to infinity slower than the second one and can be dropped.
 Then, for the sake of simplicity, we consider two of three coordinates to be zero and the third one to equal $r - h$,
 where $r$ is the corresponding radius of the condensate.
 After replacing "$\ll$" by "$\approx$" and assuming $h$ to be small as compared to $r$, we obtain:
@@ -112,113 +110,107 @@ But for lower amount of atoms, say $10^4$, we get $\mu \approx 3.02$,
 which is a sign that the we have reached the limit of the approximation's applicability.
 Therefore, for low amounts of atoms, Thomas-Fermi approximation must be used with care.
 
-\section*{Steady state calculation}
+\section{Ground state calculation}
 
-The steady state obtained using Thomas-Fermi approximation is good for estimation purposes,
+The ground state obtained using Thomas-Fermi approximation is good for estimation purposes,
 but not for real-life calculations --- for example, it does not have continuous first derivative everywhere
 (namely, near the edges of the condensate).
 That is why we have to employ numerical calculations in order to find precise (to a certain extent) solution
-of the Gross-Pitaevskii equation.
-One of the possible ways, the propagation in imaginary time using split-step Fourier method, will be described in this section.
+of the Gross-Pitaevskii equation~(\ref{thomas-fermi:exact_eqn}).
+One of the possible ways, the propagation in imaginary time, will be described in this section.
 
-The idea of the propagation in imaginary time is that propagating the system state using the time-dependent GPE,
-but with the substitution $t \rightarrow \tau = it$, diminishes energy of the system,
-so after the sufficient amount of time this propagation will lead us to steady state.
-The rigorous proof of this method can be found in \cite{gpe_ngf}, but there is a simple "hand-waving" explanation.
+The idea of the method is that propagating the system state using the time-dependent GPE,
+but with the substitution $t \rightarrow \tau = it$, diminishes energy of the system;
+therefore after the sufficient amount of time this propagation will lead us to ground state.
+The rigorous proof of this method can be found in \cite{bao_du_2004}, but there is a simple "hand-waving" explanation.
 It assumes the superposition principle works for GPE, though it does not because of the nonlinearity.
 
 Let us say we have the system with Hamiltonian $\hat{H}$, whose eigenvalues are $\mu_1 < \mu_2 < ...$.
 They do not have to correspond to real states of BEC, we just know that this Hamiltonian must have discrete spectre
-(because of the form of the potential) and the lowest eigenvalue corresponds to steady state we want to find.
-The steady solution of time-dependent GPE
+(because of the form of the potential) and the lowest eigenvalue corresponds to ground state we want to find.
+The steady solution of time-dependent GPE (in natural units)
 \[ i \frac{\partial \psi}{\partial t} = \hat{H} \psi \]
 then looks like
-\[ \psi(\mathbf{r}, t) = \sum_k e^{-i \mu_k t} f_k(\mathbf{r}). \]
-We can use Hamiltonian to propagate the solution in time:
-\[ 
-\psi(t + dt) \simeq \psi(t) + \frac{\partial \psi}{\partial t} dt =
-\psi(t) + \frac{dt}{i} \hat{H} \psi(t).
-\]
-
+\[ \psi(\mathbf{r}, t) = \sum_k e^{-i \mu_k t} f_k(\mathbf{r}), \]
+where $f_k$ are eigenfunctions of $\hat{H}$, corresponding to eigenvalues $\mu_k$.
 Now consider the substitution $t \rightarrow \tau = it$; after it the steady solution will become fading,
 with higher-energy components fading faster:
-\begin{equation}
-\label{split_step_steady_state:general_solution_imaginary_time}
-\psi(\mathbf{r}, \tau) = \sum_k e^{-\mu_k \tau} f_k(\mathbf{r}).
-\end{equation}
+\[ \psi(\mathbf{r}, \tau) = \sum_k e^{-\mu_k \tau} f_k(\mathbf{r}). \]
+
 Therefore, if we take some random initial solution and propagate it for a sufficient amount of time,
 higher-energy components will eventually die out (in comparison with the lowest-energy state)
-and leave us with desired steady state:
-\begin{equation}
-\label{split_step_steady_state:iterative_process}
-\psi(\tau + d\tau) \simeq \psi(\tau) - d\tau \hat{H} \psi(\tau).
-\end{equation}
+and leave us with desired ground state.
 The state obtained from Thomas-Fermi approximated GPE can be taken as an initial one,
 since it is rather close to the desired one (and, therefore, higher-energy components are already quite small).
 
 Since the energy will decrease exponentially after each step and the precision of numerical calculations is limited,
 renormalisation after each step will be required.
-Known total number of atoms in steady state serves best in this case
-(because we will have to renormalise the final steady state anyway):
+Known total number of atoms in ground state serves best in this case
+(because we will have to renormalise the final ground state anyway):
 \[ \int\limits_V \lvert \psi(\tau, \mathbf{r}) \rvert^2 dV = N. \]
 
-Propagation should be terminated when the total energy of the state stops changing
+Propagation is terminated when the total energy of the state stops changing
 (that is, only one component with the lowest energy is left out).
 So, we need to calculate the total energy after each step:
-\[ E(\psi) = \int\limits_V \psi^\dagger \left(
--\frac{\nabla^2}{2} + V(\mathbf{r}) + \frac{g_{11}}{2} \lvert \psi(\mathbf{r}) \rvert^2 \right) \psi dV \]
-and compare it to the previous value.
+\[
+E(\psi) = \int\limits_V \psi^* \hat{H} \psi dV =
+\int\limits_V \left(
+-\frac{\psi^* \nabla^2 \psi}{2} + V(\mathbf{r}) n + \frac{g_{11}}{2} n^2
+\right) dV,
+\]
+where $n = \lvert \psi \rvert^2$,
+and compare it to the previous value, waiting for the desired precision to be reached.
 
 Now how do we propagate the state of the system?
-There are a lot of possibilities, one of which is split-step Fourier method.
-It is rather simple and can be effectively parallelised, which means a good scaling and low computation times. 
-
+There are a lot of possibilities, one of which is split-step Fourier method (see Appendix~\ref{chapter:split-step}).
 The propagation in imaginary time can be described as:
-\[ \psi(\tau + d\tau, \mathbf{r}) \simeq \exp ( -d\tau \hat{H} ) \psi(\tau, \mathbf{r}). \]
-The idea of split-step Fourier method is to separate the execution of different parts of Hamiltonian:
-\begin{equation}
-\label{split_step_steady_state:splitted_propagation}
-\psi(\tau + d\tau, \mathbf{r}) \simeq \exp(d\tau \hat{D}) \exp(d\tau \hat{N}) \psi(\tau, \mathbf{r}),
-\end{equation}
-where $\hat{D}$ and $\hat{N}$ are chosen so that they could be executed most conveniently
-in Fourier and spatial domains correspondingly.
-For our Hamiltonian
-\[ 
-\hat{H} = -\frac{1}{2} \frac{\partial^2}{\partial \mathbf{r}^2} +
-V(\mathbf{r}) + g_{11} \lvert \psi(\mathbf{r}) \rvert^2,
-\]
-it means that
+\[ \frac{\partial \psi}{\partial \tau} = - \hat{H} \psi. \]
+Therefore, differential and nonlinear operator, necessary for split-step method, are:
 \[
-\hat{D} = \frac{1}{2} \frac{\partial^2}{\partial \mathbf{r}^2},\,
+\hat{D} = \frac{\nabla^2}{2},\,
 \hat{N} = -\left( V(\mathbf{r}) + g_{11} \lvert \psi(\mathbf{r}) \rvert^2 \right).
 \]
-The spatial derivative is a simple multiplication in Fourier domain, so the propagation can be performed straightforwardly:
-\[
-\psi(\tau + d\tau, \mathbf{r}) \simeq \left\{ \hat{F}^{-1} \exp \left[ d\tau \hat{D}(i\omega) \right] \hat{F} \right\}
-\exp(d\tau \hat{N}) \psi(\tau, \mathbf{r}).
-\]
-Here $\hat{D}(i\omega)$ is obtained by replacing differential operator by $i \omega$,
-where $\omega$ is a frequency in Fourier domain.
 
-In order to improve the accuracy of the method, equation \ref{split_step_steady_state:splitted_propagation} can be rewritten as
-\[
-\psi(\tau + d\tau, \mathbf{r}) \simeq \exp \left( \frac{d\tau}{2} \hat{D} \right)
-\exp \left( \int\limits^{\tau + d\tau}_\tau \hat{N} (\tau^\prime) d\tau^\prime \right)
-\exp \left( \frac{d\tau}{2} \hat{D} \right) \psi(\tau, \mathbf{r}).
-\]
-This method is called the symmetrized split-step Fourier method.
-Integral can be evaluated either by approximating it with $d\tau\hat{N}$ or by using more accurate method,
-like trapezoidal rule
-\[
-\int\limits^{\tau + d\tau}_\tau \hat{N} (\tau^\prime) d\tau^\prime \simeq
-\frac{d\tau}{2} \left( \hat{N}(\tau) + \hat{N}(\tau + d\tau) \right).
-\]
-Since the value of $\hat{N}(\tau + d\tau)$ is unknown at the time of the calculation
-(it is performed in the middle of the step), an iterative procedure is necessary.
+\section{Two-component condensate}
 
-\section*{Two-component evolution}
+Hereafter we are discussing $^{87}$Rb condensate and two of its $5^2S_{1/2}$ states: $\vert1,-1\rangle$ and $\vert2,1\rangle$,
+called $\vert1\rangle$ and $\vert2\rangle$, correspondingly.
+The energy of the mixture of two states is~\cite{pitaevskii_bec} (in real units):
+\begin{equation}
+\label{two-component_cond:energy}
+\begin{split}
+E(\psi) & = \int\limits_V \left(
+-\frac{\hbar^2 \psi_1^* \nabla^2 \psi_1}{2m} - \frac{\hbar^2 \psi_2^* \nabla^2 \psi_2}{2m} + \right. \\
+& \left. + V_1 n_1 + ( V_2 + V_{hf} ) n_2 + \frac{g_{11}}{2} n_1^2 + \frac{g_{22}}{2} n_2^2 + g_{12} n_1 n_2
+\right) dV.
+\end{split}
+\end{equation}
+External trap potential $V_1$ and $V_2$ can be different for each component, depending on experimental setup;
+but in the experiment in question they are equal (symmetric trapping).
+Interaction coefficients $g_{11}$, $g_{12}$ and $g_{22}$ depend on corresponding scattering lengths:
+\[ g_{ij} = \frac{4 \pi \hbar^2 a_{ij}}{m}. \]
+For rubidium, according to the latest experimental data \cite{mertes_merrill_carretero-gonzalez_frantzeskakis_kevrekidis_hall_2007},
+$a_{11} = 100.40\ a_0$, $a_{22} = 95.00\ a_0$ and $a_{12} = 97.66\ a_0$ where $a_0$ is the Bohr radius.
+The quantity $V_{hf}$ is the hyperfine splitting for $5^2S_{1/2}$ and equals $V_{hf} / h \approx 6.8 \textrm{GHz}$~\cite{steck_2009}.
 
-Now when we have got the steady state for one-component system, it is the time to start the simulation of two-component system.
+One can obtain coupled GPEs from the variational principle $i \hbar \partial \psi_i / \partial t = \delta E / \delta \psi_i^*$:
+\begin{align}
+\label{two-component_cond:cgpes}
+\begin{split}
+i \hbar \frac{\partial \psi_1}{\partial t} & = \left( - \frac{\hbar^2 \nabla^2}{2 m} + V_1 +
+g_{11} \lvert \psi_1 \rvert^2 + g_{12} \lvert \psi_2 \rvert^2 \right) \psi_1 \\
+i \hbar \frac{\partial \psi_2}{\partial t} & = \left( - \frac{\hbar^2 \nabla^2}{2 m} + V_2 + V_{hf} +
+g_{22} \lvert \psi_2 \rvert^2 + g_{12} \lvert \psi_1 \rvert^2 \right) \psi_2
+\end{split}
+\end{align}
+Ground state for two-component condensate can be found by propagating these equations in imaginary time simultaneously,
+waiting for total energy~(\ref{two-component_cond:energy}) to stop changing.
+
+\textcolor{red}{[Pictures needed?]}
+
+\section{Two-component evolution}
+
+Now when we have got the ground state for one-component system, it is the time to start the simulation of two-component system.
 The initial state for the component $\vert1\rangle$ is the one-component steady state,
 and for $\vert2\rangle$ the initial state equals to zero.
 
@@ -335,12 +327,12 @@ Therefore bath couplings can be defined as:
 To get stochastic equations, which can be solved numerically,
 we must rewrite the master equation in Wigner representation using the functional correspondences
 from~\cite{gardiner_quantum_noise}:
-\begin{eqnarray*}
+\begin{align*}
 \hat{\psi} \rho = \left( \psi + \frac{1}{2} \frac{\partial}{\partial \psi^*} \right) W, & &
 \hat{\psi}^\dagger \rho = \left( \psi^* - \frac{1}{2} \frac{\partial}{\partial \psi} \right) W, \\
 \rho \hat{\psi} = \left( \psi - \frac{1}{2} \frac{\partial}{\partial \psi^*} \right) W, & &
 \rho \hat{\psi}^\dagger = \left( \psi^* + \frac{1}{2} \frac{\partial}{\partial \psi} \right) W.
-\end{eqnarray*}
+\end{align*}
 Note that first pair of correspondences is applied in left-to-right order, while the second pair is applied right-to-left.
 While simplifying the resulting equation, one can use the fact, that, although $\psi$ and $\psi^*$ are not independent
 (one is the complex conjugate of the other), $\psi$ and $\partial/\partial\psi^*$ can still be exchanged.
@@ -354,17 +346,17 @@ It can be proved with the help of transformation to independent variables $x$ an
 The transformation to Wigner representation is straightforward (though quite cumbersome),
 except for the term with $\hat{K}$ operator, which requires some special treatment.
 Let's do the transformation for this term step by step:
-\begin{eqnarray}
+\begin{align}
 [ \int\limits_V \hat{\psi}^\dagger \hat{K} \hat{\psi}, \rho ]
-& = & \int\limits_V d\mathbf{r} \hat{\psi}^\dagger \hat{K} \hat{\psi} \rho - \int\limits_V d\mathbf{r} \rho \hat{\psi}^\dagger \hat{K} \hat{\psi} \nonumber \\
-& \leftrightarrow & \int\limits_V d\mathbf{r} \left\{ \left( \psi^* - \frac{1}{2}\frac{\partial}{\partial\psi}\right) \hat{K} \left( \psi + \frac{1}{2}\frac{\partial}{\partial\psi^*} \right) - \nonumber \right. \\
-& & \left. - \left( \psi - \frac{1}{2}\frac{\partial}{\partial\psi^*}\right) \hat{K} \left( \psi^* + \frac{1}{2}\frac{\partial}{\partial\psi}  \right) \right\} W \nonumber \\
-& = & \int\limits_V d\mathbf{r} \left\{ \left( \psi^* \hat{K} \psi - \psi \hat{K} \psi^* \right) -  \right. \label{annihilating_psi_K_psi} \\
-& & \left. - \left( \frac{1}{2}\frac{\partial}{\partial\psi} \hat{K} \psi +
+= & \int\limits_V d\mathbf{r} \hat{\psi}^\dagger \hat{K} \hat{\psi} \rho - \int\limits_V d\mathbf{r} \rho \hat{\psi}^\dagger \hat{K} \hat{\psi} \nonumber \\
+\leftrightarrow & \int\limits_V d\mathbf{r} \left\{ \left( \psi^* - \frac{1}{2}\frac{\partial}{\partial\psi}\right) \hat{K} \left( \psi + \frac{1}{2}\frac{\partial}{\partial\psi^*} \right) - \nonumber \right. \\
+& \left. - \left( \psi - \frac{1}{2}\frac{\partial}{\partial\psi^*}\right) \hat{K} \left( \psi^* + \frac{1}{2}\frac{\partial}{\partial\psi}  \right) \right\} W \nonumber \\
+= & \int\limits_V d\mathbf{r} \left\{ \left( \psi^* \hat{K} \psi - \psi \hat{K} \psi^* \right) -  \right. \label{annihilating_psi_K_psi} \\
+& \left. - \left( \frac{1}{2}\frac{\partial}{\partial\psi} \hat{K} \psi +
 \frac{1}{2} \psi \hat{K} \frac{\partial}{\partial\psi} \right) \right. + \label{dpsi_K_psi_term} \\
-& & \left. + \left( \frac{1}{2}\frac{\partial}{\partial\psi^*} \hat{K} \psi^* +
+& \left. + \left( \frac{1}{2}\frac{\partial}{\partial\psi^*} \hat{K} \psi^* +
 \frac{1}{2} \psi^* \hat{K} \frac{\partial}{\partial\psi^*} \right) \right\} W \label{dpsi_star_K_psi_star_term}
-\end{eqnarray}
+\end{align}
 
 Operator $\hat{K}$ is the sum of kinetic and potential energy operators;
 the former is the second order derivative, and the latter is the function of coordinates:
@@ -373,16 +365,16 @@ Potential term does not depend on $\psi$ or $\psi^*$ and can be easily handled;
 kinetic term can be moved to desired place using integration by parts
 (since our case is three-dimensional, we will use Green's first identity).
 For example, let us prove that the term~(\ref{annihilating_psi_K_psi}) is equal to zero:
-\begin{eqnarray*}
+\begin{align*}
 \int\limits_V d\mathbf{r} \left( \psi^* \hat{K} \psi - \psi \hat{K} \psi^* \right) W
-& = & \frac{1}{2} \int\limits_V d\mathbf{r} \left( - \psi^* \nabla^2 \psi - \psi \nabla^2 \psi^* \right) W \\
-& = & \frac{1}{2} \left\{ - \oint\limits_{\partial V} \psi^* (\nabla \psi \cdot \mathbf{n}) dS +
+= &\, \frac{1}{2} \int\limits_V d\mathbf{r} \left( - \psi^* \nabla^2 \psi - \psi \nabla^2 \psi^* \right) W \\
+= &\, \frac{1}{2} \left\{ - \oint\limits_{\partial V} \psi^* (\nabla \psi \cdot \mathbf{n}) dS +
 \int\limits_V d\mathbf{r} \nabla \psi^* \nabla \psi \right. + \\
-& & \left. + \oint\limits_{\partial V} \psi (\nabla \psi^* \cdot \mathbf{n}) dS -
+& \left. + \oint\limits_{\partial V} \psi (\nabla \psi^* \cdot \mathbf{n}) dS -
 \int\limits_V d\mathbf{r} \nabla \psi \nabla \psi^* \right\} W \\
-& = & \frac{1}{2} \left\{ \oint\limits_{\partial V} \psi (\nabla \psi^* \cdot \mathbf{n}) dS -
+= &\, \frac{1}{2} \left\{ \oint\limits_{\partial V} \psi (\nabla \psi^* \cdot \mathbf{n}) dS -
 \oint\limits_{\partial V} \psi^* (\nabla \psi \cdot \mathbf{n}) dS \right\} W = 0
-\end{eqnarray*}
+\end{align*}
 Here $\partial V$ stands for the boundary of region $V$.
 Differential operator needs to be Hermitian, therefore it equals to zero along the boundary $V$.
 This results in both surface integrals being equal to zero. 
@@ -493,21 +485,21 @@ Equation~(\ref{full_wigner_equation}) in discrete form will then look like:
 \end{split}
 \end{equation*}
 where
-\begin{eqnarray*}
-\hat{A}_1 & = & i \left( - \hat{K}_1 + g_{11} \left( \frac{1}{dV} - \lvert \psi_1 \rvert^2 \right) +
+\begin{align*}
+\hat{A}_1 = &\, i \left( - \hat{K}_1 + g_{11} \left( \frac{1}{dV} - \lvert \psi_1 \rvert^2 \right) +
 g_{12} \left( \frac{1}{2 dV} - \lvert \psi_2 \rvert^2 \right) \right) + \\
-& & +\frac{\gamma_{111}}{2} \left( \frac{3}{dV} \lvert \psi_1 \rvert^2 - \frac{3}{2 dV^2} - \lvert \psi_1 \rvert^4 \right) +
+& +\frac{\gamma_{111}}{2} \left( \frac{3}{dV} \lvert \psi_1 \rvert^2 - \frac{3}{2 dV^2} - \lvert \psi_1 \rvert^4 \right) +
 \frac{\gamma_{12}}{2} \left( \frac{1}{2 dV} - \lvert \psi_2 \rvert^2 \right), \\
-\hat{A}_2 & = & i \left( - \hat{K}_2 + g_{22} \left( \frac{1}{dV} - \lvert \psi_2 \rvert^2 \right) +
+\hat{A}_2 = &\, i \left( - \hat{K}_2 + g_{22} \left( \frac{1}{dV} - \lvert \psi_2 \rvert^2 \right) +
 g_{12} \left( \frac{1}{2 dV} - \lvert \psi_1 \rvert^2 \right) \right) + \\
-& & + \frac{\gamma_{12}}{2} \left( \frac{1}{2 dV} - \lvert \psi_1 \rvert^2 \right) +
+& + \frac{\gamma_{12}}{2} \left( \frac{1}{2 dV} - \lvert \psi_1 \rvert^2 \right) +
 \frac{\gamma_{22}}{2} \left( \frac{1}{dV} - \lvert \psi_2 \rvert^2 \right), \\
-\hat{D}_{11} & = & \frac{\gamma_{111}}{2} \left(3 \lvert \psi_1 \rvert^4 -
+\hat{D}_{11} = &\, \frac{\gamma_{111}}{2} \left(3 \lvert \psi_1 \rvert^4 -
 \frac{6}{dV} \lvert \psi_1 \rvert^2 + \frac{3}{2 dV^2} \right) + \frac{\gamma_{12}}{2} \left( \lvert \psi_2 \rvert^2 - \frac{1}{2 dV} \right) \\
-\hat{D}_{22} & = & \frac{\gamma_{12}}{2} \left( \lvert \psi_1 \rvert^2 - \frac{1}{2 dV} \right) +
+\hat{D}_{22} = &\, \frac{\gamma_{12}}{2} \left( \lvert \psi_1 \rvert^2 - \frac{1}{2 dV} \right) +
 \frac{\gamma_{22}}{2} \left( 2 \lvert \psi_2 \rvert^2 - \frac{1}{dV} \right) \\
-\hat{D}_{12} & = & \frac{\gamma_{12}}{2} \psi_1 \psi_2^*
-\end{eqnarray*}
+\hat{D}_{12} = &\, \frac{\gamma_{12}}{2} \psi_1 \psi_2^*
+\end{align*}
 
 \subsection*{Measurement}
 
@@ -613,12 +605,12 @@ where $x = \lvert \alpha \rvert^2 + \beta + 1$.
 
 Since eigenvalues have multiplicity greater than 1, we cannot simply construct matrix $B'$ from eigenvectors;
 we have to use modified set instead:
-\begin{eqnarray*}
+\begin{align*}
 q_1 = D' v_1^* + \sqrt{\lambda_1} v_1, & &
 q_2 = D' v_2^* - \sqrt{\lambda_2} v_2, \\
 q_3 = D' v_3^* + \sqrt{\lambda_3} v_3, & &
 q_4 = D' v_4^* - \sqrt{\lambda_4} v_4.
-\end{eqnarray*}
+\end{align*}
 Now, one can prove that if $u_i$ are normalized $v_i$, and $U$ is the matrix, constructed from $u_i$ vectors,
 the following equation is valid:
 \[ D' = U \textrm{diag} \left( \sqrt{\lambda{1}}, -\sqrt{\lambda{2}}, \sqrt{\lambda{3}}, -\sqrt{\lambda{4}} \right) U^T \]
@@ -788,6 +780,76 @@ which can be described by rotation matrix:
 The result can be seen on fig~\ref{axial_pi_pulse}.
 Comparing it to the fig~\ref{axial_view}, you can see the so called 'revival' ---
 the amplitude of spin projection oscillations did not decrease after 120ms.
+
+\appendix
+
+\chapter{Natural units}
+\label{chapter:natural_units}
+
+Nondimensionalization can be performed in many ways;
+the parameters of the harmonic trap are the natural choice for the new units.
+Taking into account the usual symmetry $\omega_x = \omega_y = \omega_\rho$ which exists in experiments,
+we can set the following units for length, time and energy:
+\[
+l_\rho =  \sqrt{\frac{\hbar}{m\omega_\rho}},\, t_\rho = \frac{1}{\omega_\rho},\, E_\rho = \hbar \omega_\rho.
+\]
+
+Wave function can be made dimensionless differently depending on the normalisation.
+We will use the transformation
+\[
+\psi = \psi^\prime l_\rho^\frac{3}{2},
+\]
+that keeps the integral of wave function over space equal to number of particles in the system:
+\[
+\int\limits_V \psi dV = \int\limits_V \psi^\prime dV^\prime = N,
+\]
+where the variables with primes are dimensionless.
+
+\chapter{Split-step propagation}
+\label{chapter:split-step}
+
+Split-step propagation method is used to obtain the numerical solution of the following differential equation:
+\begin{equation}
+\label{split-step:general_eqn}
+\frac{d\psi(\mathbf{r}, t)}{dt} = ( \hat{D}(\nabla) + \hat{N}(\mathbf{r}, t) ) \psi(\mathbf{r}, t)
+\end{equation}
+given the initial state $\psi(\mathbf{r}, 0)$, 
+where $\hat{D}$ is the differential operator, and $\hat{N}$ is the nonlinear operator,
+which is just a common function.
+
+The equation~(\ref{split-step:general_eqn}) can be rewritten as:
+\[
+\psi(\mathbf{r}, t + dt) \simeq \exp ( ( \hat{D} + \hat{N} ) dt ) \psi(\mathbf{r}, dt).
+\]
+The idea of split-step Fourier method is to separate the calculation of both terms:
+\begin{equation}
+\label{split-step:split_eqn}
+\psi(\mathbf{r}, t + dt) \simeq \exp(dt \hat{D}) \exp(dt \hat{N}) \psi(\mathbf{r}, t)
+\end{equation}
+and calculate the differential factor in Fourier domain, where spatial derivative can be replaced by simple multiplication:
+\[
+\psi(\mathbf{r}, t + dt) \simeq \left\{ \hat{F}^{-1} \exp \left[ d\tau \hat{D}(i\omega) \right] \hat{F} \right\}
+\exp(dt \hat{N}) \psi(\mathbf{r}, t).
+\]
+Here $\hat{D}(i\omega)$ is obtained by replacing differential operator by $i \omega$,
+where $\omega$ is a frequency in Fourier domain.
+
+In order to improve the accuracy of the method, equation~(\ref{split-step:split_eqn}) can be rewritten as
+\[
+\psi(\mathbf{r}, t + dt) \simeq \exp \left( \frac{dt}{2} \hat{D} \right)
+\exp \left( \int\limits^{t + dt}_t \hat{N} (t^\prime) dt^\prime \right)
+\exp \left( \frac{dt}{2} \hat{D} \right) \psi(\mathbf{r}, t).
+\]
+This method is called the symmetric split-step Fourier method, and it has the global error of $O(dt^2)$
+\textcolor{red}{[citation needed]}.
+Integral can be evaluated either by approximating it with $dt \hat{N}(t)$ or by using slightly more accurate method,
+like trapezoidal rule
+\[
+\int\limits^{t + dt}_t \hat{N} (t^\prime) dt^\prime \simeq
+\frac{dt}{2} \left( \hat{N}(t) + \hat{N}(t + dt) \right).
+\]
+Since the value of $\hat{N}(t + dt)$ is unknown at the time of the calculation
+(it is performed in the middle of the step), an iterative procedure is necessary.
 
 \bibliographystyle{plain}
 \bibliography{refs}
