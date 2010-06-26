@@ -189,7 +189,7 @@ External trap potential $V_1$ and $V_2$ can be different for each component, dep
 but in the experiment in question they are equal (symmetric trapping).
 Interaction coefficients $g_{11}$, $g_{12}$ and $g_{22}$ depend on corresponding scattering lengths:
 \[ g_{ij} = \frac{4 \pi \hbar^2 a_{ij}}{m}. \]
-For rubidium, according to the latest experimental data \cite{mertes_merrill_carretero-gonzalez_frantzeskakis_kevrekidis_hall_2007},
+For rubidium, according to the latest experimental data~\cite{mertes_merrill_carretero-gonzalez_frantzeskakis_kevrekidis_hall_2007},
 $a_{11} = 100.40\ a_0$, $a_{22} = 95.00\ a_0$ and $a_{12} = 97.66\ a_0$ where $a_0$ is the Bohr radius.
 The quantity $V_{hf}$ is the hyperfine splitting for $5^2S_{1/2}$ and equals $V_{hf} / h \approx 6.8 \textrm{GHz}$~\cite{steck_2009}.
 
@@ -206,69 +206,102 @@ g_{22} \lvert \psi_2 \rvert^2 + g_{12} \lvert \psi_1 \rvert^2 \right) \psi_2
 Ground state for two-component condensate can be found by propagating these equations in imaginary time simultaneously,
 waiting for total energy~(\ref{two-component_cond:energy}) to stop changing.
 
-\textcolor{red}{[Pictures needed?]}
-
 \section{Two-component evolution}
 
-Now when we have got the ground state for one-component system, it is the time to start the simulation of two-component system.
-The initial state for the component $\vert1\rangle$ is the one-component steady state,
-and for $\vert2\rangle$ the initial state equals to zero.
-
-The evolution of the system is described by coupled Gross-Pitaevskii equations.
-They can contain different terms depending on which features of the system we need to take into account.
-Basic form can be found in many sources, i.e. \cite{pitaevskii_bec}; with the addition of loss terms it looks like (in real units):
-\[ i \hbar \frac{\partial \psi_1}{\partial t} = \left(
-	-\frac{\hbar^2\nabla^2}{2m} + V_1(\mathbf{r}) +
-	g_{11} \lvert \psi_1 \rvert^2 + g_{12} \lvert \psi_2 \rvert^2 - i \hbar \Gamma_1
-\right) \psi_1 + \frac{\hbar \Omega}{2}e^{i \omega t} \psi_2, \]
-\[ i \hbar \frac{\partial \psi_2}{\partial t} = \left(
-	-\frac{\hbar^2\nabla^2}{2m} + V_2(\mathbf{r}) +
-	g_{12} \lvert \psi_1 \rvert^2 + g_{22} \lvert \psi_2 \rvert^2 - i \hbar \Gamma_2
-\right) \psi_2 + \frac{\hbar \Omega}{2}e^{i \omega t} \psi_1 - \hbar \Delta \psi_2. \]
-
-Let us now explain each term in this system.
-$V_1$ and $V_2$ stand for the external potential (which, in general, is different for each component).
-For our purposes we can consider $V_1 = V_2 = V_{ext}$ (symmetric trapping), where $V_{ext}$ is a trap potential.
-Interaction coefficients $g_{11}$, $g_{12}$ and $g_{22}$ depend on corresponding scattering lengths:
-\[ g_{ij} = \frac{4 \pi \hbar^2 a_{ij}}{m}. \]
-For rubidium, according to the latest experimental data (\cite{PhysRevLett.99.190402}),
-$a_{11} = 100.40\ a_0$, $a_{22} = 95.00\ a_0$ and $a_{12} = 97.66\ a_0$ where $a_0$ is the Bohr radius.
-$\Gamma_1 = (\gamma_{111} n_1^2 + \gamma_{12} n_2) / 2$ and $\Gamma_2 = (\gamma_{22} n_2 + \gamma_{12} n_1) / 2$,
-where $n_1$ and $n_2$ stand for the densities of components, are responsible for two- and three-body loss processes.
-Loss rates $\gamma$ can be found in \cite{PhysRevLett.99.190402} and \cite{PhysRevLett.79.337}:
+Full evolution equations can be constructed from the basic form~(\ref{two-component_cond:cgpes}),
+with the inclusion of electromagnetic coupling terms~\cite{pitaevskii_bec}
+and loss terms~\cite{mertes_merrill_carretero-gonzalez_frantzeskakis_kevrekidis_hall_2007}:
+\begin{align}
+\label{two-component_evolution:cgpes}
+\begin{split}
+i \hbar \frac{\partial \psi_1}{\partial t} & = \left( - \frac{\hbar^2 \nabla^2}{2 m} + V_1 +
+g_{11} \lvert \psi_1 \rvert^2 + g_{12} \lvert \psi_2 \rvert^2 - i \hbar \Gamma_1 \right) \psi_1 +
+\left( \frac{\hbar \Omega}{2}e^{i \omega t} + \textrm{c.c.} \right) \psi_2 \\
+i \hbar \frac{\partial \psi_2}{\partial t} & = \left( - \frac{\hbar^2 \nabla^2}{2 m} + V_2 + V_{hf} +
+g_{22} \lvert \psi_2 \rvert^2 + g_{12} \lvert \psi_1 \rvert^2 - i \hbar \Gamma_2 \right) \psi_2 +
+\left( \frac{\hbar \Omega}{2}e^{i \omega t} + \textrm{c.c.} \right) \psi_1
+\end{split}
+\end{align}
+Loss rates $\gamma$ can be found in~\cite{mertes_merrill_carretero-gonzalez_frantzeskakis_kevrekidis_hall_2007}
+and \cite{burt_ghrist_myatt_holland_cornell_wieman_1997}:
 \[ \gamma_{111} = 5.4(11) \times 10^{-30}\ \textrm{cm}^6/\textrm{s}, \]
 \[ \gamma_{12} = 0.780(19) \times 10^{-13}\ \textrm{cm}^3/\textrm{s}, \]
 \[ \gamma_{22} = 1.194(19) \times 10^{-13}\ \textrm{cm}^3/\textrm{s}. \]
-$\Delta$ is a detuning frequency and depends on experimental conditions.
+Coupling frequency $\omega$ is slightly detuned from the hyperfine frequency in the experiment:
+$\omega = \omega_{hf} + \delta,\, \delta \ll \omega_{hf}$.
+Coupling coefficient $\Omega$ is a complex number $\lvert \Omega \rvert e^{i \alpha}$,
+where $\lvert \Omega \rvert$ is the Rabi frequency (its exact value depends on the nature of coupling process),
+and $\alpha$ is the phase of the coupling field.
 
-$\Omega$ is a constant for state transitions due to external oscillating magnetic field, for example, during $\frac{\pi}{2}$-pulses.
-Since these pulses act for a short amount of time (as compared to the time scale of the system),
-we can apply corresponding matrix instantaneously instead of explicitly use $\Omega$ terms.
-For example, matrix for $\frac{\pi}{2}$-pulse will look like:
-\[
-\begin{pmatrix}
-	\psi^\prime_1 \\	\psi^\prime_2
-\end{pmatrix} =
-\frac{1}{\sqrt{2}} \begin{pmatrix}
-	1 & -i \\ -i & 1
-\end{pmatrix}
-\begin{pmatrix}
-	\psi_1 \\ \psi_2
-\end{pmatrix}.
-\]
-More generally, rotation around the equatorial vector in Bloch sphere is described by the following matrix:
+Since $V_{hf} \gg V_2$, it can cause problems when performing calculations with low precision.
+Therefore it is convenient to use equations~(\ref{two-component_evolution:cgpes}) in a slightly different coordinate system:
+$\psi_2 \rightarrow \psi_2 e^{-i \omega_{hf} t}$.
+This transformation eliminates $V_{hf}$ from the equations and does not change single-time observable values;
+but one must remember that it does change relative phase of the components,
+which is significant when simulating two-pulse Ramsey interferometry.
+Transformed equations look like:
+\begin{align*}
+\begin{split}
+i \hbar \frac{\partial \psi_1}{\partial t} = & \left( - \frac{\hbar^2 \nabla^2}{2 m} + V_1 +
+g_{11} \lvert \psi_1 \rvert^2 + g_{12} \lvert \psi_2 \rvert^2 - i \hbar \Gamma_1 \right) \psi_1 + \\
+& + \left( \frac{\hbar \Omega}{2}e^{i (\omega + \omega_{hf}) t} + \frac{\hbar \Omega^*}{2}e^{-i \delta t} \right) \psi_2 \\
+i \hbar \frac{\partial \psi_2}{\partial t} = & \left( - \frac{\hbar^2 \nabla^2}{2 m} + V_2 +
+g_{22} \lvert \psi_2 \rvert^2 + g_{12} \lvert \psi_1 \rvert^2 - i \hbar \Gamma_2 \right) \psi_2 + \\
+& + \left( \frac{\hbar \Omega}{2}e^{i \delta t} + \frac{\hbar \Omega^*}{2}e^{-i (\omega + \omega_{hf})} \right) \psi_2
+\end{split}
+\end{align*}
+
+In the experiment coupling field is applied for short periods of time $t_{pulse}$,
+where $1 / \omega \ll t_{pulse} \ll 1 / \delta$.
+This allows us to drop out fast oscillating terms:
+\begin{align}
+\begin{split}
+i \hbar \frac{\partial \psi_1}{\partial t} & = \left( - \frac{\hbar^2 \nabla^2}{2 m} + V_1 +
+g_{11} \lvert \psi_1 \rvert^2 + g_{12} \lvert \psi_2 \rvert^2 - i \hbar \Gamma_1 \right) \psi_1 +
+\frac{\hbar \lvert \Omega \rvert}{2}e^{-i \delta t - \alpha} \psi_2 \\
+i \hbar \frac{\partial \psi_2}{\partial t} & = \left( - \frac{\hbar^2 \nabla^2}{2 m} + V_2 +
+g_{22} \lvert \psi_2 \rvert^2 + g_{12} \lvert \psi_1 \rvert^2 - i \hbar \Gamma_2 \right) \psi_2 +
+\frac{\hbar \lvert \Omega \rvert}{2}e^{i \delta t + \alpha} \psi_2,
+\end{split}
+\end{align}
+where $\alpha$ is the phase of the coupling field at the beginning of the pulse.
+When pulse is applied twice using the same coupling field (which is the case for Ramsey interferometry),
+phases are dependent: $\alpha_2 = \alpha_1 + \omega t_{R}$, where $t_{R}$ is the Ramsey time.
+
+The application of the coupling field can be simplified, if certain additional conditions are valid, namely:
+\begin{enumerate}
+\item $\mu / \hbar \ll \lvert \Omega \rvert$, where $\mu$ is the chemical potential of the first component;
+\item $\delta \ll \lvert \Omega \rvert$;
+\item mean field interaction can be neglected \textcolor{red}{[mathematical condition needed]}.
+\end{enumerate}
+This allows us to use "instantaneous" pulse, multiplying state vector by rotation matrix:
 \begin{equation}
 \label{rotation_matrix}
 \begin{pmatrix}
 	\psi^\prime_1 \\	\psi^\prime_2
 \end{pmatrix} =
+\begin{pmatrix}
+	\cos \frac{\theta}{2} & -i e^{-i \alpha} \sin \frac{\theta}{2} \\ -i e^{i \alpha} \sin \frac{\theta}{2} & \cos \frac{\theta}{2}
+\end{pmatrix}
+\begin{pmatrix}
+	\psi_1 \\ \psi_2
+\end{pmatrix},
+\end{equation}
+where $\theta = \Omega t_{pulse}$.
+
+For example, matrix for $\frac{\pi}{2}$-pulse, which is used in Ramsey interferometry, will look like:
+\[
+\begin{pmatrix}
+	\psi^\prime_1 \\	\psi^\prime_2
+\end{pmatrix} =
 \frac{1}{\sqrt{2}} \begin{pmatrix}
-	1 & -i e^{-i \phi} \\ -i e^{i \phi} & 1
+	1 & -i e^{-i \alpha} \\ -i e^{i \alpha} & 1
 \end{pmatrix}
 \begin{pmatrix}
 	\psi_1 \\ \psi_2
 \end{pmatrix}.
-\end{equation}
+\]
+Coupling field phase $\alpha$ can be taken to be equal to zero for the first pulse and $\omega t_{R}$ for the second pulse.
 
 After transformation to natural units and considering the above explanation of terms, we will get the following equations:
 \[ i \frac{\partial \psi_1}{\partial t} = \left(
@@ -367,12 +400,12 @@ kinetic term can be moved to desired place using integration by parts
 For example, let us prove that the term~(\ref{annihilating_psi_K_psi}) is equal to zero:
 \begin{align*}
 \int\limits_V d\mathbf{r} \left( \psi^* \hat{K} \psi - \psi \hat{K} \psi^* \right) W
-= &\, \frac{1}{2} \int\limits_V d\mathbf{r} \left( - \psi^* \nabla^2 \psi - \psi \nabla^2 \psi^* \right) W \\
-= &\, \frac{1}{2} \left\{ - \oint\limits_{\partial V} \psi^* (\nabla \psi \cdot \mathbf{n}) dS +
+= {} & \frac{1}{2} \int\limits_V d\mathbf{r} \left( - \psi^* \nabla^2 \psi - \psi \nabla^2 \psi^* \right) W \\
+= {} & \frac{1}{2} \left\{ - \oint\limits_{\partial V} \psi^* (\nabla \psi \cdot \mathbf{n}) dS +
 \int\limits_V d\mathbf{r} \nabla \psi^* \nabla \psi \right. + \\
 & \left. + \oint\limits_{\partial V} \psi (\nabla \psi^* \cdot \mathbf{n}) dS -
 \int\limits_V d\mathbf{r} \nabla \psi \nabla \psi^* \right\} W \\
-= &\, \frac{1}{2} \left\{ \oint\limits_{\partial V} \psi (\nabla \psi^* \cdot \mathbf{n}) dS -
+= {} & \frac{1}{2} \left\{ \oint\limits_{\partial V} \psi (\nabla \psi^* \cdot \mathbf{n}) dS -
 \oint\limits_{\partial V} \psi^* (\nabla \psi \cdot \mathbf{n}) dS \right\} W = 0
 \end{align*}
 Here $\partial V$ stands for the boundary of region $V$.
@@ -486,19 +519,19 @@ Equation~(\ref{full_wigner_equation}) in discrete form will then look like:
 \end{equation*}
 where
 \begin{align*}
-\hat{A}_1 = &\, i \left( - \hat{K}_1 + g_{11} \left( \frac{1}{dV} - \lvert \psi_1 \rvert^2 \right) +
+\hat{A}_1 = {} & i \left( - \hat{K}_1 + g_{11} \left( \frac{1}{dV} - \lvert \psi_1 \rvert^2 \right) +
 g_{12} \left( \frac{1}{2 dV} - \lvert \psi_2 \rvert^2 \right) \right) + \\
 & +\frac{\gamma_{111}}{2} \left( \frac{3}{dV} \lvert \psi_1 \rvert^2 - \frac{3}{2 dV^2} - \lvert \psi_1 \rvert^4 \right) +
 \frac{\gamma_{12}}{2} \left( \frac{1}{2 dV} - \lvert \psi_2 \rvert^2 \right), \\
-\hat{A}_2 = &\, i \left( - \hat{K}_2 + g_{22} \left( \frac{1}{dV} - \lvert \psi_2 \rvert^2 \right) +
+\hat{A}_2 = {} & i \left( - \hat{K}_2 + g_{22} \left( \frac{1}{dV} - \lvert \psi_2 \rvert^2 \right) +
 g_{12} \left( \frac{1}{2 dV} - \lvert \psi_1 \rvert^2 \right) \right) + \\
 & + \frac{\gamma_{12}}{2} \left( \frac{1}{2 dV} - \lvert \psi_1 \rvert^2 \right) +
 \frac{\gamma_{22}}{2} \left( \frac{1}{dV} - \lvert \psi_2 \rvert^2 \right), \\
-\hat{D}_{11} = &\, \frac{\gamma_{111}}{2} \left(3 \lvert \psi_1 \rvert^4 -
+\hat{D}_{11} = {} & \frac{\gamma_{111}}{2} \left(3 \lvert \psi_1 \rvert^4 -
 \frac{6}{dV} \lvert \psi_1 \rvert^2 + \frac{3}{2 dV^2} \right) + \frac{\gamma_{12}}{2} \left( \lvert \psi_2 \rvert^2 - \frac{1}{2 dV} \right) \\
-\hat{D}_{22} = &\, \frac{\gamma_{12}}{2} \left( \lvert \psi_1 \rvert^2 - \frac{1}{2 dV} \right) +
+\hat{D}_{22} = {} & \frac{\gamma_{12}}{2} \left( \lvert \psi_1 \rvert^2 - \frac{1}{2 dV} \right) +
 \frac{\gamma_{22}}{2} \left( 2 \lvert \psi_2 \rvert^2 - \frac{1}{dV} \right) \\
-\hat{D}_{12} = &\, \frac{\gamma_{12}}{2} \psi_1 \psi_2^*
+\hat{D}_{12} = {} & \frac{\gamma_{12}}{2} \psi_1 \psi_2^*
 \end{align*}
 
 \subsection*{Measurement}
