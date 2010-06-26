@@ -23,7 +23,10 @@ We are looking for the ground state of the system with pseudopotential model ham
 V(\mathbf{r}) + g_{11} \lvert \psi(\mathbf{r}) \rvert^2,
 \]
 \[ g_{11} = \frac{4 \pi \hbar^2 a_{11}}{m}, \]
-\[ V(\mathbf{r}) = \frac{m}{2} \left( \omega_x^2 x^2 + \omega_y^2 y^2 + \omega_z^2 z^2 \right). \]
+\begin{equation}
+\label{thomas-fermi:trap_potential}
+V(\mathbf{r}) = \frac{m}{2} \left( \omega_x^2 x^2 + \omega_y^2 y^2 + \omega_z^2 z^2 \right).
+\end{equation}
 where $V(\mathbf{r})$ is the potential energy for parabolic trap, $g_{11}$ is the interaction coefficient,
 and $a_{11}$ is the scattering length for atoms in non-excited state. In natural units
 (see Appendix~\ref{chapter:natural_units} for details):
@@ -186,7 +189,8 @@ E(\psi) & = \int\limits_V \left(
 \end{split}
 \end{equation}
 External trap potential $V_1$ and $V_2$ can be different for each component, depending on experimental setup;
-but in the experiment in question they are equal (symmetric trapping).
+but in the experiment in question they are equal (symmetric trapping)
+and defined by the same equation~(\ref{thomas-fermi:trap_potential}).
 Interaction coefficients $g_{11}$, $g_{12}$ and $g_{22}$ depend on corresponding scattering lengths:
 \[ g_{ij} = \frac{4 \pi \hbar^2 a_{ij}}{m}. \]
 For rubidium, according to the latest experimental data~\cite{mertes_merrill_carretero-gonzalez_frantzeskakis_kevrekidis_hall_2007},
@@ -197,9 +201,9 @@ One can obtain coupled GPEs from the variational principle $i \hbar \partial \ps
 \begin{align}
 \label{two-component_cond:cgpes}
 \begin{split}
-i \hbar \frac{\partial \psi_1}{\partial t} & = \left( - \frac{\hbar^2 \nabla^2}{2 m} + V_1 +
+i \hbar \frac{\partial \psi_1}{\partial t} & = \left( - \frac{\hbar^2 \nabla^2}{2 m} + V +
 g_{11} \lvert \psi_1 \rvert^2 + g_{12} \lvert \psi_2 \rvert^2 \right) \psi_1 \\
-i \hbar \frac{\partial \psi_2}{\partial t} & = \left( - \frac{\hbar^2 \nabla^2}{2 m} + V_2 + V_{hf} +
+i \hbar \frac{\partial \psi_2}{\partial t} & = \left( - \frac{\hbar^2 \nabla^2}{2 m} + V + V_{hf} +
 g_{22} \lvert \psi_2 \rvert^2 + g_{12} \lvert \psi_1 \rvert^2 \right) \psi_2
 \end{split}
 \end{align}
@@ -214,12 +218,12 @@ and loss terms~\cite{mertes_merrill_carretero-gonzalez_frantzeskakis_kevrekidis_
 \begin{align}
 \label{two-component_evolution:cgpes}
 \begin{split}
-i \hbar \frac{\partial \psi_1}{\partial t} & = \left( - \frac{\hbar^2 \nabla^2}{2 m} + V_1 +
+i \hbar \frac{\partial \psi_1}{\partial t} & = \left( - \frac{\hbar^2 \nabla^2}{2 m} + V +
 g_{11} \lvert \psi_1 \rvert^2 + g_{12} \lvert \psi_2 \rvert^2 - i \hbar \Gamma_1 \right) \psi_1 +
-\left( \frac{\hbar \Omega}{2}e^{i \omega t} + \textrm{c.c.} \right) \psi_2 \\
-i \hbar \frac{\partial \psi_2}{\partial t} & = \left( - \frac{\hbar^2 \nabla^2}{2 m} + V_2 + V_{hf} +
+\left( \frac{\hbar \tilde{\Omega}}{2}e^{i \omega t} + \textrm{c.c.} \right) \psi_2 \\
+i \hbar \frac{\partial \psi_2}{\partial t} & = \left( - \frac{\hbar^2 \nabla^2}{2 m} + V + V_{hf} +
 g_{22} \lvert \psi_2 \rvert^2 + g_{12} \lvert \psi_1 \rvert^2 - i \hbar \Gamma_2 \right) \psi_2 +
-\left( \frac{\hbar \Omega}{2}e^{i \omega t} + \textrm{c.c.} \right) \psi_1
+\left( \frac{\hbar \tilde{\Omega}}{2}e^{i \omega t} + \textrm{c.c.} \right) \psi_1
 \end{split}
 \end{align}
 Loss rates $\gamma$ can be found in~\cite{mertes_merrill_carretero-gonzalez_frantzeskakis_kevrekidis_hall_2007}
@@ -229,8 +233,8 @@ and \cite{burt_ghrist_myatt_holland_cornell_wieman_1997}:
 \[ \gamma_{22} = 1.194(19) \times 10^{-13}\ \textrm{cm}^3/\textrm{s}. \]
 Coupling frequency $\omega$ is slightly detuned from the hyperfine frequency in the experiment:
 $\omega = \omega_{hf} + \delta,\, \delta \ll \omega_{hf}$.
-Coupling coefficient $\Omega$ is a complex number $\lvert \Omega \rvert e^{i \alpha}$,
-where $\lvert \Omega \rvert$ is the Rabi frequency (its exact value depends on the nature of coupling process),
+Coupling coefficient $\tilde{\Omega}$ is a complex number $\Omega e^{i \alpha}$,
+where $\Omega$ is the Rabi frequency (its exact value depends on the nature of coupling process),
 and $\alpha$ is the phase of the coupling field.
 
 Since $V_{hf} \gg V_2$, it can cause problems when performing calculations with low precision.
@@ -238,16 +242,16 @@ Therefore it is convenient to use equations~(\ref{two-component_evolution:cgpes}
 $\psi_2 \rightarrow \psi_2 e^{-i \omega_{hf} t}$.
 This transformation eliminates $V_{hf}$ from the equations and does not change single-time observable values;
 but one must remember that it does change relative phase of the components,
-which is significant when simulating two-pulse Ramsey interferometry.
+which may be significant in some cases.
 Transformed equations look like:
 \begin{align*}
 \begin{split}
-i \hbar \frac{\partial \psi_1}{\partial t} = & \left( - \frac{\hbar^2 \nabla^2}{2 m} + V_1 +
+i \hbar \frac{\partial \psi_1}{\partial t} = & \left( - \frac{\hbar^2 \nabla^2}{2 m} + V +
 g_{11} \lvert \psi_1 \rvert^2 + g_{12} \lvert \psi_2 \rvert^2 - i \hbar \Gamma_1 \right) \psi_1 + \\
-& + \left( \frac{\hbar \Omega}{2}e^{i (\omega + \omega_{hf}) t} + \frac{\hbar \Omega^*}{2}e^{-i \delta t} \right) \psi_2 \\
-i \hbar \frac{\partial \psi_2}{\partial t} = & \left( - \frac{\hbar^2 \nabla^2}{2 m} + V_2 +
+& + \left( \frac{\hbar \tilde{\Omega}}{2}e^{i (\omega + \omega_{hf}) t} + \frac{\hbar \tilde{\Omega}^*}{2}e^{-i \delta t} \right) \psi_2 \\
+i \hbar \frac{\partial \psi_2}{\partial t} = & \left( - \frac{\hbar^2 \nabla^2}{2 m} + V +
 g_{22} \lvert \psi_2 \rvert^2 + g_{12} \lvert \psi_1 \rvert^2 - i \hbar \Gamma_2 \right) \psi_2 + \\
-& + \left( \frac{\hbar \Omega}{2}e^{i \delta t} + \frac{\hbar \Omega^*}{2}e^{-i (\omega + \omega_{hf})} \right) \psi_2
+& + \left( \frac{\hbar \tilde{\Omega}}{2}e^{i \delta t} + \frac{\hbar \tilde{\Omega}^*}{2}e^{-i (\omega + \omega_{hf})} \right) \psi_2
 \end{split}
 \end{align*}
 
@@ -255,23 +259,27 @@ In the experiment coupling field is applied for short periods of time $t_{pulse}
 where $1 / \omega \ll t_{pulse} \ll 1 / \delta$.
 This allows us to drop out fast oscillating terms:
 \begin{align}
+\label{two-component_evolution:cgpes_simplified}
 \begin{split}
-i \hbar \frac{\partial \psi_1}{\partial t} & = \left( - \frac{\hbar^2 \nabla^2}{2 m} + V_1 +
+i \hbar \frac{\partial \psi_1}{\partial t} & = \left( - \frac{\hbar^2 \nabla^2}{2 m} + V +
 g_{11} \lvert \psi_1 \rvert^2 + g_{12} \lvert \psi_2 \rvert^2 - i \hbar \Gamma_1 \right) \psi_1 +
-\frac{\hbar \lvert \Omega \rvert}{2}e^{-i \delta t - \alpha} \psi_2 \\
-i \hbar \frac{\partial \psi_2}{\partial t} & = \left( - \frac{\hbar^2 \nabla^2}{2 m} + V_2 +
+\frac{\hbar \Omega}{2}e^{-i \delta t - \alpha} \psi_2 \\
+i \hbar \frac{\partial \psi_2}{\partial t} & = \left( - \frac{\hbar^2 \nabla^2}{2 m} + V +
 g_{22} \lvert \psi_2 \rvert^2 + g_{12} \lvert \psi_1 \rvert^2 - i \hbar \Gamma_2 \right) \psi_2 +
-\frac{\hbar \lvert \Omega \rvert}{2}e^{i \delta t + \alpha} \psi_2,
+\frac{\hbar \Omega}{2}e^{i \delta t + \alpha} \psi_2,
 \end{split}
 \end{align}
-where $\alpha$ is the phase of the coupling field at the beginning of the pulse.
+where $\alpha$ is the starting phase of the coupling field.
 When pulse is applied twice using the same coupling field (which is the case for Ramsey interferometry),
-phases are dependent: $\alpha_2 = \alpha_1 + \omega t_{R}$, where $t_{R}$ is the Ramsey time.
+it is the same as just setting $\lvert \Omega \rvert$ to zero after the first pulse and then restoring its value for the time of the second pulse;
+therefore $\alpha$ stays the same too.
+If one wants to apply pulse with the different detuning, phase information is lost,
+and the value of $\alpha$ has to become random before this pulse.
 
-The application of the coupling field can be simplified, if certain additional conditions are valid, namely:
+Application of the coupling field can be simplified, if certain additional conditions are valid, namely:
 \begin{enumerate}
-\item $\mu / \hbar \ll \lvert \Omega \rvert$, where $\mu$ is the chemical potential of the first component;
-\item $\delta \ll \lvert \Omega \rvert$;
+\item $\mu / \hbar \ll \Omega$, where $\mu$ is the chemical potential of the first component;
+\item $\delta \ll \Omega$;
 \item mean field interaction can be neglected \textcolor{red}{[mathematical condition needed]}.
 \end{enumerate}
 This allows us to use "instantaneous" pulse, multiplying state vector by rotation matrix:
@@ -281,49 +289,42 @@ This allows us to use "instantaneous" pulse, multiplying state vector by rotatio
 	\psi^\prime_1 \\	\psi^\prime_2
 \end{pmatrix} =
 \begin{pmatrix}
-	\cos \frac{\theta}{2} & -i e^{-i \alpha} \sin \frac{\theta}{2} \\ -i e^{i \alpha} \sin \frac{\theta}{2} & \cos \frac{\theta}{2}
+	\cos \frac{\theta}{2} & -i e^{-i \phi} \sin \frac{\theta}{2} \\ -i e^{i \phi} \sin \frac{\theta}{2} & \cos \frac{\theta}{2}
 \end{pmatrix}
 \begin{pmatrix}
 	\psi_1 \\ \psi_2
 \end{pmatrix},
 \end{equation}
-where $\theta = \Omega t_{pulse}$.
+where $\theta = \Omega t_{pulse}$, and $\phi$ is the phase of the coupling field at the beginning of the pulse.
+In particular, for two-pulse Ramsey scheme, $\phi_2 = \phi_1 + \delta (t_{R} + t_{pulse}) \approx \phi_1 + \delta t_{R}$.
 
-For example, matrix for $\frac{\pi}{2}$-pulse, which is used in Ramsey interferometry, will look like:
-\[
-\begin{pmatrix}
-	\psi^\prime_1 \\	\psi^\prime_2
-\end{pmatrix} =
-\frac{1}{\sqrt{2}} \begin{pmatrix}
-	1 & -i e^{-i \alpha} \\ -i e^{i \alpha} & 1
-\end{pmatrix}
-\begin{pmatrix}
-	\psi_1 \\ \psi_2
-\end{pmatrix}.
-\]
-Coupling field phase $\alpha$ can be taken to be equal to zero for the first pulse and $\omega t_{R}$ for the second pulse.
-
-After transformation to natural units and considering the above explanation of terms, we will get the following equations:
-\[ i \frac{\partial \psi_1}{\partial t} = \left(
-	-\frac{\nabla^2}{2} + V_{ext} +
-	g_{11} n_1 + g_{12} n_2 - \frac{i}{2} (l_{111} n_1^2 + l_{12} n_2)
-\right) \psi_1, \]
-\[ i \frac{\partial \psi_2}{\partial t} = \left(
-	-\frac{\nabla^2}{2} + V_{ext} +
-	g_{12} n_1 + g_{22} n_2 - \frac{i}{2} (l_{22} n_2 + l_{12} n_1) -
-	\frac{\Delta}{\omega_\rho}
-\right) \psi_2, \]
+After transformation to natural units, equations~(\ref{two-component_evolution:cgpes_simplified}) will look as following:
+\begin{align}
+\label{two-component_evolution:cgpes_natural}
+\begin{split}
+i \frac{\partial \psi_1}{\partial t} & = \left(
+	-\frac{\nabla^2}{2} + V + g_{11} n_1 + g_{12} n_2 - \frac{i}{2} (l_{111} n_1^2 + l_{12} n_2)
+\right) \psi_1 +
+\frac{\Omega}{2} e^{- \delta t - \alpha} \psi_2, \\
+i \frac{\partial \psi_2}{\partial t} & = \left(
+	-\frac{\nabla^2}{2} + V + g_{12} n_1 + g_{22} n_2 - \frac{i}{2} (l_{22} n_2 + l_{12} n_1)
+\right) \psi_2 +
+\frac{\Omega}{2} e^{\delta t + \alpha} \psi_2,
+\end{split}
+\end{align}
 where $l_{111}$, $l_{12}$ and $l_{22}$ are dimensionless loss terms:
 \[ l_{ijk} = \gamma_{ijk} / l_\rho^6 \omega_{\rho},\, l_{ij} = \gamma_{ij} / l_\rho^3 \omega_{\rho}. \]
 
-These coupled equations can be solved numerically with the same split-step Fourier propagation
-as we used to get single component ground state.
-Since the propagation is performed in real time now, and there are additional terms in the equations,
-differential and nonlinear operators will change:
+These coupled equations can not be solved numerically with the same split-step Fourier propagation as we used to get the ground state ---
+due to additional coupling terms.
+Coupling simulation requires other methods, for example, 4-th order Runge-Kutta
+(see Appendix~\ref{chapter:runge-kutta} for details).
+But if one uses "instantaneous" pulses, equations without coupling terms can be solved using split-step method.
+Differential and nonlinear operators will look as following then:
 \[ \hat{D} = i \frac{\nabla^2}{2}, \]
-\[ \hat{N}_1 = -i \left( V_{ext} + g_{11} n_1 + g_{12} n_2 \right) - \frac{1}{2} \left( l_{111} n_1^2 + l_{12} n_2 \right), \]
+\[ \hat{N}_1 = -i \left( V + g_{11} n_1 + g_{12} n_2 \right) - \frac{1}{2} \left( l_{111} n_1^2 + l_{12} n_2 \right), \]
 \[
-\hat{N}_2 = -i \left( V_{ext} + g_{12} n_1 + g_{22} n_2 - \frac{\Delta}{\omega_\rho} \right) -
+\hat{N}_2 = -i \left( V + g_{12} n_1 + g_{22} n_2 \right) -
 \frac{1}{2} \left( l_{22} n_2 + l_{12} n_1 \right).
 \]
 
