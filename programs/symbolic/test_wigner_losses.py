@@ -62,7 +62,7 @@ h = Sum([Term(0.5, [GAMMA11, PSI1_OP_PLUS, PSI1_OP_PLUS, PSI1_OP, PSI1_OP]),
 	Term(0.5, [GAMMA12, PSI2_OP_PLUS, PSI1_OP_PLUS, PSI2_OP, PSI1_OP])])
 
 h_comm = Sum([Term(-1j, [h, RHO]), Term(1j, [RHO, h])])
-full = Sum([h_comm, losses111, losses12, losses21, losses22])
+losses = Sum([losses111, losses12, losses21, losses22])
 
-s = process(h_comm)
+s = process(Sum([h_comm, losses]), term_gen=pTerm)
 showSorted(s)

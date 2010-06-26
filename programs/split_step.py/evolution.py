@@ -18,6 +18,8 @@ from reduce import getReduce
 from ground_state import GPEGroundState
 from constants import PSI_FUNC, WIGNER
 
+from decompose import getTakagiDecomposition
+
 
 class TerminateEvolution(Exception):
 	pass
@@ -29,6 +31,12 @@ class Pulse(PairedCalculation):
 		PairedCalculation.__init__(self, env)
 		self._env = env
 		self._constants = constants
+
+		self._plan = createPlan(env, constants, constants.nvx, constants.nvy, constants.nvz)
+
+		self._potentials = getPotentials(env, constants)
+		self._kvectors = getKVectors(env, constants)
+
 		self._prepare()
 
 	def _cpu__prepare(self):
@@ -128,6 +136,81 @@ class Pulse(PairedCalculation):
 		self._func(cloud.a.shape, cloud.a.data, cloud.b.data,
 			self._constants.scalar.cast(theta),
 			self._constants.scalar.cast(phi))
+
+	def _cpu__propagateRK(self, cloud, t, dt):
+
+		shape = cloud.a.shape
+		dtype = cloud.a.dtype
+		batch = cloud.a.size / self._constants.cells
+		nvz = self._constants.nvz
+
+		comp1 = cloud.a.comp
+		comp2 = cloud.b.comp
+		g = self._constants.g
+		g11 = g[(comp1, comp1)]
+		g12 = g[(comp1, comp2)]
+		g22 = g[(comp2, comp2)]
+
+		l111 = self._constants.l111
+		l12 = self._constants.l12
+		l22 = self._constants.l22
+
+		def func(a_data, b_data):
+			n_a = numpy.abs(a_data) ** 2
+			n_b = numpy.abs(b_data) ** 2
+
+			a_kdata = self._env.allocate(shape, dtype=dtype)
+			b_kdata = self._env.allocate(shape, dtype=dtype)
+			a_res = self._env.allocate(shape, dtype=dtype)
+			b_res = self._env.allocate(shape, dtype=dtype)
+
+			self._plan.execute(a_data, a_kdata, inverse=True, batch=batch)
+			self._plan.execute(b_data, b_kdata, inverse=True, batch=batch)
+
+			for e in xrange(batch):
+				start = e * nvz
+				stop = (e + 1) * nvz
+				a_res[start:stop,:,:] = 1j * (a_kdata[start:stop,:,:] * self._kvectors -
+					a_data[start:stop,:,:] * self._potentials)
+				b_res[start:stop,:,:] = 1j * (b_kdata[start:stop,:,:] * self._kvectors -
+					b_data[start:stop,:,:] * self._potentials)
+
+			a_res += (
+				-(n_a * n_a * (l111 / 2) + n_b * (l12 / 2)) +
+				1j * (-n_a * g11 - n_b * g12)) * a_data - \
+				0.5j * self._constants.rabi_freq * \
+					numpy.exp(-1j * t * self._constants.detuning) * b_data
+
+			b_res += (
+				-(n_b * (l22 / 2) + n_a * (l12 / 2)) +
+				1j * (-n_b * g22 - n_a * g12)) * b_data - \
+				0.5j * self._constants.rabi_freq * \
+					numpy.exp(1j * t * self._constants.detuning) * a_data
+
+			return a_res, b_res
+
+		a0 = cloud.a.data.copy()
+		b0 = cloud.b.data.copy()
+
+		a_k1, b_k1 = func(a0, b0)
+		a_k2, b_k2 = func(a0 + 0.5 * dt * a_k1, b0 + 0.5 * dt * b_k1)
+		a_k3, b_k3 = func(a0 + 0.5 * dt * a_k2, b0 + 0.5 * dt * b_k2)
+		a_k4, b_k4 = func(a0 + dt * a_k3, b0 + dt * b_k3)
+
+		cloud.a.data += 1.0 / 6.0 * dt * (a_k1 + 2.0 * a_k2 + 2.0 * a_k3 + a_k4)
+		cloud.b.data += 1.0 / 6.0 * dt * (b_k1 + 2.0 * b_k2 + 2.0 * b_k3 + b_k4)
+
+	def applyNonIdeal(self, cloud, theta):
+		tmax = theta * self._constants.rabi_period
+		steps = 100
+		dt = tmax / steps
+
+		t = 0.0
+		for i in xrange(steps):
+			t += dt
+			print numpy.sum(numpy.abs(cloud.a.data) ** 2 * self._constants.dV), \
+				numpy.sum(numpy.abs(cloud.b.data) ** 2 * self._constants.dV)
+			self._propagateRK(cloud, t, dt)
 
 
 class TwoComponentEvolution(PairedCalculation):
@@ -279,6 +362,49 @@ class TwoComponentEvolution(PairedCalculation):
 		func(cloud.a.shape, cloud.a.data, cloud.b.data,
 			self._constants.scalar.cast(dt), self._potentials)
 
+	def _cpu__getNoiseTerms(self, cloud):
+		noise_a = numpy.zeros(self._constants.ens_shape, dtype=self._constants.complex.dtype)
+		noise_b = numpy.zeros(self._constants.ens_shape, dtype=self._constants.complex.dtype)
+
+		shape = self._constants.ens_shape
+
+		eta = [numpy.random.normal(scale=math.sqrt(self._constants.dt_evo / self._constants.dV),
+			size=shape).astype(self._constants.scalar.dtype) for i in xrange(4)]
+
+		n1 = numpy.abs(cloud.a.data) ** 2
+		n2 = numpy.abs(cloud.b.data) ** 2
+		dV = self._constants.dV
+		l12 = self._constants.l12
+		l22 = self._constants.l22
+		l111 = self._constants.l111
+
+		a = 0.25 * l12 * (n2 - 0.5 / dV) + 0.25 * l111 * (3.0 * n1 * n1 - 6.0 * n1 / dV + 1.5 / dV / dV)
+		d = 0.25 * l12 * (n1 - 0.5 / dV) + 0.25 * l22 * (2.0 * n2 - 1.0 / dV)
+		t = 0.25 * l12 * cloud.a.data * numpy.conj(cloud.b.data)
+		b = numpy.real(t)
+		c = numpy.imag(t)
+
+		t1 = numpy.sqrt(a)
+		t2 = numpy.sqrt(d - (b ** 2) / a)
+		t3 = numpy.sqrt(a + a * (c ** 2) / (b ** 2 - a * d))
+
+		row1 = t1 * eta[0]
+		row2 = b / t1 * eta[0] + t2 * eta[1]
+		row3 = c / t2 * eta[1] + t3 * eta[2]
+		row4 = -c / t1 * eta[0] + b * c / (a * t2) * eta[1] + b / a * t3 * eta[2] + \
+			numpy.sqrt((a ** 2 - b ** 2 - c ** 2) / a) * eta[3]
+
+		noise_a = row1 + 1j * row3
+		noise_b = row2 + 1j * row4
+
+		noise_a /= (cloud.a.data * self._constants.dt_evo)
+		noise_b /= (cloud.b.data * self._constants.dt_evo)
+
+		#print numpy.sum(numpy.abs(noise_a))
+		#print numpy.sum(numpy.abs(numpy.nan_to_num(noise_a)))
+
+		return numpy.nan_to_num(noise_a), numpy.nan_to_num(noise_b)
+
 	def _cpu__xpropagate(self, cloud, dt):
 		a = cloud.a
 		b = cloud.b
@@ -299,6 +425,9 @@ class TwoComponentEvolution(PairedCalculation):
 		p = self._potentials * 1j
 		nvz = self._constants.nvz
 
+		if cloud.type == WIGNER:
+			noise_a, noise_b = self._getNoiseTerms(cloud)
+
 		for iter in xrange(self._constants.itmax):
 			n_a = numpy.abs(a.data) ** 2
 			n_b = numpy.abs(b.data) ** 2
@@ -307,7 +436,7 @@ class TwoComponentEvolution(PairedCalculation):
 				1j * (n_a * g11 + n_b * g12)
 
 			pb = n_b * (-l22 / 2) + n_a * (-l12 / 2) + \
-				1j * (n_b * g22 + n_a * g12 - self._constants.detuning)
+				1j * (n_b * g22 + n_a * g12)
 
 			for e in xrange(cloud.a.size / self._constants.cells):
 				start = e * nvz
@@ -321,6 +450,12 @@ class TwoComponentEvolution(PairedCalculation):
 					1j * (g11 + 0.5 * g12)) / dV
 				pb += (l12 * 0.25 + l22 * 0.5 -
 					1j * (g22 + 0.5 * g12)) / dV
+
+				#print numpy.sum(numpy.abs(noise_a)) / numpy.sum(numpy.abs(pa)), \
+				#	numpy.sum(numpy.abs(noise_b)) / numpy.sum(numpy.abs(pb))
+
+				pa += noise_a * 1j
+				pb += noise_b * 1j
 
 			da = numpy.exp(pa * (dt / 2))
 			db = numpy.exp(pb * (dt / 2))
@@ -377,7 +512,6 @@ class TwoComponentEvolution(PairedCalculation):
 			self._runCallbacks(0, cloud, callbacks)
 
 			while t < time:
-
 				self.propagate(cloud, dt)
 				t += dt * t_rho
 				callback_t += dt * t_rho

@@ -32,6 +32,7 @@ class Model:
 
 	# detuning frequency
 	detuning = -41
+	rabi_freq = 350
 
 	# loss terms
 	gamma111 = 5.4e-42

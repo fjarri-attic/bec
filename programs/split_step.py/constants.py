@@ -71,6 +71,8 @@ class Constants:
 		self.shape = (self.nvz, self.nvy, self.nvx)
 
 		self.detuning = 2 * math.pi * model.detuning / w_rho
+		self.rabi_freq = 2 * math.pi * model.rabi_freq / w_rho
+		self.rabi_period = 1.0 / self.rabi_freq
 
 		self.l111 = model.gamma111 / (pow(l_rho, 6) * w_rho)
 		self.l12 = model.gamma12 / (pow(l_rho, 3) * w_rho)

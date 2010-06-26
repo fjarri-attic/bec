@@ -74,6 +74,30 @@ class ParticleNumberCondition:
 			raise TerminateEvolution()
 
 
+class PhaseNoiseCollector:
+
+	def __init__(self, env, constants):
+		self._constants = constants
+		self._times = []
+		self._var = []
+
+	def __call__(self, t, cloud):
+		res = []
+		for i in xrange(self._constants.ensembles):
+			start = i * self._constants.cells
+			stop = (i + 1) * self._constants.cells
+			res.append(numpy.angle(numpy.sum(
+				cloud.a.data.ravel()[start:stop] * cloud.b.data.ravel()[start:stop].conj()
+			)))
+
+		self._times.append(t)
+		self._var.append(numpy.sqrt(numpy.var(numpy.array(res))))
+		print t, self._var[-1]
+
+	def getData(self):
+		return self._times, self._var
+
+
 class VisibilityCollector:
 
 	def __init__(self, env, constants, verbose=False):
@@ -172,10 +196,12 @@ class SliceCollector:
 
 class AxialProjectionCollector:
 
-	def __init__(self, env, constants, do_pulse=True):
+	def __init__(self, env, constants, do_pulse=True, pulse_phase=0):
 		self._projection = Projection(env, constants)
 		self._pulse = Pulse(env, constants)
 		self._do_pulse = do_pulse
+		self._pulse_phase = 0
+		self._constants = constants
 
 		self.times = []
 		self.snapshots = []
@@ -185,7 +211,9 @@ class AxialProjectionCollector:
 		cloud = cloud.copy()
 
 		if self._do_pulse:
-			self._pulse.halfPi(cloud)
+			self._pulse.apply(cloud, theta=0.5 * math.pi,
+				phi=self._pulse_phase + t * self._constants.detuning /
+				self._constants.t_rho)
 
 		self.times.append(t)
 
