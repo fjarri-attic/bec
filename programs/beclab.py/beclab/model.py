@@ -15,9 +15,13 @@ class Model:
 	m = 1.443160648e-25 # mass of one particle (rubidium-87)
 
 	# scattering lengths, in Bohr radii
+	# source:
+	# private communication with Servaas Kokkelmans and the paper
+	# B. J. Verhaar, E. G. M. van Kempen, and S. J. J.
+	# M. F. Kokkelmans, Phys. Rev. A 79, 032711 (2009).
 	a11 = 100.4
-	a22 = 95.0
-	a12 = 97.66
+	a22 = 95.68
+	a12 = 98.13
 
 	# Trap frequencies
 	fx = 97.6
