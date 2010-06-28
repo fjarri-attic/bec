@@ -42,11 +42,11 @@ class ParticleNumberCollector:
 
 class ParticleNumberCondition:
 
-	def __init__(self, env, constants, verbose=False, do_pulse=True, ratio=0.5):
+	def __init__(self, env, constants, verbose=False, pulse=None, matrix_pulse=True, ratio=0.5):
 		self._stats = ParticleStatistics(env, constants)
 		self._verbose = verbose
-		self._pulse = Pulse(env, constants)
-		self._do_pulse = do_pulse
+		self._pulse = pulse
+		self._matrix_pulse = matrix_pulse
 		self._ratio = ratio
 
 		self._previous_Na = None
@@ -55,8 +55,8 @@ class ParticleNumberCondition:
 	def __call__(self, t, cloud):
 		cloud = cloud.copy()
 
-		if self._do_pulse:
-			self._pulse.halfPi(cloud)
+		if self._pulse is not None:
+			self._pulse.apply(cloud, theta=0.5 * math.pi, matrix=self._matrix_pulse)
 
 		Na = self._stats.countParticles(cloud.a)
 		Nb = self._stats.countParticles(cloud.b)
@@ -122,10 +122,10 @@ class VisibilityCollector:
 
 class SurfaceProjectionCollector:
 
-	def __init__(self, env, constants, do_pulse=True):
+	def __init__(self, env, constants, pulse=None, matrix_pulse=True):
 		self._projection = Projection(env, constants)
-		self._pulse = Pulse(env, constants)
-		self._do_pulse = do_pulse
+		self._pulse = pulse
+		self._matrix_pulse = matrix_pulse
 		self._constants = constants
 
 		self.times = []
@@ -139,8 +139,8 @@ class SurfaceProjectionCollector:
 
 		cloud = cloud.copy()
 
-		if self._do_pulse:
-			self._pulse.halfPi(cloud)
+		if self._pulse is not None:
+			self._pulse.apply(cloud, theta=0.5 * math.pi, matrix=self._matrix_pulse)
 
 		self.times.append(t)
 
@@ -159,10 +159,10 @@ class SurfaceProjectionCollector:
 
 class SliceCollector:
 
-	def __init__(self, env, constants, do_pulse=True):
+	def __init__(self, env, constants, pulse=None, matrix_pulse=True):
 		self._slice = Slice(env, constants)
-		self._pulse = Pulse(env, constants)
-		self._do_pulse = do_pulse
+		self._pulse = pulse
+		self._matrix_pulse = matrix_pulse
 		self._constants = constants
 
 		self.times = []
@@ -176,8 +176,8 @@ class SliceCollector:
 
 		cloud = cloud.copy()
 
-		if self._do_pulse:
-			self._pulse.halfPi(cloud)
+		if self._pulse is not None:
+			self._pulse.apply(cloud, theta=0.5 * math.pi, matrix=self._matrix_pulse)
 
 		self.times.append(t)
 
