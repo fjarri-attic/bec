@@ -5,4 +5,4 @@ from .ground_state import GPEGroundState
 from .evolution import Pulse, SplitStepEvolution
 from .datahelpers import XYData, HeightmapData, XYPlot, HeightmapPlot, EvolutionPlot
 from .collectors import AxialProjectionCollector, ParticleNumberCollector, \
-	SurfaceProjectionCollector, VisibilityCollector
+	SurfaceProjectionCollector, VisibilityCollector, SliceCollector
