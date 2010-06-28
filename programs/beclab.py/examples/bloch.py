@@ -2,35 +2,27 @@ import numpy
 import time
 import math
 
-from globals import Environment
-from model import Model
-from constants import Constants
-from evolution import TwoComponentBEC
-import typenames
+from beclab import *
 
-from collectors import *
+constants = Constants(Model())
+env = Environment(gpu=False)
 
-from datahelpers import XYData, HeightmapData, XYPlot, HeightmapPlot
-
-m = Model()
-constants = Constants(m)
-env = Environment(False, typenames.double_precision, constants)
-bec = TwoComponentBEC(env)
+gs = GPEGroundState(env, constants)
+evolution = SplitStepEvolution(env, constants)
 
 experiments_num = 64
 bas = [BlochSphereAveragesCollector(env) for i in xrange(experiments_num)]
 
 for i in xrange(experiments_num):
+	cloud = gs.createCloud()
+	pulse = Pulse(env, constants, starting_phase=numpy.random.normal(scale=1.0/math.sqrt(env.constants.N)))
+	pulse.apply(cloud, theta=0.5 * math.pi + numpy.random.normal(scale=1.0/math.sqrt(env.constants.N)))
+
 	t1 = time.time()
-	bec.reset(numpy.random.normal(scale=1.0/math.sqrt(env.constants.N)),
-		numpy.random.normal(scale=1.0/math.sqrt(env.constants.N)))
-	#bec.reset(0, 0)
-	bec.runEvolution(0.01, [bas[i]], callback_dt=0.005)
+	evolution.run(cloud, 0.01, [bas[i]], callback_dt=0.005)
 	env.synchronize()
 	t2 = time.time()
 	print "Time spent: " + str(t2 - t1) + " s"
-	#print bas[i].avg_amps
-	#print bas[i].avg_phases
 
 snapshots = BlochSphereAveragesCollector.getSnapshots(bas)
 times = bas[0].times
