@@ -53,7 +53,7 @@ class Pulse(PairedCalculation):
 				from math import sqrt
 			%>
 
-			__kernel void applyInstantaneous(__global ${c.complex.name} *a,
+			__kernel void calculateMatrix(__global ${c.complex.name} *a,
 				__global ${c.complex.name} *b,
 				${c.scalar.name} theta, ${c.scalar.name} phi)
 			{
@@ -89,32 +89,24 @@ class Pulse(PairedCalculation):
 				${c.scalar.name} n_a = squared_abs(a);
 				${c.scalar.name} n_b = squared_abs(b);
 
-				${c.complex.name} ta, tb;
+				${c.complex.name} ta = complex_mul_scalar(ka, kvector) - complex_mul_scalar(a, potential);
+				${c.complex.name} tb = complex_mul_scalar(kb, kvector) - complex_mul_scalar(b, potential);
 
-				ta = complex_mul_scalar(ka, kvector) - complex_mul_scalar(a, potential);
-				tb = complex_mul_scalar(kb, kvector) - complex_mul_scalar(b, potential);
-
-				${c.complex.name} im12 = ${c.complex.ctr}(0, 0.5);
+				${c.scalar.name} phase = t * (${c.scalar.name})${detuning} + phi;
+				${c.scalar.name} sin_phase = ${c.rabi_freq / 2} * sin(phase);
+				${c.scalar.name} cos_phase = ${c.rabi_freq / 2} * cos(phase);
 
 				*a_res = ${c.complex.ctr}(-ta.y, ta.x) +
 					complex_mul(${c.complex.ctr}(
 						- n_a * n_a * ${c.l111 / 2} - n_b * ${c.l12 / 2},
 						- n_a * ${c.g11} - n_b * ${c.g12}), a) -
-					complex_mul(complex_mul_scalar(complex_mul(im12,
-						cexp(${c.complex.ctr}(0, -t * (${c.scalar.name})${detuning} - phi))), ${c.rabi_freq}), b);
-					//complex_mul(${c.complex.ctr}(
-					//	0.5 * ${c.rabi_freq} * sin(t * (${c.scalar.name})${detuning} + phi),
-					//	0.5 * ${c.rabi_freq} * cos(t * (${c.scalar.name})${detuning} + phi)), b);
+					complex_mul(${c.complex.ctr}(sin_phase, cos_phase), b);
 
 				*b_res = ${c.complex.ctr}(-tb.y, tb.x) +
 					complex_mul(${c.complex.ctr}(
 						- n_a * ${c.l12 / 2} - n_b * ${c.l22 / 2},
 						- n_a * ${c.g12} - n_b * ${c.g22}), b) -
-					complex_mul(complex_mul_scalar(complex_mul(im12,
-						cexp(${c.complex.ctr}(0, t * (${c.scalar.name})${detuning} + phi))), ${c.rabi_freq}), a);
-					//complex_mul(${c.complex.ctr}(
-					//	-0.5 * ${c.rabi_freq} * sin(t * (${c.scalar.name})${detuning} + phi),
-					//	0.5 * ${c.rabi_freq} * cos(t * (${c.scalar.name})${detuning} + phi)), a);
+					complex_mul(${c.complex.ctr}(-sin_phase, cos_phase), a);
 			}
 
 			__kernel void calculateRK(__global ${c.complex.name} *a, __global ${c.complex.name} *b,
@@ -137,7 +129,7 @@ class Pulse(PairedCalculation):
 				${c.complex.name} a0 = a_copy[index];
 				${c.complex.name} b0 = b_copy[index];
 
-				${c.scalar.name} val_coeffs[4] = {0.5, 0.5, 1.0, 0.0};
+				${c.scalar.name} val_coeffs[4] = {0.5, 0.5, 1.0};
 				${c.scalar.name} res_coeffs[4] = {1.0 / 6.0, 1.0 / 3.0, 1.0 / 3.0, 1.0 / 6.0};
 
 				${c.complex.name} a_val, b_val;
@@ -154,8 +146,11 @@ class Pulse(PairedCalculation):
 
 				propagationFunc(&ra, &rb, a_val, b_val, ka, kb, t, dt, kvector, potential, phi);
 
-				a_res[index] = a0 + complex_mul_scalar(ra, dt * val_coeffs[stage]);
-				b_res[index] = b0 + complex_mul_scalar(rb, dt * val_coeffs[stage]);
+				if(stage != 4)
+				{
+					a_res[index] = a0 + complex_mul_scalar(ra, dt * val_coeffs[stage]);
+					b_res[index] = b0 + complex_mul_scalar(rb, dt * val_coeffs[stage]);
+				}
 
 				a[index] += complex_mul_scalar(ra, dt * res_coeffs[stage]);
 				b[index] += complex_mul_scalar(rb, dt * res_coeffs[stage]);
@@ -163,17 +158,15 @@ class Pulse(PairedCalculation):
 		"""
 
 		self._program = self._env.compile(kernels, self._constants, detuning=self._detuning)
-		self._applyInstantaneous = self._program.applyInstantaneous
+		self._calculateMatrix = self._program.calculateMatrix
 		self._calculateRK = self._program.calculateRK
 
-	def _cpu_applyInstantaneous(self, cloud, theta):
+	def _cpu__applyMatrix(self, cloud, theta, phi):
 		a = cloud.a.data
 		b = cloud.b.data
 
 		a0 = a.copy()
 		b0 = b.copy()
-
-		phi = cloud.time * self._detuning + self._starting_phase
 
 		half_theta = theta / 2.0
 		k1 = self._constants.scalar.cast(math.cos(half_theta))
@@ -182,20 +175,17 @@ class Pulse(PairedCalculation):
 
 		a[:,:,:] = a0 * k1 + b0 * k2
 		b[:,:,:] = a0 * k3 + b0 * k1
-		cloud.time += theta * self._constants.rabi_period
 
-	def _gpu_applyInstantaneous(self, cloud, theta):
-		phi = cloud.time * self._detuning + self._starting_phase
-		self._applyInstantaneous(cloud.a.shape, cloud.a.data, cloud.b.data,
+	def _gpu__applyMatrix(self, cloud, theta, phi):
+		self._calculateMatrix(cloud.a.shape, cloud.a.data, cloud.b.data,
 			self._constants.scalar.cast(theta),
 			self._constants.scalar.cast(phi))
-		cloud.time += theta * self._constants.rabi_period
 
 	def _cpu__calculateRK(self, _, a_data, b_data, a_copy, b_copy, a_kdata, b_kdata,
 			a_res, b_res, t, dt, p, k, phi, stage):
 
-		val_coeffs = [0.5, 0.5, 1.0, 0.0]
-		res_coeffs = [1.0 / 6.0, 1.0 / 3.0, 1.0 / 3.0, 1.0 / 6.0]
+		val_coeffs = (0.5, 0.5, 1.0, 0.0)
+		res_coeffs = (1.0 / 6.0, 1.0 / 3.0, 1.0 / 3.0, 1.0 / 6.0)
 
 		if stage == 0:
 			a = a_data.copy()
@@ -204,7 +194,7 @@ class Pulse(PairedCalculation):
 			a = a_res.copy()
 			b = b_res.copy()
 
-		self._func(a, b, a_kdata, b_kdata, a_res, b_res, t, dt, phi)
+		self._propagationFunc(a, b, a_kdata, b_kdata, a_res, b_res, t, dt, phi)
 
 		a_data += a_res * (dt * res_coeffs[stage])
 		b_data += b_res * (dt * res_coeffs[stage])
@@ -212,40 +202,58 @@ class Pulse(PairedCalculation):
 		a_res[:,:,:] = a_copy + a_res * (dt * val_coeffs[stage])
 		b_res[:,:,:] = b_copy + b_res * (dt * val_coeffs[stage])
 
-	def _propagateRK(self, cloud, a_copy, b_copy, a_kdata, b_kdata, a_res, b_res, t, dt, phi):
+	def _applyReal(self, cloud, t_pulse, phi):
 
 		batch = cloud.a.size / self._constants.cells
 		shape = cloud.a.shape
 
 		func = self._calculateRK
+		fft = self._plan.execute
 		cast = self._constants.scalar.cast
 		p = self._potentials
 		k = self._kvectors
 
-		t = cast(t)
-		dt = cast(dt)
+		steps = 50
+		dt = cast(t_pulse / steps)
+		phi = cast(phi)
 
-		self._plan.execute(a_copy, a_kdata, inverse=True, batch=batch)
-		self._plan.execute(b_copy, b_kdata, inverse=True, batch=batch)
-		func(shape, cloud.a.data, cloud.b.data, a_copy, b_copy, a_kdata, b_kdata,
-			a_res, b_res, t, dt, p, k, cast(phi), numpy.int32(0))
+		shape = cloud.a.shape
+		dtype = cloud.a.dtype
 
-		self._plan.execute(a_res, a_kdata, inverse=True, batch=batch)
-		self._plan.execute(b_res, b_kdata, inverse=True, batch=batch)
-		func(shape, cloud.a.data, cloud.b.data, a_copy, b_copy, a_kdata, b_kdata,
-			a_res, b_res, t, dt, p, k, cast(phi), numpy.int32(1))
+		a_copy = self._env.allocate(shape, dtype=dtype)
+		b_copy = self._env.allocate(shape, dtype=dtype)
+		a_kdata = self._env.allocate(shape, dtype=dtype)
+		b_kdata = self._env.allocate(shape, dtype=dtype)
+		a_res = self._env.allocate(shape, dtype=dtype)
+		b_res = self._env.allocate(shape, dtype=dtype)
 
-		self._plan.execute(a_res, a_kdata, inverse=True, batch=batch)
-		self._plan.execute(b_res, b_kdata, inverse=True, batch=batch)
-		func(shape, cloud.a.data, cloud.b.data, a_copy, b_copy, a_kdata, b_kdata,
-			a_res, b_res, t, dt, p, k, cast(phi), numpy.int32(2))
+		for i in xrange(steps):
+			t = cast(dt * i)
 
-		self._plan.execute(a_res, a_kdata, inverse=True, batch=batch)
-		self._plan.execute(b_res, b_kdata, inverse=True, batch=batch)
-		func(shape, cloud.a.data, cloud.b.data, a_copy, b_copy, a_kdata, b_kdata,
-			a_res, b_res, t, dt, p, k, cast(phi), numpy.int32(3))
+			self._env.copyBuffer(cloud.a.data, a_copy)
+			self._env.copyBuffer(cloud.b.data, b_copy)
 
-	def _func(self, a_data, b_data, a_kdata, b_kdata, a_res, b_res, t, dt, phi):
+			fft(a_copy, a_kdata, inverse=True, batch=batch)
+			fft(b_copy, b_kdata, inverse=True, batch=batch)
+			func(shape, cloud.a.data, cloud.b.data, a_copy, b_copy, a_kdata, b_kdata,
+				a_res, b_res, t, dt, p, k, phi, numpy.int32(0))
+
+			fft(a_res, a_kdata, inverse=True, batch=batch)
+			fft(b_res, b_kdata, inverse=True, batch=batch)
+			func(shape, cloud.a.data, cloud.b.data, a_copy, b_copy, a_kdata, b_kdata,
+				a_res, b_res, t, dt, p, k, phi, numpy.int32(1))
+
+			fft(a_res, a_kdata, inverse=True, batch=batch)
+			fft(b_res, b_kdata, inverse=True, batch=batch)
+			func(shape, cloud.a.data, cloud.b.data, a_copy, b_copy, a_kdata, b_kdata,
+				a_res, b_res, t, dt, p, k, phi, numpy.int32(2))
+
+			fft(a_res, a_kdata, inverse=True, batch=batch)
+			fft(b_res, b_kdata, inverse=True, batch=batch)
+			func(shape, cloud.a.data, cloud.b.data, a_copy, b_copy, a_kdata, b_kdata,
+				a_res, b_res, t, dt, p, k, phi, numpy.int32(3))
+
+	def _propagationFunc(self, a_data, b_data, a_kdata, b_kdata, a_res, b_res, t, dt, phi):
 
 		batch = a_data.size / self._constants.cells
 		nvz = self._constants.nvz
@@ -262,9 +270,6 @@ class Pulse(PairedCalculation):
 		n_a = numpy.abs(a_data) ** 2
 		n_b = numpy.abs(b_data) ** 2
 
-		self._plan.execute(a_data, a_kdata, inverse=True, batch=batch)
-		self._plan.execute(b_data, b_kdata, inverse=True, batch=batch)
-
 		for e in xrange(batch):
 			start = e * nvz
 			stop = (e + 1) * nvz
@@ -273,40 +278,26 @@ class Pulse(PairedCalculation):
 			b_res[start:stop,:,:] = 1j * (b_kdata[start:stop,:,:] * self._kvectors -
 				b_data[start:stop,:,:] * self._potentials)
 
-		a_res += (-(n_a * n_a * (l111 / 2) + n_b * (l12 / 2)) +
-			1j * (-n_a * g11 - n_b * g12)) * a_data - \
+		a_res += (n_a * n_a * (-l111 / 2) + n_b * (-l12 / 2) -
+			1j * (n_a * g11 + n_b * g12)) * a_data - \
 			0.5j * self._constants.rabi_freq * \
 				numpy.exp(1j * (- t * self._detuning - phi)) * b_data
 
-		b_res += (-(n_b * (l22 / 2) + n_a * (l12 / 2)) +
-			1j * (-n_b * g22 - n_a * g12)) * b_data - \
+		b_res += (n_b * (-l22 / 2) + n_a * (-l12 / 2) -
+			1j * (n_b * g22 + n_a * g12)) * b_data - \
 			0.5j * self._constants.rabi_freq * \
 				numpy.exp(1j * (t * self._detuning + phi)) * a_data
 
-	def apply(self, cloud, theta):
+	def apply(self, cloud, theta, matrix=True):
 		phi =  cloud.time * self._detuning + self._starting_phase
-		tmax = theta * self._constants.rabi_period
-		steps = 20
-		dt = tmax / steps
+		t_pulse = theta * self._constants.rabi_period
 
-		shape = cloud.a.shape
-		dtype = cloud.a.dtype
+		if matrix:
+			self._applyMatrix(cloud, theta, phi)
+		else:
+			self._applyReal(cloud, t_pulse, phi)
 
-		a_copy = self._env.allocate(shape, dtype=dtype)
-		b_copy = self._env.allocate(shape, dtype=dtype)
-		a_kdata = self._env.allocate(shape, dtype=dtype)
-		b_kdata = self._env.allocate(shape, dtype=dtype)
-		a_res = self._env.allocate(shape, dtype=dtype)
-		b_res = self._env.allocate(shape, dtype=dtype)
-
-		t = 0.0
-		for i in xrange(steps):
-			self._env.copyBuffer(cloud.a.data, a_copy)
-			self._env.copyBuffer(cloud.b.data, b_copy)
-			self._propagateRK(cloud, a_copy, b_copy, a_kdata, b_kdata, a_res, b_res, t, dt, phi)
-			t += dt
-
-		cloud.time += tmax
+		cloud.time += t_pulse
 
 
 class SplitStepEvolution(PairedCalculation):
