@@ -388,10 +388,10 @@ class GPEGroundState(PairedCalculation):
 
 		return state1, state2
 
-	def createCloud(self, two_component=False, ratio=0.5):
-		state1, state2 = self._create(two_component=two_component, ratio=ratio)
+	def createCloud(self, two_component=False, ratio=0.5, precision=1e-6):
+		state1, state2 = self._create(two_component=two_component, ratio=ratio, precision=precision)
 		return TwoComponentCloud(self._env, self._constants, a=state1, b=state2)
 
-	def createState(self, comp=COMP_1_minus1):
-		state1, state2 = self._create(two_component=False, comp=comp)
+	def createState(self, comp=COMP_1_minus1, precision=1e-6):
+		state1, state2 = self._create(two_component=False, comp=comp, precision=precision)
 		return state1
