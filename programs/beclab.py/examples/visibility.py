@@ -2,53 +2,45 @@ import numpy
 import time
 import math
 
-from globals import Environment
-from model import Model
-from constants import Constants, COMP_1_minus1, COMP_2_1
-from evolution import TwoComponentEvolution, Pulse
-from ground_state import GPEGroundState
+from beclab import *
 
-from collectors import *
+def testVisibility(gpu, matrix_pulses):
+	constants = Constants(Model(N=30000, nvx=16, nvy=16, nvz=128),
+		double_precision=False if gpu else True)
+	env = Environment(gpu=gpu)
+	evolution = SplitStepEvolution(env, constants)
 
-from datahelpers import XYData, HeightmapData, XYPlot, HeightmapPlot
+	gs = GPEGroundState(env, constants)
+	pulse = Pulse(env, constants)
+	v = VisibilityCollector(env, constants)
+	p = ParticleNumberCollector(env, constants, pulse=pulse, matrix_pulse=matrix_pulses)
 
-constants = Constants(Model(N=30000, nvx=16, nvy=16, nvz=128), double_precision=True)
-env = Environment(gpu=False)
-evolution = TwoComponentEvolution(env, constants)
-a = VisibilityCollector(env, constants, verbose=True)
-b = ParticleNumberCollector(env, constants, verbose=True)
-sp = SurfaceProjectionCollector(env, constants)
+	cloud = gs.createCloud()
+	pulse.apply(cloud, math.pi * 0.5, matrix=matrix_pulses)
 
-gs = GPEGroundState(env, constants)
-pulse = Pulse(env, constants)
+	t1 = time.time()
+	evolution.run(cloud, 0.4, callbacks=[v, p], callback_dt=0.002)
+	env.synchronize()
+	t2 = time.time()
+	print "Time spent: " + str(t2 - t1) + " s"
 
-cloud = gs.createCloud()
+	name = ("gpu" if gpu else "cpu") + ", " + ("ideal" if matrix_pulses else "nonideal") + " pulses"
 
-#pulse.halfPi(cloud)
-pulse.applyNonIdeal(cloud, math.pi * 0.5)
+	times, vis = v.getData()
+	vis = XYData(name, times, vis, ymin=0, ymax=1, xname="Time, s", yname="Visibility")
 
-t1 = time.time()
-evolution.run(cloud, 0.1, callbacks=[a, b, sp], callback_dt=0.01)
-env.synchronize()
-t2 = time.time()
-print "Time spent: " + str(t2 - t1) + " s"
+	times, N1, N2, N = p.getData()
+	particles = XYData(name, times, (N1 - N2) / constants.N,
+		ymin=-1, ymax=1, xname="Time, s", yname="Population ratio")
 
-"""
-times, vis = a.getData()
-vis = XYData("test", times, vis, ymin=0, ymax=1, xname="Time, s", yname="Visibility")
-vis = XYPlot([vis])
-vis.save('test.pdf')
-"""
+	return particles, vis
 
+visibility_data = []
+particles_data = []
+for gpu, matrix_pulses in ((False, True), (False, False), (True, True), (True, False)):
+	p, v = testVisibility(gpu=gpu, matrix_pulses=matrix_pulses)
+	visibility_data.append(v)
+	particles_data.append(p)
 
-"""
-times, a_xy, a_yz, b_xy, b_yz = sp.getData()
-HeightmapPlot(HeightmapData("test", a_yz[0],
-	xmin=-constants.zmax, xmax=constants.zmax,
-	ymin=-constants.ymax, ymax=constants.ymax
-)).save('testa.pdf')
-HeightmapPlot(HeightmapData("test", b_yz[0],
-	xmin=-constants.zmax, xmax=constants.zmax,
-	ymin=-constants.ymax, ymax=constants.ymax
-)).save('testb.pdf')
-"""
+XYPlot(visibility_data).save('visibility.pdf')
+XYPlot(particles_data).save('population.pdf')
