@@ -53,37 +53,6 @@ class Pulse(PairedCalculation):
 				from math import sqrt
 			%>
 
-			// Apply pi/2 pulse (instantaneus approximation)
-			__kernel void applyHalfPiInstantaneous(__global ${c.complex.name} *a,
-				__global ${c.complex.name} *b)
-			{
-				DEFINE_INDEXES;
-
-				${c.complex.name} a0 = a[index];
-				${c.complex.name} b0 = b[index];
-
-				${c.complex.name} minus_i = ${c.complex.ctr}(0, -1);
-				a[index] = complex_mul_scalar(a0 + complex_mul(b0, minus_i),
-					(${c.scalar.name})${sqrt(0.5)});
-				b[index] = complex_mul_scalar(complex_mul(a0, minus_i) + b0,
-					(${c.scalar.name})${sqrt(0.5)});
-			}
-
-			// Apply pi pulse (instantaneus approximation)
-			__kernel void applyPiInstantaneous(__global ${c.complex.name} *a,
-				__global ${c.complex.name} *b)
-			{
-				DEFINE_INDEXES;
-
-				${c.complex.name} a0 = a[index];
-				${c.complex.name} b0 = b[index];
-
-				${c.complex.name} minus_i = ${c.complex.ctr}(0, -1);
-
-				a[index] = complex_mul(b0, minus_i);
-				b[index] = complex_mul(a0, minus_i);
-			}
-
 			__kernel void applyInstantaneous(__global ${c.complex.name} *a,
 				__global ${c.complex.name} *b,
 				${c.scalar.name} theta, ${c.scalar.name} phi)
@@ -185,13 +154,6 @@ class Pulse(PairedCalculation):
 
 				propagationFunc(&ra, &rb, a_val, b_val, ka, kb, t, dt, kvector, potential, phi);
 
-				/*if(stage == 1)
-				{
-					a_res[index] = a0 + complex_mul_scalar(ra, dt * val_coeffs[stage]);
-					b_res[index] = b0 + complex_mul_scalar(rb, dt * val_coeffs[stage]);
-					return;
-				}*/
-
 				a_res[index] = a0 + complex_mul_scalar(ra, dt * val_coeffs[stage]);
 				b_res[index] = b0 + complex_mul_scalar(rb, dt * val_coeffs[stage]);
 
@@ -201,21 +163,8 @@ class Pulse(PairedCalculation):
 		"""
 
 		self._program = self._env.compile(kernels, self._constants, detuning=self._detuning)
-		self._applyHalfPiInstantaneous = self._program.applyHalfPiInstantaneous
-		self._applyPiInstantaneous = self._program.applyPiInstantaneous
 		self._applyInstantaneous = self._program.applyInstantaneous
 		self._calculateRK = self._program.calculateRK
-
-	#def _gpu_halfPiInstantaneous(self, cloud):
-	#	self._applyHalfPiInstantaneous(cloud.a.shape, cloud.a.data, cloud.b.data)
-
-	#def _cpu_halfPiInstantaneous(self, cloud):
-	#	a = cloud.a.data
-	#	b = cloud.b.data
-	#	a0 = a.copy()
-	#	b0 = b.copy()
-	#	a[:,:,:] = (a0 - 1j * b0) * math.sqrt(0.5)
-	#	b[:,:,:] = (b0 - 1j * a0) * math.sqrt(0.5)
 
 	def _cpu_applyInstantaneous(self, cloud, theta):
 		a = cloud.a.data
@@ -256,19 +205,12 @@ class Pulse(PairedCalculation):
 			b = b_res.copy()
 
 		self._func(a, b, a_kdata, b_kdata, a_res, b_res, t, dt, phi)
-		#if stage == 1:
-		#	a_res[:,:,:] = a_copy + a_res * (dt * val_coeffs[stage])
-		#	b_res[:,:,:] = b_copy + b_res * (dt * val_coeffs[stage])
-		#	return
 
 		a_data += a_res * (dt * res_coeffs[stage])
 		b_data += b_res * (dt * res_coeffs[stage])
 
 		a_res[:,:,:] = a_copy + a_res * (dt * val_coeffs[stage])
 		b_res[:,:,:] = b_copy + b_res * (dt * val_coeffs[stage])
-
-	def measure(self, x):
-		return numpy.sum(numpy.abs(self._env.toCPU(x)) ** 2 * self._constants.dV)
 
 	def _propagateRK(self, cloud, a_copy, b_copy, a_kdata, b_kdata, a_res, b_res, t, dt, phi):
 
@@ -288,26 +230,15 @@ class Pulse(PairedCalculation):
 		func(shape, cloud.a.data, cloud.b.data, a_copy, b_copy, a_kdata, b_kdata,
 			a_res, b_res, t, dt, p, k, cast(phi), numpy.int32(0))
 
-		#print self.measure(a_res), self.measure(b_res)
-		#print self.measure(cloud.a.data), self.measure(cloud.b.data)
-		#print self.measure(a_copy), self.measure(b_copy)
-		#print self.measure(a_kdata), self.measure(b_kdata)
-
 		self._plan.execute(a_res, a_kdata, inverse=True, batch=batch)
 		self._plan.execute(b_res, b_kdata, inverse=True, batch=batch)
 		func(shape, cloud.a.data, cloud.b.data, a_copy, b_copy, a_kdata, b_kdata,
 			a_res, b_res, t, dt, p, k, cast(phi), numpy.int32(1))
-		#print self.measure(a_res), self.measure(b_res)
-		#print self.measure(cloud.a.data), self.measure(cloud.b.data)
-		#print self.measure(a_copy), self.measure(b_copy)
-		#print self.measure(a_kdata), self.measure(b_kdata)
 
 		self._plan.execute(a_res, a_kdata, inverse=True, batch=batch)
 		self._plan.execute(b_res, b_kdata, inverse=True, batch=batch)
 		func(shape, cloud.a.data, cloud.b.data, a_copy, b_copy, a_kdata, b_kdata,
 			a_res, b_res, t, dt, p, k, cast(phi), numpy.int32(2))
-		#print self.measure(a_res), self.measure(b_res)
-		#exit(0)
 
 		self._plan.execute(a_res, a_kdata, inverse=True, batch=batch)
 		self._plan.execute(b_res, b_kdata, inverse=True, batch=batch)
@@ -352,31 +283,6 @@ class Pulse(PairedCalculation):
 			0.5j * self._constants.rabi_freq * \
 				numpy.exp(1j * (t * self._detuning + phi)) * a_data
 
-	def _cpu__propagateRK2(self, cloud, a_copy, b_copy, a_kdata, b_kdata, a_res, b_res, t, dt, phi):
-
-		self._func(a_copy, b_copy, a_kdata, b_kdata, a_res, b_res, t, dt, phi)
-		cloud.a.data += a_res * (dt / 6.0)
-		cloud.b.data += b_res * (dt / 6.0)
-
-		#print self.measure(cloud.a.data), self.measure(cloud.b.data)
-		#print self.measure(a_copy + a_res * (0.5 * dt)), self.measure(b_copy + b_res * (0.5 * dt))
-		self._func(a_copy + a_res * (0.5 * dt), b_copy + b_res * (0.5 * dt),
-			a_kdata, b_kdata, a_res, b_res, t, dt, phi)
-		cloud.a.data += a_res * (dt / 3.0)
-		cloud.b.data += b_res * (dt / 3.0)
-		#print self.measure(cloud.a.data), self.measure(cloud.b.data)
-		#print self.measure(a_copy + a_res * (0.5 * dt)), self.measure(b_copy + b_res * (0.5 * dt))
-
-		self._func(a_copy + a_res * (0.5 * dt), b_copy + b_res * (0.5 * dt),
-			a_kdata, b_kdata, a_res, b_res, t, dt, phi)
-		cloud.a.data += a_res * (dt / 3.0)
-		cloud.b.data += b_res * (dt / 3.0)
-
-		self._func(a_copy + a_res * dt, b_copy + b_res * dt,
-			a_kdata, b_kdata, a_res, b_res, t, dt, phi)
-		cloud.a.data += a_res * (dt / 6.0)
-		cloud.b.data += b_res * (dt / 6.0)
-
 	def apply(self, cloud, theta):
 		phi =  cloud.time * self._detuning + self._starting_phase
 		tmax = theta * self._constants.rabi_period
@@ -395,17 +301,9 @@ class Pulse(PairedCalculation):
 
 		t = 0.0
 		for i in xrange(steps):
-			#print numpy.sum(numpy.abs(self._env.toCPU(cloud.a.data)) ** 2 * self._constants.dV), \
-			#	numpy.sum(numpy.abs(self._env.toCPU(cloud.b.data)) ** 2 * self._constants.dV)
 			self._env.copyBuffer(cloud.a.data, a_copy)
 			self._env.copyBuffer(cloud.b.data, b_copy)
 			self._propagateRK(cloud, a_copy, b_copy, a_kdata, b_kdata, a_res, b_res, t, dt, phi)
-
-			#cloud.a.data = a_copy.copy()
-			#cloud.b.data = b_copy.copy()
-			#self._propagateRK(cloud, a_copy, b_copy, a_kdata, b_kdata, a_res, b_res, t, dt, phi)
-
-			#exit(0)
 			t += dt
 
 		cloud.time += tmax
