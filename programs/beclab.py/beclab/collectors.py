@@ -9,11 +9,11 @@ from evolution import Pulse, TerminateEvolution
 
 class ParticleNumberCollector:
 
-	def __init__(self, env, constants, verbose=False, do_pulse=True):
+	def __init__(self, env, constants, verbose=False, pulse=None, ideal_pulse=True):
 		self.stats = ParticleStatistics(env, constants)
 		self.verbose = verbose
-		self._pulse = Pulse(env, constants)
-		self._do_pulse = do_pulse
+		self._pulse = pulse
+		self._ideal_pulse = ideal_pulse
 
 		self.times = []
 		self.Na = []
@@ -22,8 +22,11 @@ class ParticleNumberCollector:
 	def __call__(self, t, cloud):
 		cloud = cloud.copy()
 
-		if self._do_pulse:
-			self._pulse.halfPi(cloud)
+		if self._pulse is not None:
+			if self._ideal_pulse:
+				self._pulse.applyInstantaneous(cloud, theta=0.5 * math.pi)
+			else:
+				self._pulse.apply(cloud, theta=0.5 * math.pi)
 
 		Na = self.stats.countParticles(cloud.a)
 		Nb = self.stats.countParticles(cloud.b)
@@ -196,11 +199,10 @@ class SliceCollector:
 
 class AxialProjectionCollector:
 
-	def __init__(self, env, constants, do_pulse=True, pulse_phase=0):
+	def __init__(self, env, constants, pulse=None, ideal_pulse=True):
 		self._projection = Projection(env, constants)
-		self._pulse = Pulse(env, constants)
-		self._do_pulse = do_pulse
-		self._pulse_phase = 0
+		self._pulse = pulse
+		self._ideal_pulse = ideal_pulse
 		self._constants = constants
 
 		self.times = []
@@ -210,10 +212,11 @@ class AxialProjectionCollector:
 
 		cloud = cloud.copy()
 
-		if self._do_pulse:
-			self._pulse.apply(cloud, theta=0.5 * math.pi,
-				phi=self._pulse_phase + t * self._constants.detuning /
-				self._constants.t_rho)
+		if self._pulse is not None:
+			if self._ideal_pulse:
+				self._pulse.applyInstantaneous(cloud, theta=0.5 * math.pi)
+			else:
+				self._pulse.apply(cloud, theta=0.5 * math.pi)
 
 		self.times.append(t)
 

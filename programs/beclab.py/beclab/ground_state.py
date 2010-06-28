@@ -6,11 +6,11 @@ import math
 import copy
 import numpy
 
-from globals import *
-from fft import createPlan
-from state import ParticleStatistics, State, TwoComponentCloud
-from reduce import getReduce
-from constants import COMP_1_minus1, COMP_2_1
+from .globals import *
+from .fft import createPlan
+from .state import ParticleStatistics, State, TwoComponentCloud
+from .reduce import getReduce
+from .constants import COMP_1_minus1, COMP_2_1
 
 
 class TFGroundState(PairedCalculation):
@@ -50,10 +50,10 @@ class TFGroundState(PairedCalculation):
 		"""
 
 		self._program = self._env.compile(kernel_template, self._constants)
-		self._func = self._program.fillWithTFGroundState
+		self._fillWithTFGroundState = self._program.fillWithTFGroundState
 
 	def _gpu__create(self, data, g, mu):
-		self._func(data.shape, data, self._potentials, mu, g)
+		self._fillWithTFGroundState(data.shape, data, self._potentials, mu, g)
 
 	def _cpu__create(self, data, g, mu):
 		for i in xrange(self._constants.nvx):
@@ -91,10 +91,6 @@ class GPEGroundState(PairedCalculation):
 
 		self._prepare()
 
-		# condition for stopping propagation -
-		# relative difference between state energies of two successive steps
-		self._precision = 1e-6
-
 	def _cpu__prepare(self):
 		self._k_coeff = numpy.exp(self._kvectors * (-self._constants.dt_steady / 2))
 
@@ -115,7 +111,7 @@ class GPEGroundState(PairedCalculation):
 			}
 
 			// Propagates state vector in k-space for steady state calculation (i.e., in imaginary time)
-			__kernel void propagateKSpaceImaginaryTime(__global ${c.complex.name} *data,
+			__kernel void propagateKSpace(__global ${c.complex.name} *data,
 				read_only image3d_t kvectors)
 			{
 				DEFINE_INDEXES;
@@ -130,7 +126,7 @@ class GPEGroundState(PairedCalculation):
 
 			// Propagates state vector in k-space for steady state calculation (i.e., in imaginary time)
 			// Version for processing two components at once
-			__kernel void propagateKSpaceImaginaryTime2(
+			__kernel void propagateKSpace2(
 				__global ${c.complex.name} *data1, __global ${c.complex.name} *data2,
 				read_only image3d_t kvectors)
 			{
@@ -146,7 +142,7 @@ class GPEGroundState(PairedCalculation):
 			}
 
 			// Propagates state in x-space for steady state calculation
-			__kernel void propagateXSpaceOneComponent(__global ${c.complex.name} *data,
+			__kernel void propagateXSpace(__global ${c.complex.name} *data,
 				read_only image3d_t potentials, ${c.scalar.name} g)
 			{
 				DEFINE_INDEXES;
@@ -174,7 +170,7 @@ class GPEGroundState(PairedCalculation):
 			}
 
 			// Propagates state in x-space for steady state calculation
-			__kernel void propagateXSpaceTwoComponent(__global ${c.complex.name} *a,
+			__kernel void propagateXSpace2(__global ${c.complex.name} *a,
 				__global ${c.complex.name} *b, read_only image3d_t potentials,
 				${c.scalar.name} g11, ${c.scalar.name} g22, ${c.scalar.name} g12)
 			{
@@ -214,12 +210,12 @@ class GPEGroundState(PairedCalculation):
 
 		self._program = self._env.compile(kernel_template, self._constants)
 
-		self._kpropagate_func = self._program.propagateKSpaceImaginaryTime
-		self._kpropagate2_func = self._program.propagateKSpaceImaginaryTime2
-		self._xpropagate_func = self._program.propagateXSpaceOneComponent
-		self._xpropagate2_func = self._program.propagateXSpaceTwoComponent
-		self._multiply_func = self._program.multiply
-		self._multiply2_func = self._program.multiply2
+		self._propagateKSpace = self._program.propagateKSpace
+		self._propagateKSpace2 = self._program.propagateKSpace2
+		self._propagateXSpace = self._program.propagateXSpace
+		self._propagateXSpace2 = self._program.propagateXSpace2
+		self._multiply = self._program.multiply
+		self._multiply2 = self._program.multiply2
 
 	def _cpu__kpropagate(self, state1, state2):
 		# for numpy arrays, '*=' operator is inplace
@@ -229,9 +225,9 @@ class GPEGroundState(PairedCalculation):
 
 	def _gpu__kpropagate(self, state1, state2):
 		if state2 is None:
-			self._kpropagate_func(state1.shape, state1.data, self._kvectors)
+			self._propagateKSpace(state1.shape, state1.data, self._kvectors)
 		else:
-			self._kpropagate2_func(state1.shape, state1.data, state2.data, self._kvectors)
+			self._propagateKSpace2(state1.shape, state1.data, state2.data, self._kvectors)
 
 	def _cpu__xpropagate(self, state1, state2):
 		p = self._potentials
@@ -276,7 +272,7 @@ class GPEGroundState(PairedCalculation):
 	def _gpu__xpropagate(self, state1, state2):
 		if state2 is None:
 			g = self._constants.g[(state1.comp, state1.comp)]
-			self._xpropagate_func(state1.shape, state1.data, self._potentials, g)
+			self._propagateXSpace(state1.shape, state1.data, self._potentials, g)
 		else:
 			comp1 = state1.comp
 			comp2 = state2.comp
@@ -285,7 +281,8 @@ class GPEGroundState(PairedCalculation):
 			g12 = g[(comp1, comp2)]
 			g22 = g[(comp2, comp2)]
 
-			self._xpropagate2_func(state1.shape, state1.data, state2.data, self._potentials, g11, g22, g12)
+			self._propagateXSpace2(state1.shape, state1.data, state2.data,
+				self._potentials, g11, g22, g12)
 
 	def _cpu__renormalize(self, state1, state2, coeff):
 		if state2 is None:
@@ -298,10 +295,10 @@ class GPEGroundState(PairedCalculation):
 	def _gpu__renormalize(self, state1, state2, coeff):
 		cast = self._constants.scalar.cast
 		if state2 is None:
-			self._multiply_func(state1.shape, state1.data, cast(coeff))
+			self._multiply(state1.shape, state1.data, cast(coeff))
 		else:
 			c1, c2 = coeff
-			self._multiply2_func(state1.shape, state1.data, state2.data, cast(c1), cast(c2))
+			self._multiply2(state1.shape, state1.data, state2.data, cast(c1), cast(c2))
 
 	def _toXSpace(self, state1, state2):
 		self._plan.execute(state1.data)
@@ -313,7 +310,8 @@ class GPEGroundState(PairedCalculation):
 		if state2 is not None:
 			self._plan.execute(state2.data, inverse=True)
 
-	def _create(self, two_component=False, comp=COMP_1_minus1, ratio=0.5):
+	def _create(self, two_component=False, comp=COMP_1_minus1, ratio=0.5,
+			precision=1e-6, verbose=True):
 
 		assert not two_component or comp == COMP_1_minus1
 
@@ -341,7 +339,7 @@ class GPEGroundState(PairedCalculation):
 
 		self._toKSpace(state1, state2)
 
-		while abs(E - new_E) / new_E > self._precision:
+		while abs(E - new_E) / new_E > precision:
 
 			# propagation
 			self._kpropagate(state1, state2)
@@ -375,17 +373,18 @@ class GPEGroundState(PairedCalculation):
 
 		self._toXSpace(state1, state2)
 
-		if two_component:
-			print "Ground state calculation (two components):" + \
-				" N = " + str(stats.countParticles(state1)) + \
-					" + " + str(stats.countParticles(state2)) + \
-				" E = " + str(stats.countEnergyTwoComponent(state1, state2)) + \
-				" mu = " + str(stats.countMuTwoComponent(state1, state2))
-		else:
-			print "Ground state calculation (one component):" + \
-				" N = " + str(stats.countParticles(state1)) + \
-				" E = " + str(stats.countEnergy(state1)) + \
-				" mu = " + str(stats.countMu(state1))
+		if verbose:
+			if two_component:
+				print "Ground state calculation (two components):" + \
+					" N = " + str(stats.countParticles(state1)) + \
+						" + " + str(stats.countParticles(state2)) + \
+					" E = " + str(stats.countEnergyTwoComponent(state1, state2)) + \
+					" mu = " + str(stats.countMuTwoComponent(state1, state2))
+			else:
+				print "Ground state calculation (one component):" + \
+					" N = " + str(stats.countParticles(state1)) + \
+					" E = " + str(stats.countEnergy(state1)) + \
+					" mu = " + str(stats.countMu(state1))
 
 		return state1, state2
 

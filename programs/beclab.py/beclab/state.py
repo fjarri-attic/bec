@@ -4,10 +4,10 @@ Different meters for particle states (measuring particles number, energy and so 
 
 import math
 
-from globals import *
-from fft import createPlan
-from reduce import getReduce
-from constants import *
+from .globals import *
+from .fft import createPlan
+from .reduce import getReduce
+from .constants import *
 
 
 class State(PairedCalculation):
@@ -23,7 +23,7 @@ class State(PairedCalculation):
 		self.comp = comp
 
 		self._prepare()
-		self._fillWithZeros()
+		self._initializeMemory()
 
 	def copy(self):
 		res = State(self._env, self._constants, type=self.type, comp=self.comp)
@@ -33,7 +33,7 @@ class State(PairedCalculation):
 	def _cpu__prepare(self):
 		pass
 
-	def _cpu__fillWithZeros(self):
+	def _cpu__initializeMemory(self):
 		self.data = numpy.zeros(self.shape, dtype=self.dtype)
 
 	def _cpu_fillWithOnes(self):
@@ -45,7 +45,7 @@ class State(PairedCalculation):
 				from math import sqrt
 			%>
 
-			__kernel void zeroMemory(__global ${c.complex.name} *res)
+			__kernel void fillWithZeroes(__global ${c.complex.name} *res)
 			{
 				DEFINE_INDEXES;
 				res[index] = ${c.complex.ctr}(0, 0);
@@ -70,22 +70,22 @@ class State(PairedCalculation):
 		"""
 
 		self._program = self._env.compile(kernel_template, self._constants)
-		self._zero_memory = self._program.zeroMemory
-		self._ones = self._program.fillWithOnes
-		self._initialize = self._program.initializeEnsembles
+		self._fillWithZeroes = self._program.fillWithZeroes
+		self._fillWithOnes = self._program.fillWithOnes
+		self._initializeEnsembles = self._program.initializeEnsembles
 
-	def _gpu__fillWithZeros(self):
+	def _gpu__initializeMemory(self):
 		self.data = self._env.allocate(self.shape, self.dtype)
-		self._zero_memory(self.shape, self.data)
+		self._fillWithZeroes(self.shape, self.data)
+
+	def _gpu_fillWithOnes(self):
+		self._fillWithOnes(self.shape, self.data)
 
 	def _gpu__toWigner(self, new_data, randoms):
 		randoms_gpu = self._env.allocate(randoms.shape, randoms.dtype)
 		cl.enqueue_write_buffer(self._env.queue, randoms_gpu, randoms)
 
-		self._initialize(self._constants.ens_shape, new_data, self.data, randoms_gpu)
-
-	def _gpu_fillWithOnes(self):
-		self._ones(self.shape, self.data)
+		self._initializeEnsembles(self._constants.ens_shape, new_data, self.data, randoms_gpu)
 
 	def _cpu__toWigner(self, new_data, randoms):
 		coeff = 1.0 / math.sqrt(self._constants.dV)
@@ -132,8 +132,10 @@ class TwoComponentCloud:
 
 		self.type = type
 
-		self.a = a if a is not None else State(env, constants, type=type, comp=COMP_1_minus1)
-		self.b = b if b is not None else State(env, constants, type=type, comp=COMP_2_1)
+		self.time = 0.0
+
+		self.a = a.copy() if a is not None else State(env, constants, type=type, comp=COMP_1_minus1)
+		self.b = b.copy() if b is not None else State(env, constants, type=type, comp=COMP_2_1)
 
 	def toWigner(self):
 		self.a.toWigner()
@@ -141,7 +143,9 @@ class TwoComponentCloud:
 		self.type = self.a.type
 
 	def copy(self):
-		return TwoComponentCloud(self._env, self._constants, a=self.a.copy(), b=self.b.copy())
+		res = TwoComponentCloud(self._env, self._constants, a=self.a, b=self.b)
+		res.time = self.time
+		return res
 
 
 class ParticleStatistics(PairedCalculation):
@@ -247,7 +251,7 @@ class ParticleStatistics(PairedCalculation):
 				res[index] = (squared_abs(state[index]) + statistics_term) / ensembles;
 			}
 
-			__kernel void calculateDensityTwoStates(__global ${c.scalar.name} *a_res,
+			__kernel void calculateDensity2(__global ${c.scalar.name} *a_res,
 				__global ${c.scalar.name} *b_res, __global ${c.complex.name} *a_state,
 				__global ${c.complex.name} *b_state, ${c.scalar.name} statistics_term)
 			{
@@ -283,7 +287,7 @@ class ParticleStatistics(PairedCalculation):
 					res[index] = nonlinear + differential.x;
 				}
 
-				__kernel void calculate${name}TwoStates(__global ${c.scalar.name} *res,
+				__kernel void calculate${name}2(__global ${c.scalar.name} *res,
 					__global ${c.complex.name} *xstate1, __global ${c.complex.name} *kstate1,
 					__global ${c.complex.name} *xstate2, __global ${c.complex.name} *kstate2,
 					read_only image3d_t potentials, read_only image3d_t kvectors,
@@ -318,30 +322,30 @@ class ParticleStatistics(PairedCalculation):
 
 		self._program = self._env.compile(kernel_template, self._constants)
 
-		self._calculate_mu = self._program.calculateMu
-		self._calculate_energy = self._program.calculateEnergy
-		self._calculate_density = self._program.calculateDensity
-		self._calculate_density_2states = self._program.calculateDensityTwoStates
-		self._calculate_interaction = self._program.calculateInteraction
+		self._calculateMu = self._program.calculateMu
+		self._caclculateEnergy = self._program.calculateEnergy
+		self._calculateDensity = self._program.calculateDensity
+		self._calculateDensity2 = self._program.calculateDensity2
+		self._calculateInteraction = self._program.calculateInteraction
 
-		self._calculate_mu_2states = self._program.calculateMuTwoStates
-		self._calculate_energy_2states = self._program.calculateEnergyTwoStates
+		self._calculateMu2 = self._program.calculateMu2
+		self._caclculateEnergy2 = self._program.calculateEnergy2
 
 	def _gpu_getAverageDensity(self, state):
 		density = self._env.allocate(state.shape, self._constants.scalar.dtype)
 		ensembles = state.size / self._constants.cells
 
 		statistics_term = 0 if state.type == PSI_FUNC else -0.5 / self._constants.dV
-		self._calculate_density(state.shape, density, state.data,
+		self._calculateDensity(state.shape, density, state.data,
 			numpy.int32(ensembles), self._constants.scalar.cast(statistics_term))
 		density = self._reduce.sparse(density, final_length=self._constants.cells)
 		return density.reshape(self._constants.shape)
 
 	def _gpu__countState(self, state, coeff, N):
 		if coeff == 1:
-			func = self._calculate_mu
+			func = self._calculateMu
 		else:
-			func = self._calculate_energy
+			func = self._caclculateEnergy
 
 		kstate = self._env.allocate(state.shape, dtype=state.dtype)
 		res = self._env.allocate(state.shape, dtype=self._constants.scalar.dtype)
@@ -364,9 +368,9 @@ class ParticleStatistics(PairedCalculation):
 		g12 = g[(state1.comp, state2.comp)]
 
 		if coeff == 1:
-			func = self._calculate_mu_2states
+			func = self._calculateMu2
 		else:
-			func = self._calculate_energy_2states
+			func = self._caclculateEnergy2
 
 		func(state1.shape, res, state1.data, kstate1,
 			state2.data, kstate2, self._potentials, self._kvectors, g11, g22, g12)
@@ -378,7 +382,7 @@ class ParticleStatistics(PairedCalculation):
 
 		interaction = self._env.allocate(state1.shape, self._constants.complex.dtype)
 
-		self._calculate_interaction(state1.shape, interaction, state1.data, state2.data)
+		self._calculateInteraction(state1.shape, interaction, state1.data, state2.data)
 
 		N1 = self.countParticles(state1)
 		N2 = self.countParticles(state2)
@@ -391,7 +395,7 @@ class ParticleStatistics(PairedCalculation):
 	def countParticles(self, state):
 		return self._reduce(self.getAverageDensity(state)) * self._constants.dV
 
-	def countEnergy(self, state, N=None):
+	def _countStateGeneric(self, state, coeff, N):
 		# TODO: work out the correct formula for Wigner function's E/mu
 		if state.type != PSI_FUNC:
 			raise NotImplementedError()
@@ -399,39 +403,31 @@ class ParticleStatistics(PairedCalculation):
 		if N is None:
 			N = self.countParticles(state)
 
-		return self._countState(state, 2, N)
+		return self._countState(state, coeff, N)
+
+
+	def countEnergy(self, state, N=None):
+		return self._countStateGeneric(state, 2, N)
 
 	def countMu(self, state, N=None):
+		return self._countStateGeneric(state, 1, N)
+
+	def _countTwoComponentGeneric(self, state1, state2, coeff, N):
 		# TODO: work out the correct formula for Wigner function's E/mu
-		if state.type != PSI_FUNC:
+		if state1.type != PSI_FUNC or state2.type != PSI_FUNC:
 			raise NotImplementedError()
 
 		if N is None:
-			N = self.countParticles(state)
+			N = self.countParticles(state1) + self.countParticles(state2)
 
-		return self._countState(state, 1, N)
+		return self._countStateTwoComponent(state1, state2, coeff, N) + \
+			self._countStateTwoComponent(state2, state1, coeff, N)
 
 	def countEnergyTwoComponent(self, state1, state2, N=None):
-		# TODO: work out the correct formula for Wigner function's E/mu
-		if state1.type != PSI_FUNC or state2.type != PSI_FUNC:
-			raise NotImplementedError()
-
-		if N is None:
-			N = self.countParticles(state1) + self.countParticles(state2)
-
-		return self._countStateTwoComponent(state1, state2, 2, N) + \
-			self._countStateTwoComponent(state2, state1, 2, N)
+		return self._countTwoComponentGeneric(state1, state2, 2, N)
 
 	def countMuTwoComponent(self, state1, state2, N=None):
-		# TODO: work out the correct formula for Wigner function's E/mu
-		if state1.type != PSI_FUNC or state2.type != PSI_FUNC:
-			raise NotImplementedError()
-
-		if N is None:
-			N = self.countParticles(state1) + self.countParticles(state2)
-
-		return self._countStateTwoComponent(state1, state2, 1, N) + \
-			self._countStateTwoComponent(state2, state1, 1, N)
+		return self._countTwoComponentGeneric(state1, state2, 1, N)
 
 
 class BlochSphereProjection(PairedCalculation):

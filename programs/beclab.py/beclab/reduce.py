@@ -6,8 +6,8 @@ except:
 from mako.template import Template
 import numpy
 
-from globals import *
-from transpose import Transpose
+from .globals import *
+from .transpose import Transpose
 
 class Reduce:
 

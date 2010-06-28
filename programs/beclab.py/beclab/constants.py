@@ -6,7 +6,7 @@ import copy
 import math
 import numpy
 
-from globals import *
+from .globals import *
 
 PSI_FUNC = 0
 WIGNER = 1
@@ -61,6 +61,7 @@ class Constants:
 		l_rho = math.sqrt(model.hbar / (model.m * w_rho)) # natural length
 		self.l_rho = l_rho
 		self.lambda_ = model.fx / model.fz
+		self.w_rho = w_rho
 
 		self.t_rho = 1.0 / w_rho # natural time unit
 
@@ -112,7 +113,6 @@ class Constants:
 
 		self.itmax = model.itmax
 		self.dt_steady = model.dt_steady / self.t_rho
-		self.t_equilib = model.t_equilib / self.t_rho
 		self.dt_evo = model.dt_evo / self.t_rho
 		self.ensembles = model.ensembles
 		self.ens_shape = (self.ensembles * self.nvz, self.nvy, self.nvx)

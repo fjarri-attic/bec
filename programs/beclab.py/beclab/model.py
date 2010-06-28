@@ -1,5 +1,5 @@
 """
-Split-step calculation parameters
+Default physical world parameters
 """
 
 class Model:
@@ -15,12 +15,6 @@ class Model:
 	m = 1.443160648e-25 # mass of one particle (rubidium-87)
 
 	# scattering lengths, in Bohr radii
-
-	# from AS presentation
-	#a11 = 100.44;
-	#a22 = 95.47;
-	#a12 = 98.09;
-
 	a11 = 100.4
 	a22 = 95.0
 	a12 = 97.66
@@ -30,17 +24,16 @@ class Model:
 	fy = 97.6
 	fz = 11.96
 
-	# detuning frequency
-	detuning = -41
-	rabi_freq = 350
+	# coupling field properties
+	detuning = -41 # detuning from hyperfine frequency
+	rabi_freq = 350 # Rabi frequency
+
+	hf_freq = 6.834682610904290e9 # 5^2S_{1/2} hyperfine splitting frequency
 
 	# loss terms
 	gamma111 = 5.4e-42
 	gamma12 = 0.78e-19
 	gamma22 = 1.194e-19
-	#gamma111 = 0
-	#gamma12 = 0
-	#gamma22 = 0
 
 	# spatial lattice size
 	nvx = 16
@@ -50,9 +43,8 @@ class Model:
 	# number of iterations for integration in mid step
 	itmax = 3
 
-	dt_steady = 0.00002 # time step for steady state calculation
-	t_equilib = 0 # equilibration time
-	dt_evo = 0.00004 # time step for evolution
+	dt_steady = 2e-5 # time step for steady state calculation
+	dt_evo = 4e-5 # time step for evolution
 
 	ensembles = 4 # number of ensembles
 

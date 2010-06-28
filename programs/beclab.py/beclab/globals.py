@@ -94,13 +94,22 @@ class Environment:
 		cl.enqueue_write_buffer(self.queue, gpu_buf, buf).wait()
 		return gpu_buf
 
-	def copyBuffer(self, buf):
+	def copyBuffer(self, buf, dest=None):
 		if self.gpu:
-			buf_copy = self.allocate(buf.shape, buf.dtype)
+			if dest is None:
+				buf_copy = self.allocate(buf.shape, buf.dtype)
+			else:
+				buf_copy = dest
+
 			cl.enqueue_copy_buffer(self.queue, buf, buf_copy)
-			return buf_copy
+
+			if dest is None:
+				return buf_copy
 		else:
-			return buf.copy()
+			if dest is None:
+				return buf.copy()
+			else:
+				dest[:,:,:] = buf
 
 	def __str__(self):
 		if self.gpu:

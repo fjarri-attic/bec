@@ -274,7 +274,7 @@ _DUMPERS = {
 }
 
 
-class Data:
+class _Data:
 
 	def __init__(self, format, fields, **kwds):
 
@@ -317,7 +317,7 @@ class Data:
 		return cls._load(format, **data)
 
 
-class XYData(Data):
+class XYData(_Data):
 
 	def __init__(self, name, xarray, yarray, **kwds):
 
@@ -331,7 +331,7 @@ class XYData(Data):
 
 		fields = ['ymin', 'ymax', 'xname', 'yname', 'description',
 			'source', 'experimental']
-		Data.__init__(self, 'xy', fields, **kwds)
+		_Data.__init__(self, 'xy', fields, **kwds)
 
 	@classmethod
 	def _load(cls, format, **kwds):
@@ -343,7 +343,7 @@ class XYData(Data):
 		return cls(name, xarray, yarray, **kwds)
 
 
-class HeightmapData(Data):
+class HeightmapData(_Data):
 
 	def __init__(self, name, heightmap, **kwds):
 
@@ -354,7 +354,7 @@ class HeightmapData(Data):
 
 		fields = ['xmin', 'xmax', 'ymin', 'ymax', 'description',
 			'source', 'zmin', 'zmax', 'xname', 'yname', 'zname']
-		Data.__init__(self, 'heightmap', fields, **kwds)
+		_Data.__init__(self, 'heightmap', fields, **kwds)
 
 	@classmethod
 	def _load(cls, format, **kwds):
