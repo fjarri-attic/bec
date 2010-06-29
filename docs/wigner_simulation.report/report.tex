@@ -842,7 +842,7 @@ where the variables with primes are dimensionless.
 \chapter{Split-step propagation}
 \label{chapter:split-step}
 
-Split-step propagation method is used to obtain the numerical solution of the following differential equation:
+Split-step propagation method~\cite{hardin_tappert_1973} is used to obtain the numerical solution of the following differential equation:
 \begin{equation}
 \label{split-step:general_eqn}
 \frac{d\psi(\mathbf{r}, t)}{dt} = ( \hat{D}(\nabla) + \hat{N}(\mathbf{r}, t) ) \psi(\mathbf{r}, t)
@@ -867,6 +867,7 @@ and calculate the differential factor in Fourier domain, where spatial derivativ
 \]
 Here $\hat{D}(i\omega)$ is obtained by replacing differential operator by $i \omega$,
 where $\omega$ is a frequency in Fourier domain.
+The equation is approximate, because splitting operators in this way ignores the fact that they do not commute.
 
 In order to improve the accuracy of the method, equation~(\ref{split-step:split_eqn}) can be rewritten as
 \[
@@ -874,8 +875,7 @@ In order to improve the accuracy of the method, equation~(\ref{split-step:split_
 \exp \left( \int\limits^{t + dt}_t \hat{N} (t^\prime) dt^\prime \right)
 \exp \left( \frac{dt}{2} \hat{D} \right) \psi(\mathbf{r}, t).
 \]
-This method is called the symmetric split-step Fourier method, and it has the global error of $O(dt^2)$
-\textcolor{red}{[citation needed]}.
+This method is called the symmetrized split-step Fourier method, and it has the global error of $O(dt^2)$.
 Integral can be evaluated either by approximating it with $dt \hat{N}(t)$ or by using slightly more accurate method,
 like trapezoidal rule
 \[
