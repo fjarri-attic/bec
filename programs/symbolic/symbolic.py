@@ -3,10 +3,11 @@ from itertools import product
 
 class Atom:
 
-	def __init__(self, name, constant=False, operator=False, conjugate=False):
+	def __init__(self, name, indexes=None, constant=False, operator=False, conjugate=False):
 		self._name = name
 		self._constant = constant
 		self._operator = operator
+		self._indexes = [] if indexes is None else indexes
 
 		self._differential_of = None
 		self._differential = None
@@ -60,34 +61,107 @@ class Atom:
 		return self._constant
 
 	def __str__(self):
-		return self._name
+		return self._name + ("_" + "".join(self._indexes) if len(self._indexes) > 0 else "")
+
+	def register(self, locals):
+		locals[str(self).replace("*", "_star").replace("+", "_plus")] = self
 
 	def __cmp__(self, other):
-		return cmp(self._name, other._name)
+		return cmp(str(self), str(other))
+
+	def sameVariableAs(self, other):
+		return self._name == other._name
+
+	@staticmethod
+	def getDelta(a1, a2):
+		assert a1._name == a2._name
+		assert len(a1._indexes) == len(a2._indexes)
+
+		deltas = []
+		for i, j in zip(a1._indexes, a2._indexes):
+			if i != j:
+				deltas.append(Atom("delta_" + "".join(sorted([i, j])), constant=True))
+
+		return Term(1, deltas)
 
 	def __hash__(self):
-		return hash(self._name)
+		return hash(str(self))
 
+def declareOperator(locals, name, indexes=None):
+	op = Atom(name, operator=True, indexes=indexes)
+	op.register(locals)
+
+	conj_op = Atom(name + "+", operator=True, conjugate=True, indexes=indexes)
+	conj_op.register(locals)
+
+	Atom.declareConjugate(op, conj_op)
+	return op, conj_op
+
+def declareFunction(locals, name, indexes=None):
+	conj_name = name + "*"
+	diff_name = "d_" + name
+	conj_diff_name = diff_name + "*"
+
+	func = Atom(name, indexes=indexes)
+	conj_func = Atom(conj_name, indexes=indexes, conjugate=True)
+	diff = Atom(diff_name, indexes=indexes)
+	conj_diff = Atom(conj_diff_name, indexes=indexes, conjugate=True)
+
+	func.register(locals)
+	conj_func.register(locals)
+	diff.register(locals)
+	conj_diff.register(locals)
+
+	Atom.declareDifferential(func, diff)
+	Atom.declareDifferential(conj_func, conj_diff)
+
+	Atom.declareConjugate(func, conj_func)
+	return func, conj_func
+
+def declarePair(locals, op_name, func_name, indexes=None):
+	op, conj_op = declareOperator(locals, op_name, indexes=indexes)
+	func, conj_func = declareFunction(locals, func_name, indexes=indexes)
+	Atom.declareCorrespondence(op, func)
+	Atom.declareCorrespondence(conj_op, conj_func)
+
+def declareConstant(locals, name):
+	a = Atom(name, constant=True)
+	a.register(locals)
 
 # Atoms
-A = Atom("a", operator=True)
-A_PLUS = Atom("a+", operator=True, conjugate=True)
-RHO = Atom("rho", operator=True)
+rho = Atom("rho", operator=True)
 
+declarePair(locals(), "a", "alpha", indexes=['i', 'k'])
+declarePair(locals(), "a", "alpha", indexes=['j', 'l'])
+declarePair(locals(), "a", "alpha", indexes=['i', 'm'])
+declarePair(locals(), "a", "alpha", indexes=['j', 'n'])
+
+declareConstant(locals(), "h_omega_k")
+declareConstant(locals(), "klmn")
+declareConstant(locals(), "k111")
+declareConstant(locals(), "k12")
+declareConstant(locals(), "k22")
+declareConstant(locals(), "U12")
+declareConstant(locals(), "U11")
+declareConstant(locals(), "U22")
+declareConstant(locals(), "Vhf")
+declareConstant(locals(), "Omega")
+declareConstant(locals(), "Omega_star")
+
+declarePair(locals(), "Psi1", "psi1")
+declarePair(locals(), "Psi2", "psi2")
+
+"""
 PSI1_OP = Atom("psi1^", operator=True)
 PSI1_OP_PLUS = Atom("psi1^+", operator=True, conjugate=True)
 PSI2_OP = Atom("psi2^", operator=True)
 PSI2_OP_PLUS = Atom("psi2^+", operator=True, conjugate=True)
 
-ALPHA = Atom("alpha")
-ALPHA_STAR = Atom("alpha*", conjugate=True)
 PSI1 = Atom("psi1")
 PSI1_STAR = Atom("psi1*", conjugate=True)
 PSI2 = Atom("psi2")
 PSI2_STAR = Atom("psi2*", conjugate=True)
 
-D_ALPHA = Atom("d/dalpha")
-D_ALPHA_STAR = Atom("d/dalpha*", conjugate=True)
 D_PSI1 = Atom("d/dpsi1")
 D_PSI1_STAR = Atom("d/dpsi1*", conjugate=True)
 D_PSI2 = Atom("d/dpsi2")
@@ -120,7 +194,7 @@ Atom.declareConjugate(PSI2_OP, PSI2_OP_PLUS)
 Atom.declareConjugate(ALPHA, ALPHA_STAR)
 Atom.declareConjugate(PSI1, PSI1_STAR)
 Atom.declareConjugate(PSI2, PSI2_STAR)
-
+"""
 
 class Term:
 
@@ -286,9 +360,9 @@ def derivativesToFront(obj):
 	dif = term.factors[pos]
 	var = term.factors[pos - 1]
 
-	if dif.differentialOf() == var:
+	if dif.differentialOf().sameVariableAs(var):
 		new_factors = term.factors[:pos-1] + \
-			[Sum([Term(1.0, [dif, var]), Term(-1, [])])] + \
+			[Sum([Term(1.0, [dif, var]), Term(-1, [Atom.getDelta(dif.differentialOf(), var)])])] + \
 			term.factors[pos+1:]
 	else:
 		new_factors = term.factors[:pos-1] + [dif, var] + term.factors[pos+1:]
@@ -342,7 +416,7 @@ def replaceRhoWithQuasiprobability(obj, term_gen):
 	assert term.isSimple()
 
 	new_factors = []
-	rho_pos = term.factors.index(RHO)
+	rho_pos = term.factors.index(rho)
 
 	for i in xrange(rho_pos):
 		if term.factors[i].isOperator():
