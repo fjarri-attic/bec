@@ -3,8 +3,13 @@ from symbolic import *
 
 def process(sum, term_gen=wignerTerm):
 	return apply(sum, flattenSum, (replaceRhoWithQuasiprobability, term_gen),
-		flattenSum, derivativesToFront, flattenSum,
-		sortFactors, (dropHighOrderDerivatives, 2), groupTerms)
+		flattenSum,
+		derivativesToFront,
+		flattenSum,
+		sortFactors,
+		(dropHighOrderDerivatives, 2),
+		groupTerms
+	)
 
 def hermitianConjugate(term):
 	assert term.isSimple()
@@ -20,9 +25,9 @@ def hermitianConjugate(term):
 
 def lossesOperator(term):
 	return Sum([
-		Term(2, [term, RHO, hermitianConjugate(term)]),
-		Term(-1, [hermitianConjugate(term), term, RHO]),
-		Term(-1, [RHO, hermitianConjugate(term), term])
+		Term(2, [term, rho, hermitianConjugate(term)]),
+		Term(-1, [hermitianConjugate(term), term, rho]),
+		Term(-1, [rho, hermitianConjugate(term), term])
 		])
 
 def showSorted(sum):
@@ -49,20 +54,22 @@ def showSorted(sum):
 	for key in sorted(terms.keys()):
 		print key + ": " + str(terms[key])
 
-
-losses111 = Term(0.5, [KAPPA111, lossesOperator(Term(1, [PSI1_OP, PSI1_OP, PSI1_OP]))])
-losses12 = Term(0.5, [KAPPA12, lossesOperator(Term(1, [PSI1_OP, PSI2_OP]))])
-losses21 = Term(0.5, [KAPPA12, lossesOperator(Term(1, [PSI2_OP, PSI1_OP]))])
-losses22 = Term(0.5, [KAPPA22, lossesOperator(Term(1, [PSI2_OP, PSI2_OP]))])
+losses111 = Term(0.5, [k111, lossesOperator(Term(1, [Psi1, Psi1, Psi1]))])
+losses12 = Term(0.5, [k12, lossesOperator(Term(1, [Psi1, Psi2]))])
+losses21 = Term(0.5, [k12, lossesOperator(Term(1, [Psi2, Psi1]))])
+losses22 = Term(0.5, [k22, lossesOperator(Term(1, [Psi2, Psi2]))])
 
 # interaction part of the hamiltonian
-h = Sum([Term(0.5, [GAMMA11, PSI1_OP_PLUS, PSI1_OP_PLUS, PSI1_OP, PSI1_OP]),
-	Term(0.5, [GAMMA22, PSI2_OP_PLUS, PSI2_OP_PLUS, PSI2_OP, PSI2_OP]),
-	Term(0.5, [GAMMA12, PSI1_OP_PLUS, PSI2_OP_PLUS, PSI1_OP, PSI2_OP]),
-	Term(0.5, [GAMMA12, PSI2_OP_PLUS, PSI1_OP_PLUS, PSI2_OP, PSI1_OP])])
+h = Sum([Term(1, [Vhf, Psi2_plus, Psi2]),
+	Term(1, [Omega, Psi1_plus, Psi2]),
+	Term(-1, [Omega_star, Psi1, Psi2_plus]),
+	Term(0.5, [U11, Psi1_plus, Psi1_plus, Psi1, Psi1]),
+	Term(0.5, [U22, Psi2_plus, Psi2_plus, Psi2, Psi2]),
+	Term(0.5, [U12, Psi1_plus, Psi2_plus, Psi1, Psi2]),
+	Term(0.5, [U12, Psi2_plus, Psi1_plus, Psi2, Psi1])])
 
-h_comm = Sum([Term(-1j, [h, RHO]), Term(1j, [RHO, h])])
+h_comm = Sum([Term(1, [h, rho]), Term(-1, [rho, h])])
 losses = Sum([losses111, losses12, losses21, losses22])
 
-s = process(Sum([h_comm, losses]), term_gen=pTerm)
+s = process(Sum([h_comm, losses]), term_gen=wignerTerm)
 showSorted(s)
