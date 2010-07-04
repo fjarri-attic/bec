@@ -329,99 +329,202 @@ Differential and nonlinear operators will look as following then:
 \frac{1}{2} \left( l_{22} n_2 + l_{12} n_1 \right).
 \]
 
-\section*{Quantum noise}
+\chapter{Quantum noise}
 
-\subsection*{Master equation}
+\section{Hamiltonian}
 
-In order to take into account quantum noise, we must start from the master equation.
-Second-quantized hamiltonian for the two-component system looks like:
-\[
-\hat{H} = \sum\limits^2_{i=1} \left\{ \int\limits_V d\mathbf{r} \hat{\psi}_i^\dagger \hat{K}_i \hat{\psi}_i +
-\sum\limits^2_{j=1} \frac{\Gamma_{ij}}{2} \int\limits_V d\mathbf{r} \hat{\psi}_i^\dagger \hat{\psi}_j^\dagger \hat{\psi}_i \hat{\psi}_j \right\}
-\]
-where $\hat{K}_i$ is the sum of kinetic and potential energy operators for the corresponding component,
-and $\hat{\psi}_i$ are field operators.
+In order to take into account quantum effects, we must start from the master equation.
+Second-quantized hamiltonian for the two-component system with the addition of coupling terms looks like:
+\begin{align}
+\label{master_equation:hamiltonian}
+\begin{split}
+\hat{H} = {} & \sum\limits^2_{i=1}\int\limits_V d\mathbf{r} \, \hat{\psi}_i^\dagger(\mathbf{r}) \hat{K} \hat{\psi}_i(\mathbf{r}) +
+	V_{hf} \int\limits_V d\mathbf{r}\, \hat{\psi}_2^\dagger \hat{\psi}_2 \\
+& + \frac{1}{2} \sum\limits^2_{i=1} \sum\limits^2_{j=1} \int\limits_V d\mathbf{r} \int\limits_V d\mathbf{r}^\prime \,
+	\hat{\psi}_i^\dagger (\mathbf{r}) \hat{\psi}_j^\dagger (\mathbf{r}^\prime)
+	U_{ij}(\mathbf{r} - \mathbf{r}^\prime)
+	\hat{\psi}_i(\mathbf{r}^\prime) \hat{\psi}_j(\mathbf{r}) \\
+& + i \hbar \int\limits_V d\mathbf{r} \left(
+	\tilde{\Omega} e^{i \omega t} \hat{\psi}_1^\dagger(\mathbf{r}) \hat{\psi}_2(\mathbf{r}) -
+	\tilde{\Omega}^* e^{-i \omega t} \hat{\psi}_1(\mathbf{r}) \hat{\psi}_2(\mathbf{r})^\dagger
+\right)
+\end{split}
+\end{align}
+\textcolor{red}{Is the scattering term actually $\hat{\psi}_i^\dagger (\mathbf{r}) \hat{\psi}_j^\dagger (\mathbf{r}^\prime)
+	U_{2b}(\mathbf{r} - \mathbf{r}^\prime)
+	\hat{\psi}_j(\mathbf{r}^\prime) \hat{\psi}_i(\mathbf{r})$?}
+Here we used the fact that trap potential is the same for both components, except for the hyperfine energy term.
+This allows us to use the same operator $\hat{K}$ for both components:
+\[ \hat{K} = - \frac{\hbar^2 \nabla^2}{2 m} + V \]
+Coupling constant $\tilde{\Omega} = \Omega e^{i \alpha}$ means the same as it does in Chapter~\ref{chapter:mean-field}.
 Volume $V$ is, strictly speaking, the whole coordinate space, but we will need explicit integration boundaries later.
 
-The master equation can then be written as following:
+The second-quantized annihilation operators $\hat{\psi}_i (\mathbf{r})$ obey the commutation relations for identical bosons:
 \[
-\frac{\partial\rho}{\partial t} = -i [\hat{H}, \rho] + \sum\limits_j \frac{\kappa_j}{2} \int\limits_V d\mathbf{r}
-\left( 2  \hat{O}_j \rho \hat{O}_j^\dagger - \hat{O}_j^\dagger \hat{O}_j \rho - \rho \hat{O}_j^\dagger \hat{O}_j \right),
+\left[ \hat{\psi}_i(\mathbf{r}), \hat{\psi}_j(\mathbf{r}^\prime) \right] =
+\left[ \hat{\psi}_i^\dagger(\mathbf{r}), \hat{\psi}_j^\dagger(\mathbf{r}^\prime) \right] = 0
+\]
+\[
+\left[ \hat{\psi}_i(\mathbf{r}), \hat{\psi}_j^\dagger(\mathbf{r}^\prime) \right] = \delta_{ij} \delta(\mathbf{r} - \mathbf{r}^\prime)
+\]
+
+\section{Restricted basis field}
+
+Field operator can be decomposed using a single-particle basis \textcolor{red}{[explanation needed]}:
+\[ \hat{\psi}_i(\mathbf{r}) = \sum\limits_k \phi_{k}(\mathbf{r}) \hat{a}_{ik}, \]
+where $\phi_{ij}$ are eigenfunctions of noninteracting portion of the Hamiltonian:
+\[ \hat{K} \phi_{k} = \hbar \omega_{k} \phi_{k} \]
+The mode operators obey bosonic commutation relations:
+\[ [ \hat{a}_{ik}, \hat{a}_{jl} ] = [ \hat{a}_{ik}^\dagger, \hat{a}_{jl}^\dagger ] = 0, \]
+\[ [ \hat{a}_{ik}, \hat{a}_{jl}^\dagger ] = \delta_{ij} \delta_{kl} . \]
+
+Hamiltonian~(\ref{master_equation:hamiltonian}) then can be rewritten as:
+\begin{equation*}
+\begin{split}
+\hat{H} = &
+	\sum\limits_{i=1}^2 \sum\limits_k \hbar \omega_{k} \hat{a}_{ik}^\dagger \hat{a}_{ik} +
+	V_{hf} \sum\limits_k \hat{a}_{2k}^\dagger \hat{a}_{2k} \\
+	& + \frac{1}{2} \sum\limits_{i=1}^2 \sum\limits_{j=1}^2 \sum\limits_{klmn}
+		\langle kl \lvert U_{ij} \rvert mn \rangle
+		\hat{a}_{ik}^\dagger \hat{a}_{jl}^\dagger \hat{a}_{im} \hat{a}_{jn} \\
+	& + i \hbar \sum\limits_{kl} \langle k \vert l \rangle \left(
+		\tilde{\Omega} e^{i \omega t} \hat{a}_{1k}^\dagger \hat{a}_{2l} +
+		\tilde{\Omega}^* e^{-i \omega t} \hat{a}_{1k} \hat{a}_{2l}^\dagger
+	\right)
+\end{split}
+\end{equation*}
+
+Now we divide mode subspaces $ik,\,i=1,2$ into low- and high-energy subsets ($L$ and $H$),
+depending on whether $\hbar \omega_{k}$ is more or less than $\epsilon_{\textrm{cut}}$.
+If values of $\epsilon_{\textrm{cut}}$ are sufficiently small, the effective Hamiltonian for low-energy modes is:
+\begin{equation*}
+\begin{split}
+\hat{H}_{\textrm{eff}} = &
+	\sum\limits_{i=1}^2 \sum\limits_{k \in L} \hbar \omega_{k} \hat{a}_{ik}^\dagger \hat{a}_{ik} +
+	V_{hf} \sum\limits_{k \in L} \hat{a}_{2k}^\dagger \hat{a}_{2k} \\
+	& + \frac{U_{ij}}{2} \sum\limits_{i=1}^2 \sum\limits_{j=1}^2 \sum\limits_{klmn \in L}
+		\langle kl \vert mn \rangle
+		\hat{a}_{ik}^\dagger \hat{a}_{jl}^\dagger \hat{a}_{im} \hat{a}_{jn} \\
+	& + i \hbar \sum\limits_{kl \in L} \langle k \vert l \rangle \left(
+		\tilde{\Omega} e^{i \omega t} \hat{a}_{1k}^\dagger \hat{a}_{2l} +
+		\tilde{\Omega}^* e^{-i \omega t} \hat{a}_{1k} \hat{a}_{2l}^\dagger
+	\right),
+\end{split}
+\end{equation*}
+where $U_{ij} = 4 \pi \hbar^2 a_{ij} / m$.
+
+We introduce projection operators:
+\[ P \equiv \sum\limits_{k \in L} \lvert k \rangle \langle k \rvert, \]
+\[ Q \equiv \sum\limits_{k \in H} \lvert k \rangle \langle k \rvert. \]
+In coordinate form:
+\[
+P [f(x)] = \sum\limits_{k \in L} \phi_{k} (\mathbf{r}) \int\limits_V d\mathbf{r}^\prime\, \phi_{k}^*(\mathbf{r}^\prime) f(\mathbf{r}^\prime)
+\]
+Being applied to the field operator $\hat{\psi}_i$, this operator returns the restricted field operator:
+\[
+P [\hat{\psi}_i] = \sum\limits_{k \in L} \phi_{k} (\mathbf{r}) \hat{a}_{ik} = \hat{\psi}_{iP} (\mathbf{r})
+\]
+
+Because of the restricted nature of the operator, common commutation relations no longer apply.
+The following ones should be used instead:
+\[
+\left[ \hat{\psi}_{iP}(\mathbf{r}), \hat{\psi}_{jP}(\mathbf{r}^\prime) \right] =
+\left[ \hat{\psi}_{iP}^\dagger(\mathbf{r}), \hat{\psi}_{jP}^\dagger(\mathbf{r}^\prime) \right] = 0,
+\]
+\[
+\left[ \hat{\psi}_{iP}(\mathbf{r}), \hat{\psi}_{iP}^\dagger(\mathbf{r}^\prime) \right] = \delta_{ij} \delta_{P}(\mathbf{r}, \mathbf{r}^\prime),
+\]
+where the restricted delta function $\delta_P$ is defined as:
+\[
+\delta_{P}(\mathbf{r}, \mathbf{r}^\prime) = \sum\limits_{k \in L} \phi_{k}^* (\mathbf{r}) \phi_{k} (\mathbf{r}^\prime).
+\]
+
+\section{Master equation}
+
+The master equation for restricted field can be written as following \textcolor{red}{[citation needed]}:
+\[
+i \hbar \frac{d\rho}{d t} = [\hat{H}_{\textrm{eff}}, \rho] + \sum\limits_n \frac{\kappa_n}{2} \int\limits_V d\mathbf{r}
+\left( 2  \hat{O}_n \rho \hat{O}_n^\dagger - \hat{O}_n^\dagger \hat{O}_n \rho - \rho \hat{O}_n^\dagger \hat{O}_n \right),
 \]
 where $\hat{O}_j$ are operators, describing bath couplings with corresponding strengths $\kappa_j$.
 In our case, we have three main sources of losses: three-body interactions between $\vert1\rangle$ particles,
 two-body $\vert1\rangle$-$\vert2\rangle$ and two-body $\vert2\rangle$-$\vert2\rangle$ interactions.
-Therefore bath couplings can be defined as:
-\begin{equation}
-\label{bath_coupling_operators}
-\hat{O}_1 = \hat{\psi}_1^3,\, \hat{O}_2 = \hat{\psi}_1 \hat{\psi}_2 + \hat{\psi}_2 \hat{\psi}_1,\, \hat{O}_3 = \hat{\psi}_2^2
-\end{equation}
-
-\subsection*{Wigner representation}
-
-To get stochastic equations, which can be solved numerically,
-we must rewrite the master equation in Wigner representation using the functional correspondences
-from~\cite{gardiner_quantum_noise}:
-\begin{align*}
-\hat{\psi} \rho = \left( \psi + \frac{1}{2} \frac{\partial}{\partial \psi^*} \right) W, & &
-\hat{\psi}^\dagger \rho = \left( \psi^* - \frac{1}{2} \frac{\partial}{\partial \psi} \right) W, \\
-\rho \hat{\psi} = \left( \psi - \frac{1}{2} \frac{\partial}{\partial \psi^*} \right) W, & &
-\rho \hat{\psi}^\dagger = \left( \psi^* + \frac{1}{2} \frac{\partial}{\partial \psi} \right) W.
-\end{align*}
-Note that first pair of correspondences is applied in left-to-right order, while the second pair is applied right-to-left.
-While simplifying the resulting equation, one can use the fact, that, although $\psi$ and $\psi^*$ are not independent
-(one is the complex conjugate of the other), $\psi$ and $\partial/\partial\psi^*$ can still be exchanged.
-It can be proved with the help of transformation to independent variables $x$ and $y$:
+Therefore, bath coupling operators are:
 \[
-\psi = x + iy,\, \psi^* = x - iy,\, \\
-\frac{\partial}{\partial\psi} = \frac{1}{2} \left( \frac{\partial}{\partial x} - i \frac{\partial}{\partial y} \right),\, \\
-\frac{\partial}{\partial\psi^*} = \frac{1}{2} \left( \frac{\partial}{\partial x} + i \frac{\partial}{\partial y} \right).
+\hat{O}_1 = \hat{\psi}_1^3,\, \hat{O}_2 = \hat{\psi}_{1P} \hat{\psi}_{2P} + \hat{\psi}_{2P} \hat{\psi}_{1P},\, \hat{O}_3 = \hat{\psi}_{2P}^2
 \]
 
-The transformation to Wigner representation is straightforward (though quite cumbersome),
-except for the term with $\hat{K}$ operator, which requires some special treatment.
-Let's do the transformation for this term step by step:
-\begin{align}
-[ \int\limits_V \hat{\psi}^\dagger \hat{K} \hat{\psi}, \rho ]
-= & \int\limits_V d\mathbf{r} \hat{\psi}^\dagger \hat{K} \hat{\psi} \rho - \int\limits_V d\mathbf{r} \rho \hat{\psi}^\dagger \hat{K} \hat{\psi} \nonumber \\
-\leftrightarrow & \int\limits_V d\mathbf{r} \left\{ \left( \psi^* - \frac{1}{2}\frac{\partial}{\partial\psi}\right) \hat{K} \left( \psi + \frac{1}{2}\frac{\partial}{\partial\psi^*} \right) - \nonumber \right. \\
-& \left. - \left( \psi - \frac{1}{2}\frac{\partial}{\partial\psi^*}\right) \hat{K} \left( \psi^* + \frac{1}{2}\frac{\partial}{\partial\psi}  \right) \right\} W \nonumber \\
-= & \int\limits_V d\mathbf{r} \left\{ \left( \psi^* \hat{K} \psi - \psi \hat{K} \psi^* \right) -  \right. \label{annihilating_psi_K_psi} \\
-& \left. - \left( \frac{1}{2}\frac{\partial}{\partial\psi} \hat{K} \psi +
-\frac{1}{2} \psi \hat{K} \frac{\partial}{\partial\psi} \right) \right. + \label{dpsi_K_psi_term} \\
-& \left. + \left( \frac{1}{2}\frac{\partial}{\partial\psi^*} \hat{K} \psi^* +
-\frac{1}{2} \psi^* \hat{K} \frac{\partial}{\partial\psi^*} \right) \right\} W \label{dpsi_star_K_psi_star_term}
-\end{align}
+\subsection{Wigner representation}
 
-Operator $\hat{K}$ is the sum of kinetic and potential energy operators;
-the former is the second order derivative, and the latter is the function of coordinates:
-\[ \hat{K} = - \frac{1}{2} \nabla^2 + V(\mathbf{r}) \]
-Potential term does not depend on $\psi$ or $\psi^*$ and can be easily handled;
-kinetic term can be moved to desired place using integration by parts
-(since our case is three-dimensional, we will use Green's first identity).
-For example, let us prove that the term~(\ref{annihilating_psi_K_psi}) is equal to zero:
+We use a multimode Wigner function representation~\cite{gardiner_quantum_noise} of the density operator,
+with operator correspondences being:
 \begin{align*}
-\int\limits_V d\mathbf{r} \left( \psi^* \hat{K} \psi - \psi \hat{K} \psi^* \right) W
-= {} & \frac{1}{2} \int\limits_V d\mathbf{r} \left( - \psi^* \nabla^2 \psi - \psi \nabla^2 \psi^* \right) W \\
-= {} & \frac{1}{2} \left\{ - \oint\limits_{\partial V} \psi^* (\nabla \psi \cdot \mathbf{n}) dS +
-\int\limits_V d\mathbf{r} \nabla \psi^* \nabla \psi \right. + \\
-& \left. + \oint\limits_{\partial V} \psi (\nabla \psi^* \cdot \mathbf{n}) dS -
-\int\limits_V d\mathbf{r} \nabla \psi \nabla \psi^* \right\} W \\
-= {} & \frac{1}{2} \left\{ \oint\limits_{\partial V} \psi (\nabla \psi^* \cdot \mathbf{n}) dS -
-\oint\limits_{\partial V} \psi^* (\nabla \psi \cdot \mathbf{n}) dS \right\} W = 0
+\hat{a}_{ik} \rho = \left( \alpha_{ik} + \frac{1}{2} \frac{\partial}{\partial \alpha_{ik}^*} \right) W, & &
+\hat{a}_{ik}^\dagger \rho = \left( \alpha_{ik}^* - \frac{1}{2} \frac{\partial}{\partial \alpha_{ik}} \right) W, \\
+\rho \hat{a}_{ik} = \left( \alpha_{ik} - \frac{1}{2} \frac{\partial}{\partial \alpha_{ik}^*} \right) W, & &
+\rho \hat{a}_{ik}^\dagger = \left( \alpha_{ik}^* + \frac{1}{2} \frac{\partial}{\partial \alpha_{ik}} \right) W.
 \end{align*}
-Here $\partial V$ stands for the boundary of region $V$.
-Differential operator needs to be Hermitian, therefore it equals to zero along the boundary $V$.
-This results in both surface integrals being equal to zero. 
 
-Terms~(\ref{dpsi_K_psi_term}) and~(\ref{dpsi_star_K_psi_star_term}) can be dealt with analagously.
-The resulting expression for commutator will then look like:
+Using these, we can transform the noninteracting term:
+\begin{align*}
+\begin{split}
+\sum\limits^2_{i=1}\int\limits_V d\mathbf{r} \, \hat{\psi}_i^\dagger(\mathbf{r}) \hat{K} \hat{\psi}_i(\mathbf{r}) = &
+\sum\limits_{i=1}^2 \sum\limits_k \hbar \omega_{k} \hat{a}_{ik}^\dagger \hat{a}_{ik} \\
+\rightarrow {} & \sum\limits_{i=1}^2 \sum\limits_{k \in L} \hbar \omega_{k} \hat{a}_{ik}^\dagger \hat{a}_{ik} \\
+\rightarrow {} & - \sum\limits_{i=1}^2 \sum\limits_{k \in L} \hbar \omega_k \left(
+	\frac{\partial}{\partial \alpha_{ik}} \alpha_{ik} - \frac{\partial}{\partial \alpha_{ik}^*} \alpha_{ik}^*
+\right) W \\
+= {} & - \sum\limits_{i=1}^2 \int\limits_V d\mathbf{r} \left(
+	\frac{\delta}{\delta \psi_{iP}} \hat{K} \psi_{iP} - \frac{\delta}{\delta \psi_{iP}^*} \hat{K} \psi_{iP}^*
+\right)
+\end{split}
+\end{align*}
+
+But for every other term it is easier to use functional correspondences, following~\cite{norrie_ballagh_gardiner_bradley_2006}.
+To do this, we define restricted basis wave functions:
 \[
-[ \int\limits_V \hat{\psi}^\dagger \hat{K} \hat{\psi}, \rho ]  = - \int\limits_V d\mathbf{r} \frac{\partial}{\partial\psi} \hat{K} \psi W +
-\int\limits_V d\mathbf{r} \frac{\partial}{\partial\psi^*} \hat{K} \psi^* W
+\psi_{iP} \equiv \sum\limits_{k \in L} \phi_k (\mathbf{r}) \alpha_{ik}
 \]
+and then the functional derivatives:
+\[
+\frac{\delta}{\delta \psi_{iP} (\mathbf{r})} \equiv \sum\limits_{k \in L} \phi_k^* (\mathbf{r}) \frac{\partial}{\partial \alpha_j}.
+\]
+This gives us the following correspondences:
+\begin{align*}
+\hat{\psi}_{iP} \rho = \left( \psi_{iP} + \frac{1}{2} \frac{\delta}{\delta \psi_{iP}^*} \right) W, & &
+\hat{\psi}_{iP}^\dagger \rho = \left( \psi_{iP}^* - \frac{1}{2} \frac{\delta}{\delta \psi_{iP}} \right) W, \\
+\rho \hat{\psi}_{iP} = \left( \psi_{iP} - \frac{1}{2} \frac{\delta}{\delta \psi_{iP}^*} \right) W, & &
+\rho \hat{\psi}_{iP}^\dagger = \left( \psi_{iP}^* + \frac{1}{2} \frac{\delta}{\delta \psi_{iP}} \right) W.
+\end{align*}
 
-\subsection*{Fokker-Planck equations}
+Now we can transform full master equation to Wigner representation.
+\textcolor{red}{[Add section about truncation and describe validity criteria.]}
+Wigner truncation is performed simultaneously,
+following the procedure, thoroughly described in~\cite{norrie_ballagh_gardiner_2006} and~\cite{norrie_ballagh_gardiner_bradley_2006}:
+\begin{align*}
+\begin{split}
+i \hbar \frac{\partial W}{\partial t} = & \int\limits_V d\mathbf{r} \left\{
+	- \frac{\delta}{\delta \psi_{1P}} \left( \left(
+		\hat{K} + U_{11} \lvert \psi_{2P} \rvert^2 + U_{11} \lvert \psi_{1P} \rvert^2 \right. \right. \right. \\
+		& \left. \left. \left. - \frac{3}{2} \kappa_{111} \lvert \psi_{1P} \rvert^4 - \kappa_{12} \lvert \psi_{2P} \rvert^2
+	\right) \psi_{1P} + i \hbar \tilde{\Omega} e^{i \omega t} \psi_{2P} \right) \right. \\
+& \left. - \frac{\delta}{\delta \psi_{2P}} \left( \left(
+		\hat{K} + V_{hf} + U_{22} \lvert \psi_{2P} \rvert^2 + U_{12} \lvert \psi_{1P} \rvert^2 \right. \right. \right. \\
+		& \left. \left. \left. - \kappa_{12} \lvert \psi_{1P} \rvert^2 - \kappa_{22} \lvert \psi_{2P} \rvert^2
+	\right) \psi_{2P} - i \hbar \tilde{\Omega}^* e^{-i \omega t} \psi_{1P} \right) \right. \\
+& \left. + \frac{\delta^2}{\delta \psi_{1P} \delta \psi_{1P}^*} \left(
+	\frac{9}{2} \kappa_{111} \lvert \psi_{1P} \rvert^4 + \kappa_{12} \lvert \psi_{2P} \rvert^2
+\right) + \right. \\
+& \left. + \frac{\delta^2}{\delta \psi_{2P} \delta \psi_{2P}^*} \left(
+	\kappa_{12} \lvert \psi_{1P} \rvert^2 + 2 \kappa_{22} \lvert \psi_2 \rvert^2
+\right) + \right. \\
+& \left. + \frac{\delta^2}{\delta \psi_{1P} \delta \psi_{2P}^*} \kappa_{12} \psi_{1P} \psi_{2P}^*
++ \frac{\delta^2}{\delta \psi_{1P}^* \delta \psi_{2P}} \kappa_{12} \psi_{1P}^* \psi_{2P}
+\right\} W
+\end{split}
+\end{align*}
+
+\section{Fokker-Planck equations}
 
 Now we can transform the whole master equation to Wigner representation, writing it down in the form of Fokker-Planck equation.
 Let us first do it for the case of zero losses.
