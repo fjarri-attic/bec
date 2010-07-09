@@ -61,8 +61,10 @@ losses22 = Term(0.5, [k22, lossesOperator(Term(1, [Psi2, Psi2]))])
 
 # interaction part of the hamiltonian
 h = Sum([Term(1, [Vhf, Psi2_plus, Psi2]),
-	Term(1, [Omega, Psi1_plus, Psi2]),
-	Term(-1, [Omega_star, Psi1, Psi2_plus]),
+	Term(0.5, [Omega, Psi1_plus, Psi2]),
+	Term(0.5, [Omega, Psi2_plus, Psi1]),
+	Term(0.5, [Omega_star, Psi1, Psi2_plus]),
+	Term(0.5, [Omega_star, Psi2, Psi1_plus]),
 	Term(0.5, [U11, Psi1_plus, Psi1_plus, Psi1, Psi1]),
 	Term(0.5, [U22, Psi2_plus, Psi2_plus, Psi2, Psi2]),
 	Term(0.5, [U12, Psi1_plus, Psi2_plus, Psi1, Psi2]),
