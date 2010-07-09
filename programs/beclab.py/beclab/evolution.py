@@ -312,7 +312,6 @@ class SplitStepEvolution(PairedCalculation):
 		self._constants = constants
 
 		self._plan = createPlan(env, constants, constants.nvx, constants.nvy, constants.nvz)
-		self._pulse = Pulse(env, constants)
 
 		# indicates whether current state is in midstep (i.e, right after propagation
 		# in x-space and FFT to k-space)
@@ -583,6 +582,158 @@ class SplitStepEvolution(PairedCalculation):
 		for callback in callbacks:
 			callback(t, cloud)
 		self._toKSpace(cloud)
+
+	def run(self, cloud, time, callbacks=None, callback_dt=0):
+
+		# in SI units
+		t = 0
+		callback_t = 0
+		t_rho = self._constants.t_rho
+
+		# in natural units
+		dt = self._constants.dt_evo
+
+		self._toKSpace(cloud)
+
+		try:
+			self._runCallbacks(0, cloud, callbacks)
+
+			while t < time:
+				self.propagate(cloud, dt)
+				t += dt * t_rho
+				callback_t += dt * t_rho
+
+				if callback_t > callback_dt:
+					self._runCallbacks(t, cloud, callbacks)
+					callback_t = 0
+
+			if callback_dt > time:
+				self._runCallbacks(time, cloud, callbacks)
+
+			self._toXSpace(cloud)
+
+		except TerminateEvolution:
+			return t
+
+
+class RungeKuttaEvolution:
+
+	def __init__(self, env, constants):
+		PairedCalculation.__init__(self, env)
+		self._env = env
+		self._constants = constants
+
+		self._plan = createPlan(env, constants, constants.nvx, constants.nvy, constants.nvz)
+
+		self._potentials = getPotentials(self._env, self._constants)
+		self._kvectors = getKVectors(self._env, self._constants)
+
+		self._prepare()
+
+	def _cpu__prepare(self):
+		pass
+
+	def _propagationFunc(self, a_data, b_data, dt):
+
+		batch = a_data.size / self._constants.cells
+		nvz = self._constants.nvz
+
+		# TODO: remove hardcoding (g must depend on cloud.a.comp and cloud.b.comp)
+		g11 = self._constants.g11
+		g12 = self._constants.g12
+		g22 = self._constants.g22
+
+		l111 = self._constants.l111
+		l12 = self._constants.l12
+		l22 = self._constants.l22
+
+		n_a = numpy.abs(a_data) ** 2
+		n_b = numpy.abs(b_data) ** 2
+
+		a_res = self._env.allocate(a_data.shape, dtype=a_data.dtype)
+		b_res = self._env.allocate(b_data.shape, dtype=b_data.dtype)
+		a_kdata = self._env.allocate(a_data.shape, dtype=a_data.dtype)
+		b_kdata = self._env.allocate(b_data.shape, dtype=b_data.dtype)
+
+		self._plan.execute(a_data, a_kdata, inverse=True, batch=batch)
+		self._plan.execute(b_data, b_kdata, inverse=True, batch=batch)
+
+		for e in xrange(batch):
+			start = e * nvz
+			stop = (e + 1) * nvz
+			a_res[start:stop,:,:] = 1j * (a_kdata[start:stop,:,:] * self._kvectors -
+				a_data[start:stop,:,:] * self._potentials)
+			b_res[start:stop,:,:] = 1j * (b_kdata[start:stop,:,:] * self._kvectors -
+				b_data[start:stop,:,:] * self._potentials)
+
+		a_res += (n_a * n_a * (-l111 / 2) + n_b * (-l12 / 2) -
+			1j * (n_a * g11 + n_b * g12)) * a_data
+
+		b_res += (n_b * (-l22 / 2) + n_a * (-l12 / 2) -
+			1j * (n_b * g22 + n_a * g12)) * b_data
+
+		return a_res, b_res
+
+	def _noiseFunc(self, a_data, b_data):
+		shape = self._constants.ens_shape
+
+		noise_a = numpy.zeros(shape, dtype=self._constants.complex.dtype)
+		noise_b = numpy.zeros(shape, dtype=self._constants.complex.dtype)
+
+		eta = [numpy.random.normal(scale=math.sqrt(self._constants.dt_evo / self._constants.dV),
+			size=shape).astype(self._constants.scalar.dtype) for i in xrange(4)]
+
+		n1 = numpy.abs(cloud.a.data) ** 2
+		n2 = numpy.abs(cloud.b.data) ** 2
+		dV = self._constants.dV
+		l12 = self._constants.l12
+		l22 = self._constants.l22
+		l111 = self._constants.l111
+
+		a = 0.25 * l12 * n2 + 0.25 * l111 * 3.0 * n1 * n1
+		d = 0.25 * l12 * n1 + 0.25 * l22 * 2.0 * n2
+		t = 0.25 * l12 * cloud.a.data * numpy.conj(cloud.b.data)
+		b = numpy.real(t)
+		c = numpy.imag(t)
+
+		t1 = numpy.sqrt(a)
+		t2 = numpy.sqrt(d - (b ** 2) / a)
+		t3 = numpy.sqrt(a + a * (c ** 2) / (b ** 2 - a * d))
+
+		row1 = t1 * eta[0]
+		row2 = b / t1 * eta[0] + t2 * eta[1]
+		row3 = c / t2 * eta[1] + t3 * eta[2]
+		row4 = -c / t1 * eta[0] + b * c / (a * t2) * eta[1] + b / a * t3 * eta[2] + \
+			numpy.sqrt((a ** 2 - b ** 2 - c ** 2) / a) * eta[3]
+
+		noise_a = row1 + 1j * row3
+		noise_b = row2 + 1j * row4
+
+		return numpy.nan_to_num(noise_a), numpy.nan_to_num(noise_b)
+
+	def propagate(self, cloud, dt):
+
+		main_a, main_b = self._propagationFunc(cloud.a.data, cloud.b.data, dt)
+		noise_a, noise_b = self._noiseFunc(cloud.a.data, cloud.b.data)
+
+		temp_a = cloud.a.data + main_a * dt + noise_a * math.sqrt(dt)
+		temp_b = cloud.b.data + main_b * dt + noise_b * math.sqrt(dt)
+
+		noise_mod_a, noise_mod_b = self._noiseFunc(temp_a, temp_b)
+
+		cloud.a.data += main_a * dt + noise_a * deltaW_a + \
+			0.5 * (noise_mod_a - noise_a) * (deltaW_a ** 2 - dt) * math.sqrt(dt)
+		cloud.b.data += main_b * dt + noise_b * deltaW_b + \
+			0.5 * (noise_mod_b - noise_b) * (deltaW_b ** 2 - dt) * math.sqrt(dt)
+
+		cloud.time += dt
+
+	def _runCallbacks(self, t, cloud, callbacks):
+		if callbacks is None:
+			return
+
+		for callback in callbacks:
+			callback(t, cloud)
 
 	def run(self, cloud, time, callbacks=None, callback_dt=0):
 
