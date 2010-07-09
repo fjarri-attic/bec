@@ -344,10 +344,16 @@ Second-quantized hamiltonian for the two-component system with the addition of c
 	\hat{\psi}_i^\dagger (\mathbf{r}) \hat{\psi}_j^\dagger (\mathbf{r}^\prime)
 	U_{ij}(\mathbf{r} - \mathbf{r}^\prime)
 	\hat{\psi}_i(\mathbf{r}^\prime) \hat{\psi}_j(\mathbf{r}) \\
-& + i \hbar \int\limits_V d\mathbf{r} \left(
-	\tilde{\Omega} e^{i \omega t} \hat{\psi}_1^\dagger(\mathbf{r}) \hat{\psi}_2(\mathbf{r}) -
-	\tilde{\Omega}^* e^{-i \omega t} \hat{\psi}_1(\mathbf{r}) \hat{\psi}_2(\mathbf{r})^\dagger
-\right)
+& + \frac{\hbar}{2} \int\limits_V d\mathbf{r} \left\{
+	\tilde{\Omega} e^{i \omega t} \left(
+		\hat{\psi}_1^\dagger(\mathbf{r}) \hat{\psi}_2(\mathbf{r}) +
+		\hat{\psi}_2^\dagger(\mathbf{r}) \hat{\psi}_1(\mathbf{r})
+	\right) \right. \\
+	& \left. + \tilde{\Omega}^* e^{-i \omega t} \left(
+		\hat{\psi}_1(\mathbf{r}) \hat{\psi}_2(\mathbf{r})^\dagger +
+		\hat{\psi}_2(\mathbf{r}) \hat{\psi}_1(\mathbf{r})^\dagger
+	\right)
+\right\}
 \end{split}
 \end{align}
 \textcolor{red}{Is the scattering term actually $\hat{\psi}_i^\dagger (\mathbf{r}) \hat{\psi}_j^\dagger (\mathbf{r}^\prime)
@@ -443,7 +449,7 @@ where the restricted delta function $\delta_P$ is defined as:
 
 The master equation for restricted field can be written as following \textcolor{red}{[citation needed]}:
 \[
-i \hbar \frac{d\rho}{d t} = [\hat{H}_{\textrm{eff}}, \rho] + \sum\limits_n \frac{\kappa_n}{2} \int\limits_V d\mathbf{r}
+i \hbar \frac{d\rho}{d t} = [\hat{H}_{\textrm{eff}}, \rho] + i \hbar \sum\limits_n \frac{\kappa_n}{2} \int\limits_V d\mathbf{r}
 \left( 2  \hat{O}_n \rho \hat{O}_n^\dagger - \hat{O}_n^\dagger \hat{O}_n \rho - \rho \hat{O}_n^\dagger \hat{O}_n \right),
 \]
 where $\hat{O}_j$ are operators, describing bath couplings with corresponding strengths $\kappa_j$.
@@ -452,6 +458,12 @@ two-body $\vert1\rangle$-$\vert2\rangle$ and two-body $\vert2\rangle$-$\vert2\ra
 Therefore, bath coupling operators are:
 \[
 \hat{O}_1 = \hat{\psi}_1^3,\, \hat{O}_2 = \hat{\psi}_{1P} \hat{\psi}_{2P} + \hat{\psi}_{2P} \hat{\psi}_{1P},\, \hat{O}_3 = \hat{\psi}_{2P}^2
+\]
+
+We choose loss constants $\kappa_n$ so that loss terms in final stochastic equations
+are the same as in coupled GPEs~(\ref{two-component_evolution:cgpes}):
+\[
+\kappa_1 = \gamma_{111} / 3,\, \kappa_2 = \gamma_{12} / 2,\, \kappa_3 = \gamma_{22} / 2
 \]
 
 \subsection{Wigner representation}
@@ -505,21 +517,25 @@ following the procedure, thoroughly described in~\cite{norrie_ballagh_gardiner_2
 \begin{split}
 i \hbar \frac{\partial W}{\partial t} = & \int\limits_V d\mathbf{r} \left\{
 	- \frac{\delta}{\delta \psi_{1P}} \left( \left(
-		\hat{K} + U_{11} \lvert \psi_{2P} \rvert^2 + U_{11} \lvert \psi_{1P} \rvert^2 \right. \right. \right. \\
-		& \left. \left. \left. - \frac{3}{2} \kappa_{111} \lvert \psi_{1P} \rvert^4 - \kappa_{12} \lvert \psi_{2P} \rvert^2
-	\right) \psi_{1P} + i \hbar \tilde{\Omega} e^{i \omega t} \psi_{2P} \right) \right. \\
+		\hat{K} + U_{11} \lvert \psi_{1P} \rvert^2 + U_{12} \lvert \psi_{2P} \rvert^2 \right. \right. \right. \\
+		& \left. \left. \left. - i \hbar \frac{\gamma_{111}}{2} \lvert \psi_{1P} \rvert^4 - i \hbar \frac{\gamma_{12}}{2} \lvert \psi_{2P} \rvert^2
+	\right) \psi_{1P} +
+	\frac{\hbar}{2} \left( \tilde{\Omega} e^{i \omega t} + \tilde{\Omega}^* e^{-i \omega t} \right) \psi_{2P} \right) +
+	\textrm{c.c.} \right. \\
 & \left. - \frac{\delta}{\delta \psi_{2P}} \left( \left(
 		\hat{K} + V_{hf} + U_{22} \lvert \psi_{2P} \rvert^2 + U_{12} \lvert \psi_{1P} \rvert^2 \right. \right. \right. \\
-		& \left. \left. \left. - \kappa_{12} \lvert \psi_{1P} \rvert^2 - \kappa_{22} \lvert \psi_{2P} \rvert^2
-	\right) \psi_{2P} - i \hbar \tilde{\Omega}^* e^{-i \omega t} \psi_{1P} \right) \right. \\
-& \left. + \frac{\delta^2}{\delta \psi_{1P} \delta \psi_{1P}^*} \left(
-	\frac{9}{2} \kappa_{111} \lvert \psi_{1P} \rvert^4 + \kappa_{12} \lvert \psi_{2P} \rvert^2
+		& \left. \left. \left. - i \hbar \frac{\gamma_{12}}{2} \lvert \psi_{1P} \rvert^2 - i \hbar \frac{\gamma_{22}}{2} \lvert \psi_{2P} \rvert^2
+	\right) \psi_{2P} +
+	\frac{\hbar}{2} \left( \tilde{\Omega} e^{i \omega t} + \tilde{\Omega}^* e^{-i \omega t} \right) \psi_{1P} \right) +
+	\textrm{c.c.} \right. \\
+& \left. + i \hbar \frac{\delta^2}{\delta \psi_{1P} \delta \psi_{1P}^*} \left(
+	\frac{3 \gamma_{111}}{2} \lvert \psi_{1P} \rvert^4 + \frac{\gamma_{12}}{2} \lvert \psi_{2P} \rvert^2
 \right) + \right. \\
-& \left. + \frac{\delta^2}{\delta \psi_{2P} \delta \psi_{2P}^*} \left(
-	\kappa_{12} \lvert \psi_{1P} \rvert^2 + 2 \kappa_{22} \lvert \psi_2 \rvert^2
+& \left. + i \hbar \frac{\delta^2}{\delta \psi_{2P} \delta \psi_{2P}^*} \left(
+	\frac{\gamma_{12}}{2} \lvert \psi_{1P} \rvert^2 + \gamma_{22} \lvert \psi_2 \rvert^2
 \right) + \right. \\
-& \left. + \frac{\delta^2}{\delta \psi_{1P} \delta \psi_{2P}^*} \kappa_{12} \psi_{1P} \psi_{2P}^*
-+ \frac{\delta^2}{\delta \psi_{1P}^* \delta \psi_{2P}} \kappa_{12} \psi_{1P}^* \psi_{2P}
+& \left. + i \hbar \frac{\delta^2}{\delta \psi_{1P} \delta \psi_{2P}^*} \frac{\gamma_{12}}{2} \psi_{1P} \psi_{2P}^*
++ i \hbar \frac{\delta^2}{\delta \psi_{1P}^* \delta \psi_{2P}} \frac{\gamma_{12}}{2} \psi_{1P}^* \psi_{2P}
 \right\} W
 \end{split}
 \end{align*}
