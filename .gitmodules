@@ -1,0 +1,3 @@
+[submodule "programs/beclab.py"]
+	path = programs/beclab.py
+	url = git@github.com:Manticore/beclab.git
