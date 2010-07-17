@@ -1,0 +1,211 @@
+% inspired by beamerthemeDreuw.sty (beamerposter) - dark blue
+\ProvidesPackage{beamerthemeGray}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\selectcolormodel{cmyk}
+%\selectcolormodel{rgb}
+\mode<presentation>
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% foreground
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% headline
+\definecolor{cf1}
+{named}{white}                              % white
+
+
+% author, footline, lines
+\definecolor{cf2}
+{cmyk/HTML}{0.34,0.28,0.27,0.00/ababad}     % light gray
+
+
+% institution
+\definecolor{cf3}
+{cmyk/HTML}{0.34,0.28,0.27,0.00/ababad}     % light gray
+
+
+% blocktitle,exampletitle
+\definecolor{cff}
+{named}{white}                              % white
+
+
+% blockbody
+\definecolor{cfb}
+{named}{black}                              % black
+
+
+% normal text
+\definecolor{cfn}
+{named}{black}                              % black
+
+
+% allert
+\definecolor{cfa}
+{cmyk/HTML}{0.86,0.77,0.00,0.00/3e53a4}     % blue
+
+
+% structure (frametitle, item)
+\definecolor{cfs}
+{cmyk/HTML}{0.86,0.77,0.00,0.00/3e53a4}     % blue
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% background
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% headline, footline
+\definecolor{cb1}
+{cmyk/HTML}{1.00,1.00,0.33,0.50/150d42}     % dark blue
+
+
+% blocktitle, exampletitle
+\definecolor{cbf}
+{cmyk/HTML}{0.67,0.60,0.39,0.16/5e5f72}     % dark gray
+
+
+% blockbody
+\definecolor{cbb}
+{named}{white}                              % white
+
+
+% normal text, footline
+\definecolor{cbn}
+{cmyk/HTML}{0.34,0.28,0.27,0.00/ababad}     % light gray
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% headline colors and fonts
+\setbeamercolor{headline}{fg=cf1,bg=cb1}
+\setbeamercolor{title in headline}{fg=cf1}
+\setbeamercolor{author in headline}{fg=cf2}
+\setbeamercolor{institute in headline}{fg=cf3}
+
+% lines
+\setbeamercolor{upper separation line head}{fg=cf1}
+\setbeamercolor{separation line}{bg=cf1}
+
+% footline colors and fonts
+\setbeamercolor{footline}{fg=cf2, bg=cb1}
+\setbeamerfont{footline}{size=\large,series=\rm}
+
+
+% poster background, body colors, and fonts
+\setbeamercolor*{normal text}{fg=cfn, bg=cbn}
+
+% block environment
+\setbeamercolor*{block title}{fg=cff,bg=cbf}
+\setbeamerfont{block title}{size=\large,series=\bf}
+\setbeamercolor*{block body}{fg=cfb,bg=cbb}
+\setbeamerfont{block body}{size=\small}
+
+% example environment
+\setbeamercolor*{example title}{bg=cff,fg=cbf}
+\setbeamercolor*{example body}{fg=cfb,bg=cbb}
+\setbeamercolor*{example text}{fg=cfb,bg=cbb}
+
+\setbeamercolor{alerted text}{fg=cfa}
+
+\setbeamercolor{structure}{fg=cfs}                 % frametitle, item
+\setbeamertemplate{itemize items}[triangle]
+
+%not used or useful in beamerposter
+\setbeamercolor{framesubtitle}{fg=cfs, bg=cbb}   % framesubtitle useless on a poster
+\setbeamertemplate{navigation symbols}{}         % no navigation on a poster
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\setbeamertemplate{block begin}{
+  \vskip.75ex
+  \begin{beamercolorbox}[rounded=true,shadow=true,leftskip=1cm,colsep*=.75ex]{block title}%
+    \usebeamerfont*{block title}\insertblocktitle
+  \end{beamercolorbox}%
+  {\ifbeamercolorempty[bg]{block body}{}{\nointerlineskip\vskip-0.5pt}}%
+  \usebeamerfont{block body}%
+  \begin{beamercolorbox}[rounded=true,shadow=true,colsep*=.75ex,sep=.75ex,vmode]{block body}%
+    \ifbeamercolorempty[bg]{block body}{\vskip-.25ex}{\vskip-.75ex}\vbox{}%
+  }
+  \setbeamertemplate{block end}{
+  \end{beamercolorbox}
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\setbeamertemplate{headline}{
+  \leavevmode
+
+  \begin{beamercolorbox}[wd=\paperwidth]{headline}
+    \begin{columns}[T]
+      \begin{column}{.02\paperwidth}
+      \end{column}
+      \begin{column}{.82\paperwidth}
+        \vskip2cm
+        \raggedright
+        \usebeamercolor{title in headline}{\color{fg}\textbf{\huge{\inserttitle}}\\[1ex]}
+        \vspace{1cm}
+        \raggedright
+        \usebeamercolor{author in headline}{\color{fg}\Large{\insertauthor}\\}
+        \usebeamercolor{institute in headline}{\color{fg}\large{\insertinstitute}\\[1ex]}
+        \vspace{0.2cm}
+      \end{column}
+      \begin{column}{.14\paperwidth}
+        \vskip 1.2cm
+        \begin{center}
+          \includegraphics[width=0.14\paperwidth]{swinburne_logo.pdf}\\
+          \vskip 0.7cm
+          \includegraphics[width=0.14\paperwidth]{acqao_logo.pdf}
+        \end{center}
+        \vspace{0.7cm}
+      \end{column}
+      \begin{column}{.02\paperwidth}
+      \end{column}
+    \end{columns}
+  \end{beamercolorbox}
+
+  \begin{beamercolorbox}[wd=\paperwidth]{lower separation line head}
+    \rule{0pt}{2pt}
+  \end{beamercolorbox}
+}
+
+%  \setbeamertemplate{headline}{
+%    \leavevmode
+%    \begin{beamercolorbox}[sep=0.5cm,wd=.8\paperwidth]{headline}
+%      \usebeamercolor{title in headline}{\raggedleft\color{fg}\textbf{\LARGE{\inserttitle}}\\[1ex]}
+%      \usebeamercolor{author in headline}{\raggedleft\color{fg}\large{\insertauthor}\\[1ex]}
+%      \usebeamercolor{institute in headline}{\raggedleft\color{fg}\large{\insertinstitute}\\[1ex]}
+%    \end{beamercolorbox}%
+%    \begin{beamercolorbox}[wd=.2\paperwidth]{logo in headline}
+%      \centering
+%      \LARGE{LOGO}
+%    \end{beamercolorbox}
+
+
+%}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\setbeamertemplate{footline}{
+  \begin{beamercolorbox}[wd=\paperwidth]{upper separation line foot}
+    \rule{0pt}{2pt}
+  \end{beamercolorbox}
+
+  \leavevmode%
+  \begin{beamercolorbox}[ht=4ex,leftskip=5cm,rightskip=10cm]{footline}%
+    \raggedleft\tiny
+    Sadzba pdf\TeX{} (štýly \LaTeX{}, BEAMERPOSTER) \quad \quad
+    \vskip4ex
+  \end{beamercolorbox}
+  \vskip0pt%
+  \begin{beamercolorbox}[wd=\paperwidth]{lower separation line foot}
+    \rule{0pt}{2pt}
+  \end{beamercolorbox}
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Display a grid to help align images ... and it looks nice with this color scheme
+\beamertemplategridbackground[1cm]
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\mode<all>
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-PDF-mode: t
+%%% TeX-master: "poster"
+%%% End:
