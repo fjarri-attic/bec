@@ -5,7 +5,6 @@
 \documentclass[final,hyperref={pdfpagelabels=false}]{beamer}
 \mode<presentation>{\usetheme{Gray}}
 \usepackage[english]{babel}
-%\usepackage{subfig}
 \usepackage{amsmath,amsthm, amssymb, latexsym}
 \usefonttheme[onlymath]{serif}
 \boldmath
@@ -13,13 +12,14 @@
 
 \setlength{\abovecaptionskip}{-2ex}
 \setlength{\belowcaptionskip}{-2ex}
+\setbeamertemplate{bibliography item}{\insertbiblabel}
 
 \newcommand{\ket}[1]{\mbox{\ensuremath{| #1 \rangle}}}
 \newcommand{\Rb}{$^{87}$Rb }
 \newcommand{\figref}[1]{Fig.~\ref{#1}}
 
 \newcommand{\mycolumn}[1]{
-	\begin{column}{.33\textwidth}
+	\begin{column}{.5\textwidth}
 	\begin{beamercolorbox}[center,wd=\textwidth]{postercolumn}
 	\begin{minipage}[T]{.95\textwidth} % tweaks the width, makes a new \textwidth
 
@@ -72,90 +72,232 @@ P.~D.~Drummond\inst{1}}
 % First column
 \mycolumn{
 
-\begin{block}{Master equation}
+\begin{block}{Trapped two-component BEC}
+
 \begin{itemize}
-\item System: two-component \Rb BEC in a harmonic trap
-\item Components: $5^2S_{1/2}$ states $\vert1,-1\rangle$ and $\vert2,1\rangle$
-\item Born-Markov master equation:
+	\item System: two-component \Rb BEC in a harmonic trap
+	\item Components: $5^2S_{1/2}$ states $\vert1,-1\rangle$ and $\vert2,1\rangle$
+	\item Second-quantized hamiltonian:
+\begin{align*}
+\begin{split}
+\hat{H} = {} & \int d\mathbf{r} \left\{
+	\sum\limits^2_{i=1} \hat{\psi}_i^\dagger(\mathbf{r}) \hat{K} \hat{\psi}_i(\mathbf{r}) +
+	V_{hf} \hat{\psi}_2^\dagger(\mathbf{r}) \hat{\psi}_2(\mathbf{r}) \right. \\
+& \left. + \frac{1}{2} \sum\limits^2_{i=1} \sum\limits^2_{j=1} \int d\mathbf{r}^\prime \,
+	\hat{\psi}_i^\dagger (\mathbf{r}) \hat{\psi}_j^\dagger (\mathbf{r}^\prime)
+	U_{ij}(\mathbf{r} - \mathbf{r}^\prime)
+	\hat{\psi}_i(\mathbf{r}^\prime) \hat{\psi}_j(\mathbf{r}) \right. \\
+& \left. + \frac{\hbar}{2} \tilde{\Omega} e^{i \omega t} \left(
+		\hat{\psi}_1^\dagger(\mathbf{r}) \hat{\psi}_2(\mathbf{r}) +
+		\hat{\psi}_2^\dagger(\mathbf{r}) \hat{\psi}_1(\mathbf{r})
+	\right) \right. \\
+& \left. + \frac{\hbar}{2} \tilde{\Omega}^* e^{-i \omega t} \left(
+		\hat{\psi}_1(\mathbf{r}) \hat{\psi}_2(\mathbf{r})^\dagger +
+		\hat{\psi}_2(\mathbf{r}) \hat{\psi}_1(\mathbf{r})^\dagger
+	\right)
+\right\}
+\end{split}
+\end{align*}
+% FIXME:
+% Is the scattering term actually $\hat{\psi}_i^\dagger (\mathbf{r}) \hat{\psi}_j^\dagger (\mathbf{r}^\prime)
+%	U_{2b}(\mathbf{r} - \mathbf{r}^\prime)
+%	\hat{\psi}_j(\mathbf{r}^\prime) \hat{\psi}_i(\mathbf{r})$?
+	\item Noninteracting term $\hat{K} = - \frac{\hbar^2 \nabla^2}{2 m} + V(\mathbf{r})$
+	\item Hyperfine splitting energy $V_{\textrm{hf}} / h = 6.8 \textrm{GHz}$
+	\item Two-photon coupling constant $\tilde{\Omega} = \Omega e^{i \alpha}$,
+		where $\Omega$ is the Rabi frequency
+	\item Field annihilation operators $\hat{\psi}_i (\mathbf{r})$ obey the common commutation relations for identical bosons
+\end{itemize}
+
+\end{block}
+
+\begin{block}{Restricted basis field}
+
+\begin{itemize}
+	\item Basis $\phi_{n}$ of plane waves: $\phi_{n}(\mathbf{r}) = e^{i \mathbf{k}_n \mathbf{r}} / \sqrt{V}$
+	\item Decomposed field operators: $\hat{\psi}_i(\mathbf{r}) = \sum\limits_n \phi_{n}(\mathbf{r}) \hat{a}_{in}$
+	\item Mode space is divided into low- and high- energy subsets $L$ and $H$,
+		depending on whether $\hbar^2 k_n^2 / 2 m $ is more or less than $\epsilon_{\textrm{cut}}$~\cite{norrie}
+	\item Projector operators:	
+\[ P \equiv \sum\limits_{n \in L} \lvert n \rangle \langle n \rvert,\,
+Q \equiv \sum\limits_{n \in H} \lvert n \rangle \langle n \rvert \]
+	\item Commutation relations for restricted field operators $\hat{\psi}_{iP} \equiv P[\hat{\psi}_i]$:
 \[
-i \hbar \frac{d\rho}{d t} = [\hat{H}_{\textrm{eff}}, \rho] +
-i \hbar \sum\limits_n \frac{\kappa_n}{2} \int\limits_V d\mathbf{r} L [\hat{O}_n]
+\left[ \hat{\psi}_{iP}(\mathbf{r}), \hat{\psi}_{jP}(\mathbf{r}^\prime) \right] =
+\left[ \hat{\psi}_{iP}^\dagger(\mathbf{r}), \hat{\psi}_{jP}^\dagger(\mathbf{r}^\prime) \right] = 0
 \]
-\item Loss operator:
-\[ L [\hat{O}] = 2  \hat{O} \rho \hat{O}^\dagger - \hat{O}^\dagger \hat{O} \rho - \rho \hat{O}^\dagger \hat{O} \]
-\item Operators $\hat{O}_n$ describe bath couplings with corresponding strengths $\kappa_n$
-\item There are three dominant sources of losses:
-\begin{enumerate}
-\item Three-body recombination: $\hat{O}_1 = \hat{\psi}_1^3$
-\item Two-body $\vert1\rangle$-$\vert2\rangle$ inelastic collisions:
-	$\hat{O}_2 = \hat{\psi}_1 \hat{\psi}_2 + \hat{\psi}_2 \hat{\psi}_1$
-\item Two-body $\vert2\rangle$-$\vert2\rangle$ inelastic collisions: $\hat{O}_3 = \hat{\psi}_2^2$
-\end{enumerate}
+\[
+\left[ \hat{\psi}_{iP}(\mathbf{r}), \hat{\psi}_{iP}^\dagger(\mathbf{r}^\prime) \right] = \delta_{ij} \delta_{P}(\mathbf{r}, \mathbf{r}^\prime)
+\]
+	Restricted delta function:
+\[
+\delta_{P}(\mathbf{r}, \mathbf{r}^\prime) = \sum\limits_{n \in L} \phi_{n}^* (\mathbf{r}) \phi_{n} (\mathbf{r}^\prime).
+\]
+	\item If $\epsilon_{\textrm{cut}}$ is sufficiently small, contact potential can be used~\cite{morgan}:
+\begin{align*}
+\begin{split}
+\int d\mathbf{r} \int d\mathbf{r}^\prime \,
+	\hat{\psi}_i^\dagger (\mathbf{r}) \hat{\psi}_j^\dagger (\mathbf{r}^\prime)
+	U_{ij}(\mathbf{r} - \mathbf{r}^\prime)
+	\hat{\psi}_i(\mathbf{r}^\prime) \hat{\psi}_j(\mathbf{r}) \\
+\rightarrow g_{ij} \int d\mathbf{r} \,
+	\hat{\psi}_{iP}^\dagger (\mathbf{r}) \hat{\psi}_{jP}^\dagger (\mathbf{r})
+	\hat{\psi}_{iP}(\mathbf{r}) \hat{\psi}_{jP}(\mathbf{r}),
+\end{split}
+\end{align*}
+	where $g_{ij} = 4 \pi \hbar^2 a_{ij} / m$
 
 \end{itemize}
 
 \tiny{ \begin{thebibliography}{9}
-	\bibitem{jack} Jack, M., \textit{Phys. Rev. Lett.} \textbf{89} 140402 (2002).
+	\bibitem{morgan} Morgan, S. A., \textit{J. Phys. B: At. Mol. Opt. Phys.} \textbf{33} 3847 (2000)
+	\bibitem{norrie} Norrie, A. and Ballagh, R. and Gardiner, C., \textit{Phys. Rev. A} \textbf{73} 043617 (2006)
+\end{thebibliography} }
+
+\end{block}
+
+\begin{block}{Master equation}
+
+\begin{itemize}
+	\item Born-Markov master equation:
+	\[
+		\frac{d\rho}{d t} = - \frac{i}{\hbar} [\hat{H}, \rho] +
+		\sum\limits_n \frac{\kappa_n}{2} \int\limits d\mathbf{r} L [\hat{O}_n]
+	\]
+% FIXME: Jack only described loss operator for three-body recombination;
+% some global reference is necessary
+	\item Loss operator for the restricted basis field~\cite{jack}:
+		\[ L [\hat{O}] = 2  \hat{O} \rho \hat{O}^\dagger - \hat{O}^\dagger \hat{O} \rho - \rho \hat{O}^\dagger \hat{O} \]
+	\item Operators $\hat{O}_n$ describe bath couplings with corresponding strengths $\kappa_n$
+	\item There are three dominant sources of losses~\cite{burt}~\cite{mertes}:
+	\begin{enumerate}
+		\item Three-body recombination: $\hat{O}_1 = \hat{\psi}_{1P}^3$
+		\item Two-body $\vert1\rangle$-$\vert2\rangle$ inelastic collisions: $\hat{O}_2 = \hat{\psi}_{1P} \hat{\psi}_{2P}$
+		\item Two-body $\vert2\rangle$-$\vert2\rangle$ inelastic collisions: $\hat{O}_3 = \hat{\psi}_{2P}^2$
+	\end{enumerate}
+\end{itemize}
+
+\tiny{ \begin{thebibliography}{9}
 	\bibitem{burt} Burt, E. and Ghrist, R. and Myatt, C. and Holland, M. and Cornell, E. and Wieman, C.,
-		\textit{Phys. Rev. Lett.} \textbf{79} 337-440 (1997)
+		\textit{Phys. Rev. Lett.} \textbf{79} 337--440 (1997)
+	\bibitem{jack} Jack, M., \textit{Phys. Rev. Lett.} \textbf{89} 140402 (2002)
 	\bibitem{mertes} Mertes, K. and Merrill, J. and Carretero-Gonz\'alez, R. and Frantzeskakis, D. and Kevrekidis, P. and Hall, D.,
 		\textit{Phys. Rev. Lett.} \textbf{99} 190402 (2007)
 \end{thebibliography} }
 
 \end{block}
 
-            \vfill
-
-            \begin{block}{Dual state imaging}
-            \end{block}
-
-            \vfill
-
-            \begin{block}{Phase measurements}
-            \end{block}
-
 } % First column
 
 % Second column
 \mycolumn{
             
-            \begin{block}{BEC self-rephasing}
-            \end{block}
+\begin{block}{Wigner truncation, FPE and stochastic equations}
 
-            \vfill
-            
-            \begin{block}{Spatial phase dynamics (Ramsey)}
-            \end{block}
+\begin{itemize}
+	\item Wigner representation~\cite{gardiner} is used for solving the master equation
+	\item Derivatives of order higher than 2 can be truncated if number of modes in low-energy subset $L$
+		is much less than the number of atoms in the cloud~\cite{norrie}~\cite{sinatra}
+	\item Resulting Fokker-Planck equation:
+\begin{equation*}
+\begin{split}
+\frac{\partial W}{\partial t} = & \int d\mathbf{r}\, \left\{
+	- \frac{\delta}{\delta \psi_{1P}} A_1 -
+	\frac{\delta}{\delta \psi_{2P}} A_2 -
+	\frac{\delta}{\delta \psi^*_{1P}} A^*_1 -
+	\frac{\delta}{\delta \psi^*_{2P}} A^*_2
+\right. \\
+& \left. + \frac{1}{2} \left(
+	\frac{\delta^2}{\delta \psi_1 \delta \psi_1^*} D_{11} +
+	\frac{\delta^2}{\delta \psi_2 \delta \psi_2^*} D_{22} +
+	\frac{\delta^2}{\delta \psi_1 \delta \psi_2^*} D_{12} +
+	\frac{\delta^2}{\delta \psi_1^* \delta \psi_2} D^*_{12} \right)
+\right\} W,
+\end{split}
+\end{equation*}
+where:
+\begin{align*}
+A_1 = {} & -\frac{i}{\hbar} \left( \hat{K} + g_{11} \lvert \psi_{1P} \rvert^2 + g_{12} \lvert \psi_{2P} \rvert^2 \right) \psi_{1P} \\
+	& - \left( \frac{3 \kappa_1}{2} \lvert \psi_{1P} \rvert^4 + \frac{\kappa_2}{2} \lvert \psi_{2P} \rvert^2 \right) \psi_{1P} -
+	\frac{i}{2} \left( \tilde{\Omega} e^{i \omega t} + \tilde{\Omega}^* e^{-i \omega t} \right) \psi_{2P}, \\
+A_2 = {} & -\frac{i}{\hbar} \left( \hat{K} + V_{\textrm{hf}} +
+	g_{12} \lvert \psi_{1P} \rvert^2 + g_{22} \lvert \psi_{2P} \rvert^2 \right) \psi_{2P} \\
+	& - \left( \frac{\kappa_2}{2} \lvert \psi_{1P} \rvert^2 + \kappa_3 \lvert \psi_{2P} \rvert^2 \right) \psi_{2P} -
+	\frac{i}{2} \left( \tilde{\Omega} e^{i \omega t} + \tilde{\Omega}^* e^{-i \omega t} \right) \psi_{1P}, \\
+D_{11} = {} & 9 \kappa_1 \lvert \psi_1 \rvert^4 + \kappa_2 \lvert \psi_2 \rvert^2, \\
+D_{22} = {} & \kappa_2 \lvert \psi_1 \rvert^2 + 4 \kappa_3 \lvert \psi_2 \rvert^2, \\
+D_{12} = {} & \kappa_2 \psi_1 \psi_2^*
+\end{align*}
+	\item It is easier to solve these equations in real variables; diffusion matrix turns out to be decomposable,
+		which allows one to write down stochastic equations:
+% FIXME: in fact, D may not be positive-definite - the only thing we know for sure is that it is decomposable
+% In addition: if we can drop out D_{12}, things get much simpler
+\[ d \vec{\psi} = P \left[ \vec{A} dt + B d\vec{W} \right], \]
+where
+\[ \vec{\psi} = \begin{pmatrix} \textrm{Re} \psi_1 & \textrm{Im} \psi_1 & \textrm{Re} \psi_2 & \textrm{Im} \psi_1 \end{pmatrix}^T, \]
+\[ \vec{A} = \begin{pmatrix} \textrm{Re} A_1 & \textrm{Im} A_1 & \textrm{Re} A_2 & \textrm{Im} A_1 \end{pmatrix}^T, \]
+\[
+\newcommand{\ta}{D_{11}}
+\newcommand{\tb}{\textrm{Re}D_{12}}
+\newcommand{\tc}{\textrm{Im}D_{12}}
+\newcommand{\td}{D_{22}}
+B B^T = \frac{1}{4} \begin{pmatrix}
+\ta & \tb & 0 & \tc \\
+\tb & \td & -\tc & 0 \\
+0 & -\tc & \ta & \tb \\
+\tc & 0 & \tb & \td
+\end{pmatrix}
+% Matrix in explicit form is too large and does not fit the column
+%B = \frac{1}{2} \begin{pmatrix}
+%\sqrt{\ta} & 0 & 0 & 0 \\
+%0 & \tc \sqrt{\frac{\ta}{\ta \td - (\tb)^2}} & \sqrt{\ta + \frac{\ta (\tc)^2}{(\tb)^2 - \ta \td}} & 0 \\
+%\frac{\tb}{\sqrt{\ta}} & \sqrt{\frac{\ta \td - (\tb)^2}{\ta}} & 0 & 0 \\
+%-\frac{\tc}{\sqrt{\ta}} & \frac{\tb \tc}{\ta} \sqrt{\frac{\ta}{\ta \td - (\tb)^2}} &
+%\frac{\tb}{\ta} \sqrt{\ta + \frac{\ta (\tc)^2}{(\tb)^2 - \ta \td}} & \sqrt{\frac{\ta \td - (\tb)^2 - (\tc)^2}{\ta}}
+%\end{pmatrix}
+\]
+and $\vec{W}$ is the multicomponent Wiener process
+\end{itemize}
 
-            \vfill
+\tiny{ \begin{thebibliography}{9}
+	\bibitem{gardiner} Gardiner C., Quantum Noise. \textit{Springer-Verlag}, 1992
+	\bibitem{norrie} Norrie, A. and Ballagh, R. and Gardiner, C., \textit{Phys. Rev. A} \textbf{73} 043617 (2006)
+	\bibitem{sinatra} Sinatra, A. and Lobo, C. and Castin, Y., \textit{J. Phys. B: At. Mol. Opt. Phys.} \textbf{35} 3599-3631 (2002)
+\end{thebibliography} }
 
-            \begin{block}{Echo at short evolution times}
-            \end{block}
+\end{block}
 
-            \vfill
+\begin{block}{Initial state and sampling}
 
-            \begin{block}{Multiple echoes (Carr-Purcell technique)}
-            \end{block}
+\begin{itemize}
+	\item Initial state for simulation~\cite{scott}:
+\[
+\psi_{iP}(\mathbf{r}) = P[\psi_{iGP}(\mathbf{r})] + \frac{1}{\sqrt{2V}} \sum\limits_{n \in L} \chi_n e^{i \mathbf{k}_n \mathbf{r}},
+\]
+		where $\psi_{iP}$ is the steady solution of Gross-Pitaevskii equation,
+		and $\chi_n$ are independent normally distributed complex random numbers,
+		$\langle \chi_m^* \chi_n \rangle = \delta_{mn}$
+	\item Second term stands for quantum fluctuations; total number of virtual particles is $M/2$,
+		where $M$ is the number of low-energy modes ($L$ subspace)
+	\item Moments of $\psi_{iP}$ for Wigner representation are equal to symmetrically ordered operator products
+	\item Basic measurable: number of particles
+\begin{align*}
+N_i & = \int \langle \hat{\psi}_{iP}^\dagger \hat{\psi}_{iP} \rangle d\mathbf{r} \\
+& = \int \left( \langle \left\{ \hat{\psi}_{iP}^\dagger \hat{\psi}_{iP} \right\}_{\textrm{sym}} \rangle -
+	\frac{1}{2} \delta_P(\mathbf{r}, \mathbf{r})  \right) d\mathbf{r} \\
+& = \int \langle \psi_{iP}^* \psi_{iP} \rangle_{\textrm{paths}} d\mathbf{r} - \frac{M}{2},
+\end{align*}
+	where $\langle \rangle_{\textrm{paths}}$ stands for the average over different simulation paths,
+	with different random numbers sets for initial state and Wiener processes
+
+\end{itemize}
+
+\tiny{ \begin{thebibliography}{9}
+	\bibitem{scott} Scott, R. and Hutchinson, D. and Gardiner, C., \textit{Phys. Rev. A} \textbf{74} 053605 (2006)
+\end{thebibliography} }
+\end{block}
 
 } % Second column
-
-% Third column
-\mycolumn{
-
-            \begin{block}{Rephasing with echo}
-            \end{block}
- 
-            \vfill
-
-            \begin{block}{Spatial phase with echo}
-            \end{block}
-
-            \vfill
-
-            \begin{block}{Phase randomness}
-            \end{block}
-
-} % Third column
 
 \end{columns}
 \end{frame}
