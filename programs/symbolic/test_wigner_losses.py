@@ -56,7 +56,6 @@ def showSorted(sum):
 
 losses111 = Term(0.5, [k111, lossesOperator(Term(1, [Psi1, Psi1, Psi1]))])
 losses12 = Term(0.5, [k12, lossesOperator(Term(1, [Psi1, Psi2]))])
-losses21 = Term(0.5, [k12, lossesOperator(Term(1, [Psi2, Psi1]))])
 losses22 = Term(0.5, [k22, lossesOperator(Term(1, [Psi2, Psi2]))])
 
 # interaction part of the hamiltonian
@@ -71,7 +70,7 @@ h = Sum([Term(1, [Vhf, Psi2_plus, Psi2]),
 	Term(0.5, [U12, Psi2_plus, Psi1_plus, Psi2, Psi1])])
 
 h_comm = Sum([Term(1, [h, rho]), Term(-1, [rho, h])])
-losses = Sum([losses111, losses12, losses21, losses22])
+losses = Sum([losses111, losses12, losses22])
 
 s = process(Sum([h_comm, losses]), term_gen=wignerTerm)
 showSorted(s)
