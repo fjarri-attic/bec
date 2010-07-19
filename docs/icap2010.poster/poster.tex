@@ -72,6 +72,21 @@ P.~D.~Drummond\inst{1}}
 % First column
 \mycolumn{
 
+\begin{block}{ BEC Interferometry}
+
+Atom interferometry is an important quantum technology,
+at the heart of many suggested future applications of ultra-cold atomic physics.
+Bose-Einstein condensates or atom lasers have potential advantages as detectors or sensors,
+provided one can extract atomic phase information.
+However, there is a challenge to be met. Unlike photons, atoms can interact rather strongly, causing dephasing.
+An intimate understanding of quantum many-body dynamics is essential
+in understanding the precise nature of interaction-induced dephasing in the measurement process.
+
+\bf{Progress in this technology requires a theory of atom interferometry.}
+
+\end{block}
+
+
 \begin{block}{Trapped two-component BEC}
 
 \begin{itemize}
@@ -106,7 +121,7 @@ P.~D.~Drummond\inst{1}}
 	\item Hyperfine splitting energy $V_{\textrm{hf}} / h = 6.8 \textrm{GHz}$
 	\item Two-photon coupling constant $\tilde{\Omega} = \Omega e^{i \alpha}$,
 		where $\Omega$ is the Rabi frequency
-	\item Field annihilation operators $\hat{\psi}_i (\mathbf{r})$ obey the common commutation relations for identical bosons
+	\item Field annihilation operators $\hat{\psi}_i (\mathbf{r})$ obey the commutation relations for identical bosons
 \end{itemize}
 
 \end{block}
@@ -158,6 +173,13 @@ Q \equiv \sum\limits_{n \in H} \lvert n \rangle \langle n \rvert \]
 
 \begin{block}{Master equation}
 
+There is more happening in a BEC than just unitary evolution.
+Atoms are scattered by residual gas in the vacuum chamber.
+More importantly, in a high density BEC, there are nonlinear losses.
+These are driven by two-body and three-body interactions,
+both of which cause losses from the trapped modes into untrapped atomic and molecular configurations.
+This must be treated using a master equation to describe dissipation.
+
 \begin{itemize}
 	\item Born-Markov master equation:
 	\[
@@ -191,13 +213,33 @@ Q \equiv \sum\limits_{n \in H} \lvert n \rangle \langle n \rvert \]
 
 % Second column
 \mycolumn{
+
+\begin{block}{Wigner truncation, FPE and stochastic equations}
+
+Here we describe a simple, yet quantitatively accurate theoretical approach to calculations of atom interferometry
+using a truncated Wigner representation.
+This method extends the conventional Gross-Pitaevski equations describing a Bose condensate to include quantum noise effects.
+The method has been used successfully in optical quantum soliton noise calculations\cite{Drummond,Corney},
+and for BEC\cite{Steel}.
+It can be extended to include interactions with reservoirs \cite{Hoffmann}.
+We suggest that the theoretical approach employed here can be reliably used as a benchmark for predictions.
+Importantly, we can clearly demonstrate where phase decay is driven by quantum fluctuations,
+and where it is driven by trap inhomogeneity or other effects.
+
+\tiny{ \begin{thebibliography}{9}
+	\bibitem{Drummond}  P. D. Drummond and A. D. Hardman,  Europhysics Letters 21, 279-284 (1993).
+	\bibitem{Corney}  J. F. Corney, J. Heersink, R. F. Dong, V. Josse, P. D. Drummond, G. Leuchs, U. L. Andersen, Phys. Rev. A. 78, 023831 (2008).
+	\bibitem{Steel} M. J. Steel, M. K. Olsen, L. I. Plimak, P. D. Drummond, S. M. Tan, M. J. Collet, D. F. Walls and R. Graham, Physical Review A58, 4824-4835 (1998).
+	\bibitem{Hoffmann} Scott E. Hoffmann, Joel F. Corney, and Peter D. Drummond, Phys. Rev. A 78, 013622 (2008).
+\end{thebibliography} }
+
+\end{block}
             
 \begin{block}{Wigner truncation, FPE and stochastic equations}
 
 \begin{itemize}
-	\item Wigner representation~\cite{gardiner} is used for solving the master equation
-	\item Derivatives of order higher than 2 can be truncated if number of modes in low-energy subset $L$
-		is much less than the number of atoms in the cloud~\cite{norrie}~\cite{sinatra}
+	\item The Wigner representation~\cite{gardiner} is used for solving the master equation
+	\item Derivatives of order higher than 2 can be truncated in limit of large atom number~\cite{norrie}~\cite{sinatra}
 	\item Resulting Fokker-Planck equation:
 \begin{equation*}
 \begin{split}
@@ -228,14 +270,11 @@ D_{11} = {} & 9 \kappa_1 \lvert \psi_1 \rvert^4 + \kappa_2 \lvert \psi_2 \rvert^
 D_{22} = {} & \kappa_2 \lvert \psi_1 \rvert^2 + 4 \kappa_3 \lvert \psi_2 \rvert^2, \\
 D_{12} = {} & \kappa_2 \psi_1 \psi_2^*
 \end{align*}
-	\item It is easier to solve these equations in real variables; diffusion matrix turns out to be decomposable,
-		which allows one to write down stochastic equations:
+	\item The diffusion matrix is positive definite, which allows one to derive stochastic equations:
 % FIXME: in fact, D may not be positive-definite - the only thing we know for sure is that it is decomposable
 % In addition: if we can drop out D_{12}, things get much simpler
 \[ d \vec{\psi} = P \left[ \vec{A} dt + B d\vec{W} \right], \]
-where
-\[ \vec{\psi} = \begin{pmatrix} \textrm{Re} \psi_1 & \textrm{Im} \psi_1 & \textrm{Re} \psi_2 & \textrm{Im} \psi_1 \end{pmatrix}^T, \]
-\[ \vec{A} = \begin{pmatrix} \textrm{Re} A_1 & \textrm{Im} A_1 & \textrm{Re} A_2 & \textrm{Im} A_1 \end{pmatrix}^T, \]
+where $\vec{A}$ is a classical-like GPE term,  $\vec{B}$ contains the dissipative quantum noise with:
 \[
 \newcommand{\ta}{D_{11}}
 \newcommand{\tb}{\textrm{Re}D_{12}}
@@ -295,6 +334,13 @@ N_i & = \int \langle \hat{\psi}_{iP}^\dagger \hat{\psi}_{iP} \rangle d\mathbf{r}
 \tiny{ \begin{thebibliography}{9}
 	\bibitem{scott} Scott, R. and Hutchinson, D. and Gardiner, C., \textit{Phys. Rev. A} \textbf{74} 053605 (2006)
 \end{thebibliography} }
+\end{block}
+
+\begin{block}{Summary}
+
+\bf{We derive a simple, classical-like stochastic method for treating BEC interferometry.
+Our theory includes the dominant nonlinear losses that cause decoherence, as well as nonlinear unitary evolution.}
+
 \end{block}
 
 } % Second column
